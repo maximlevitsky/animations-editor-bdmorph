@@ -100,7 +100,6 @@ private:
     int selectedIndex;
 
     set<int> pinned;
-    bool shiftDown, controlDown;
     double alpha;
 	double brush;
 	int wireframe;
@@ -114,10 +113,6 @@ private:
     GLuint textureRef;
 
     vector< vector<int> > constraintVerts;
-    vector< vector< Vector2D<double> > > constraintTangents;
-    vector< vector< Point2D<double> > > constraintTargets;
-    vector< LogSpiral<double> > curSpirals;
-    int curFrame;
     vector<int> oldVertices;
 
     vector< vector< Vector2D<double> > > logDisplacements;

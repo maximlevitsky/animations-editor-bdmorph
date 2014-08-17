@@ -9,8 +9,11 @@
 #include <QGesture>
 #include <ctime>
 using namespace std;
+#include <stdio.h>
 
-DeformationScene::DeformationScene(QGLWidget *w) : controlDown(false), shiftDown(false), curFrame(0), model(NULL), origModel(NULL), selectedIndex(-1), alpha(.5), brush(10), wireframe(0), glWidget(w) {
+DeformationScene::DeformationScene(QGLWidget *w) :
+			model(NULL), origModel(NULL), selectedIndex(-1), alpha(.5), brush(10), wireframe(0), glWidget(w)
+{
     glWidget->setAttribute(Qt::WA_AcceptTouchEvents);
     glWidget->setAttribute(Qt::WA_StaticContents);
 
@@ -378,32 +381,18 @@ void DeformationScene::modeChanged(bool m)
     if (!m) { // go back to deformation mode
         // restore original positions
         model->copyPositions(*origModel);
-
-        // todo:  throw out animation curves
-    } else {
+    } else
+    {
         // restore original positions
         model->copyPositions(*origModel);
         constraintVerts.resize(1); // only one frame
-        constraintTangents.resize(1);
-        constraintTargets.resize(1);
-        curSpirals.resize(0);
-
         constraintVerts[0].resize(0);
-        constraintTangents[0].resize(0);
-        constraintTargets[0].resize(0);
-        curFrame = 0;
     }
 }
 
 void DeformationScene::keyReleaseEvent(QKeyEvent *e)
 {
     switch(e->key()) {
-    case Qt::Key_Shift:
-    	shiftDown = false;
-    	break;
-    case Qt::Key_Control:
-    	controlDown = false;
-    	break;
     default:
     	QGraphicsScene::keyPressEvent(e);
     	break;
@@ -432,12 +421,6 @@ void DeformationScene::keyPressEvent(QKeyEvent *e)
     case Qt::Key_Minus:
     case Qt::Key_Underscore:
     	zoomOut();
-    	break;
-    case Qt::Key_Shift:
-    	shiftDown = true;
-    	break;
-    case Qt::Key_Control:
-    	controlDown = true;
     	break;
     case Qt::Key_D:
     	model->reuseVF();
@@ -476,13 +459,20 @@ void DeformationScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
         pos *= model->getWidth() / modelWidth;
         pos += QPointF(model->getMinX(),model->getMinY());
 
-        if (shiftDown || pinMode->isChecked())
+        Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
+
+        if ((mods & Qt::ShiftModifier) || pinMode->isChecked())
         {
             int i = model->getClosestVertex(Point2D<double>(pos.x(),pos.y()),brush*model->getWidth()/modelWidth);
-            if (i == -1) return;
-            if (pinned.count(i)) pinned.erase(i);
-            else pinned.insert(i);
-        } else if (controlDown)
+
+            if (i == -1)
+            	return;
+
+            if (pinned.count(i))
+            	pinned.erase(i);
+            else
+            	pinned.insert(i);
+        } else
         {
             int vertex = model->getClosestVertex(Point2D<double>(pos.x(),pos.y()),brush*model->getWidth()/modelWidth);
             oldVertices.resize(0);
@@ -503,20 +493,24 @@ void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     if (!model) return;
     if (event->isAccepted()) return;
 
-	if ((event->buttons() & Qt::RightButton) && !controlDown && selectedIndex >= 0)
+    Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
+
+	if ((event->buttons() & Qt::RightButton) && selectedIndex >= 0)
 	{
 		mousePos = event->scenePos();
         mousePos.setY(height()-mousePos.y()-1);
         mousePos -= modelLocation;
         mousePos *= model->getWidth() / modelWidth;
         mousePos += QPointF(model->getMinX(),model->getMinY());
+
 		QPointF oldPos = event->lastScenePos();
         QPointF curPos = event->scenePos();
         QPointF diff = curPos - oldPos;
 		move(QPointF(diff.x(),-diff.y()));
 	} 
 
-    if ((event->buttons() & Qt::LeftButton) && !shiftDown && !pinMode->isChecked() && selectedIndex >= 0) {
+    if ((event->buttons() & Qt::LeftButton) && (!(mods & Qt::ShiftModifier)) && !pinMode->isChecked() && selectedIndex >= 0)
+    {
         mousePos = event->scenePos();
         mousePos.setY(height()-mousePos.y()-1);
         mousePos -= modelLocation;
@@ -529,12 +523,19 @@ void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
         diff *= model->getWidth() / modelWidth;
 
+        std::cout << "Mouse move delta:" << diff.rx() << "-" << diff.ry() << std::endl;
+
+        if (diff.rx() == 0 && diff.ry() == 0)
+        	return;
+
+
         vector<int> indices;
 		vector< Vector2D<double> > displacements;
 		indices.push_back(selectedIndex);
 		displacements.push_back(Vector2D<double>(diff.x(),-diff.y()));
 
-		for (set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it) {
+		for (set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
+		{
 			indices.push_back(*it);
 			displacements.push_back(Vector2D<double>(0,0));
 		}
@@ -552,6 +553,7 @@ void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         event->accept();
         update();
     }
+
     glWidget->repaint();
 }
 
@@ -600,8 +602,9 @@ void DeformationScene::drawBackground(QPainter *painter, const QRectF &)
 
         if (selectedIndex != -1)
                 model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),selectedIndex);
-            for (int i = 0; i < pointsToRender.size(); i++)
-                model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),pointsToRender[i]);
+
+        for (int i = 0; i < pointsToRender.size(); i++)
+			model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),pointsToRender[i]);
 
 
         glColor3f(1,1,0); //highlighted anchors
@@ -625,8 +628,7 @@ int DeformationScene::closestIndex(QPointF pos)
 	pos *= model->getWidth() / modelWidth;
 	pos += QPointF(model->getMinX(), model->getMinY());
 	// large radius because my fingers are "fleshy" according to my piano prof
-	return model->getClosestVertex(Point2D<double>(pos.x(), pos.y()),
-			5 * model->getWidth() / modelWidth);
+	return model->getClosestVertex(Point2D<double>(pos.x(), pos.y()), 5 * model->getWidth() / modelWidth);
 }
 
 Vector2D<double> DeformationScene::screenToModelVec(QPointF v)

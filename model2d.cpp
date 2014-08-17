@@ -191,6 +191,25 @@ void Model2D<T>::initialize() {
 	undoIndex = 0; //save for undo
 	undoVertices[0] = vertices; //save for undo
 
+    //static SimpleSparseMatrix<T> P;
+    getP(P);
+
+    //static SimpleSparseMatrix<T> trans;
+
+    // do a second time for timing with memory allocated
+    clock_t t = clock();
+    P.transpose(trans);
+    qWarning("Transpose time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
+
+    t = clock();
+    if (transCount == 0)
+        trans.multiply(P, covariance);
+    else
+        trans.parallelMultiply(P, covariance);
+
+    transCount++;
+    qWarning("Covariance product time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
+
 
     int nz = covariance.getNumNonzero();
     int n = 2*numVertices;
@@ -212,7 +231,7 @@ void Model2D<T>::initialize() {
     Ap = covariance.getAp();
 
     qWarning("Computing permutation...");
-    clock_t t = clock();
+    t = clock();
     double Info[AMD_INFO];
     if (amd_order (n, Ap, Ai, Pfw, (double *) NULL, Info) < AMD_OK) {
         qWarning("call to AMD failed\n");
