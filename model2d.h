@@ -9,8 +9,6 @@
 using namespace std;
 
 #include "vector2d.h"
-#include "Eigen/Eigen"
-using namespace Eigen;
 
 extern "C" {
 #include <amd.h>
@@ -54,8 +52,6 @@ public:
     Face &getFace(int i) { return faces[i]; }
 
     int getClosestVertex(Point2D<T> point, T dist);
-
-    typedef VectorXd Vector;
 
     void displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha);
 
@@ -106,7 +102,7 @@ private:
     int transCount, pCount;
 
     cholmod_sparse cSparse, *A;
-    Vector rhs;
+    std::vector<T> rhs;
     bool drawVFMode;
 	float wireframeTrans;
 
