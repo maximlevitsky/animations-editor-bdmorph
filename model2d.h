@@ -55,87 +55,30 @@ public:
 
     int getClosestVertex(Point2D<T> point, T dist);
 
-    void moveVertex(int i, Vector2D<T> d) { vertices[i] += d; recomputeEigenvectors(); }
-
     typedef VectorXd Vector;
 
     void displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha);
 
     void getP(SimpleSparseMatrix<T> &prod);
-    void recomputeEigenvectors();
-    void updateCovariance();
-    void setNumExtraEigenvectors(int n) {
-        eigenvectors.resize(n+3);
-        for (unsigned int i = 0; i < eigenvectors.size(); i++) {
-            eigenvectors[i].resize(2*numVertices);
-            srand(0);
-            for (int j = 0; j < 2*numVertices; j++)
-                eigenvectors[i][j] = rand() / (double)RAND_MAX;
-            eigenvectors[i].normalize();
-        }
-    }
 
     ~Model2D();
 
     void initialize();
-    void copyPositions(Model2D<T> &m) {
-        for (int i = 0; i < numVertices; i++)
-            vertices[i] = m.vertices[i];
-    }
-
-    void changeDrawMode(bool m) {
-        drawVFMode = m;
-    }
-
-	void setWireframeTrans(float m) {
-        wireframeTrans = m;
-    }
-
-    void changePinnedVertices(set<int> &pinned);
-
-    void reuseVF() {
-        if (drawVFMode) {
-            for (int i = 0; i < numVertices; i++)
-                for (int j = 0; j < 2; j++)
-                    vertices[i][j] += vf[i][j]*.5;
-        }
-    }
+	void copyPositions(Model2D<T>& m);
+	void changeDrawMode(bool m);
+	void setWireframeTrans(float m);
+	void reuseVF();
 
     void renderVertex(T left, T bottom, T meshWidth, T width, T height, Point2D<T> p);
 
-	void addUndoAction(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha) {
-		if (undoIndex == UNDOSIZE-1) {
-			for (int i=0; i<UNDOSIZE-1; i++) {
-				undoVertices[i] = undoVertices[i+1];
-				undoIndices[i] = undoIndices[i+1];
-				undoDisplacements[i] = undoDisplacements[i+1];
-				undoAlpha[i] = undoAlpha[i+1];
-			}
-		}
-		if (undoIndex < UNDOSIZE-1) undoIndex++;
-		undoVertices[undoIndex] = vertices;
-		undoIndices[undoIndex] = indices;
-		undoDisplacements[undoIndex] = displacements;
-		undoAlpha[undoIndex] = alpha;
-	}
-
-	void redoDeform(vector< vector<int> > &logIndices, vector< vector< Vector2D<T> > > &logDisplacements, vector< T > &logAlphas) {
-		if (undoIndex == UNDOSIZE-1) return;
-		undoIndex++;
-		vertices = undoVertices[undoIndex];
-		logDisplacements.push_back(undoDisplacements[undoIndex]);
-		logIndices.push_back(undoIndices[undoIndex]);
-		logAlphas.push_back(undoAlpha[undoIndex]);
-	}
-
-	void undoDeform(vector< vector<int> > &logIndices, vector< vector< Vector2D<T> > > &logDisplacements, vector< T > &logAlphas) {
-		if (undoIndex == 0) return;
-		undoIndex--;
-		vertices = undoVertices[undoIndex];
-		logDisplacements.pop_back();
-		logIndices.pop_back();
-		logAlphas.pop_back();
-	}
+	void addUndoAction(vector<int>& indices,
+			vector<Vector2D<T> >& displacements, T alpha);
+	void redoDeform(vector<vector<int> >& logIndices,
+			vector<vector<Vector2D<T> > >& logDisplacements,
+			vector<T>& logAlphas);
+	void undoDeform(vector<vector<int> >& logIndices,
+			vector<vector<Vector2D<T> > >& logDisplacements,
+			vector<T>& logAlphas);
 
 private:
     vector< Point2D<T> > vertices, texCoords;
@@ -155,7 +98,6 @@ private:
     int numVertices, numFaces;
 
     T minX, maxX, minY, maxY;
-    vector<Vector> eigenvectors;
 
     // we don't want to keep malloc'ing these things!
     double *Ax, *Lx, *Y, *D, *X;
@@ -177,5 +119,7 @@ private:
     cholmod_common Common, *cm;
     cholmod_factor *L2;
 };
+
+
 
 #endif // MODEL2D_H

@@ -36,40 +36,13 @@ public:
     void drawBackground(QPainter *painter, const QRectF &rect);
     void zoom(double factor) {modelWidth *= factor;}
     void move(QPointF direction) {modelLocation += direction;}
-    int closestTangent(QPointF pos);
     void updateLogSpiral(int which);
-    int closestIndex(QPointF pos) {
-        if (!model) return -1;
+	int closestIndex(QPointF pos);
 
-        pos.setY(height()-pos.y()-1);
-        pos -= modelLocation;
-        pos *= model->getWidth() / modelWidth;
-        pos += QPointF(model->getMinX(),model->getMinY());
+	Vector2D<double> screenToModelVec(QPointF v);
 
-        // large radius because my fingers are "fleshy" according to my piano prof
-        return model->getClosestVertex(Point2D<double>(pos.x(),pos.y()),5*model->getWidth()/modelWidth);
-    }
-
-    Vector2D<double> screenToModelVec(QPointF v) {
-        v *= model->getWidth() / modelWidth;
-        return Vector2D<double>(v.x(), -v.y());
-    }
-
-    void displaceMesh(vector<int> indices, vector<Vector2D<double> > displacements) {
-        for (set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it) {
-            indices.push_back(*it);
-            displacements.push_back(Vector2D<double>(0,0));
-        }
-
-        if (multitouchMode->isChecked()) { 
-			model->displaceMesh(indices,displacements,alpha);
-			logDisplacements.push_back(displacements);
-			logIndices.push_back(indices);
-			logAlphas.push_back(alpha);
-
-			model->addUndoAction(indices,displacements,alpha);
-		}
-    }
+	void displaceMesh(vector<int> indices,
+			vector<Vector2D<double> > displacements);
 
 public slots:
 	void undoModel();
@@ -100,9 +73,7 @@ public slots:
     void clearPins() { pinned.clear(); }
 
     void resetPoints();
-    void restorePoints() {
-        model->copyPositions(*origModel);
-    }
+	void restorePoints();
 
     void saveLog();
     void runLog();
@@ -121,7 +92,7 @@ private:
     QWidget *undoButton, *redoButton, *imageButton, *modelButton, *chooseTextureButton, *removeTextureButton, *clearButton, *loadGeometry, *saveButton, *resetButton;
     QSlider *alphaSlider, *brushSlider, *wireframeSlider;
 	QLabel *meshLabel;
-    QCheckBox *animationMode, *multitouchMode, *drawVectorField, *pinMode;
+    QCheckBox *multitouchMode, *drawVectorField, *pinMode;
 
     Model2D<double> *model, *origModel;
     QPointF modelLocation;

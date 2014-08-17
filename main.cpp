@@ -13,7 +13,8 @@ using namespace std;
 
 #include "deformationscene.h"
 
-class GraphicsView : public QGraphicsView {
+class GraphicsView : public QGraphicsView
+{
 public:
     GraphicsView(DeformationScene *e) : deformationScene(e) {
         setAttribute(Qt::WA_AcceptTouchEvents);
