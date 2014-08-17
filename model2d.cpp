@@ -40,7 +40,7 @@ if (p != (type *) NULL) \
     p = (type *) NULL ; \
 }
 
-void error_handler(int status, const char *file, int line, const char *message) {
+void error_handler(int status, char *file, int line,  char *message) {
     qWarning("CHOLMOD error status %d", status);
     qWarning("File: %s", file);
     qWarning("Line: %d", line);
@@ -337,6 +337,8 @@ bool checkBad(T *array, int n) {
 
 template<class T>
 void Model2D<T>::recomputeEigenvectors() {
+
+	return;
     updateCovariance();
 
     for (int i = 0; i < 3; i++)

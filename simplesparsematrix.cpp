@@ -2,7 +2,7 @@
 #include <map>
 #include <ctime>
 #include <limits>
-#include <qString>
+#include <QString>
 #define ABS(x) (((x)<0)?-(x):(x))
 using namespace std;
 

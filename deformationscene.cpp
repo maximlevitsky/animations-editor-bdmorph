@@ -432,7 +432,8 @@ void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 
     if (event->isAccepted()) return;
 
-	if ((event->buttons() & Qt::RightButton) && !controlDown && selectedIndex >= 0) { qWarning("LOL@PAN");
+	if ((event->buttons() & Qt::RightButton) && !controlDown && selectedIndex >= 0)
+	{
 		mousePos = event->scenePos();
         mousePos.setY(height()-mousePos.y()-1);
         mousePos -= modelLocation;
