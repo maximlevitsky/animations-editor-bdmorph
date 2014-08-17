@@ -49,7 +49,8 @@ void error_handler(int status, char *file, int line,  char *message) {
 
 
 template<class T>
-Model2D<T>::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0) {
+Model2D<T>::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0)
+{
     qWarning("File constructor");
 	if (filename.endsWith("obj")) //handle obj file
 	{
@@ -144,7 +145,8 @@ Model2D<T>::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans
 }
 
 template<class T>
-Model2D<T>::Model2D(Model2D<T> &m) {
+Model2D<T>::Model2D(Model2D<T> &m)
+{
     qWarning("Copy constructor");
     numVertices = m.numVertices;
     numFaces = m.numFaces;
@@ -157,8 +159,8 @@ Model2D<T>::Model2D(Model2D<T> &m) {
 }
 
 template<class T>
-void Model2D<T>::initialize() {
-
+void Model2D<T>::initialize()
+{
     transCount = 0;
     pCount = 0;
 
@@ -170,7 +172,8 @@ void Model2D<T>::initialize() {
 	T sumX = 0.0;
 	T sumY = 0.0;
 
-    for (int i = 0; i < numVertices; i++) {
+    for (int i = 0; i < numVertices; i++)
+    {
         minX = min(minX, vertices[i].x);
         minY = min(minY, vertices[i].y);
         maxX = max(maxX, vertices[i].x);
@@ -183,7 +186,8 @@ void Model2D<T>::initialize() {
 	T avgX = sumX/numVertices;
 	T avgY = sumY/numVertices;
 
-	for (int i=0; i<numVertices; i++) {
+	for (int i=0; i<numVertices; i++)
+	{
 		vertices[i].x = vertices[i].x - avgX;
 		vertices[i].y = vertices[i].y - avgY;
 	}
@@ -191,10 +195,7 @@ void Model2D<T>::initialize() {
 	undoIndex = 0; //save for undo
 	undoVertices[0] = vertices; //save for undo
 
-    //static SimpleSparseMatrix<T> P;
     getP(P);
-
-    //static SimpleSparseMatrix<T> trans;
 
     // do a second time for timing with memory allocated
     clock_t t = clock();
@@ -246,8 +247,6 @@ void Model2D<T>::initialize() {
     t = clock();
     ldl_symbolic (2*numVertices, Ap, Ai, Lp, Parent, Lnz, Flag, Pfw, Pinv);
     qWarning("Symbolic time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
-    //recomputeEigenvectors();
-
 
     neighbors.resize(numVertices);
     map< int , map<int,int> > edgeCount;
@@ -267,7 +266,8 @@ void Model2D<T>::initialize() {
         edgeCount[b][c]++;
     }
 
-    for (int i = 0; i < numFaces; i++) {
+    for (int i = 0; i < numFaces; i++)
+    {
         int a = faces[i][0], b = faces[i][1], c = faces[i][2];
         if (edgeCount[a][b] == 1) {
             boundaryVertices.insert(a);
@@ -382,7 +382,8 @@ Model2D<T>::~Model2D() {
 }
 
 template<class T>
-void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha) {
+void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha)
+{
     if (indices.size() == 1) { // when only one vertex is constrained, move parallel
         for (int i = 0; i < numVertices; i++) {
             vertices[i][0] += displacements[0].x;
@@ -621,7 +622,8 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
 }
 
 template<class T>
-void Model2D<T>::getP(SimpleSparseMatrix<T> &prod) {
+void Model2D<T>::getP(SimpleSparseMatrix<T> &prod)
+{
     P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
     dx2.reshape(numFaces, numVertices, 3*numFaces);
     dy2.reshape(numFaces, numVertices, 3*numFaces);
@@ -672,7 +674,9 @@ void Model2D<T>::getP(SimpleSparseMatrix<T> &prod) {
 }
 
 template<class T>
-void Model2D<T>::replacePoints(const QString &filename) { //todo: handle obj file too
+void Model2D<T>::replacePoints(const QString &filename)
+{
+	//todo: handle obj file too
 	ifstream infile(filename.toAscii());
 
 	if (filename.endsWith("off")) 
@@ -727,8 +731,8 @@ void Model2D<T>::replacePoints(const QString &filename) { //todo: handle obj fil
 }
 
 template<class T>
-void Model2D<T>::saveVertices(ofstream& outfile, const QString &filename) {
-  
+void Model2D<T>::saveVertices(ofstream& outfile, const QString &filename)
+{
 	if (filename.endsWith("off"))
 	{
 		for (int i = 0; i < numVertices; i++)
@@ -745,8 +749,8 @@ void Model2D<T>::saveVertices(ofstream& outfile, const QString &filename) {
 }
 
 template<class T>
-void Model2D<T>::saveTextureUVs(ofstream& outfile, const QString &filename) {
-
+void Model2D<T>::saveTextureUVs(ofstream& outfile, const QString &filename)
+{
 	if (filename.endsWith("obj"))
 	{
 		for (int i = 0; i < numVertices; i++)
@@ -756,8 +760,8 @@ void Model2D<T>::saveTextureUVs(ofstream& outfile, const QString &filename) {
 }
 
 template<class T>
-void Model2D<T>::saveFaces(ofstream& outfile, const QString &filename) {
-   
+void Model2D<T>::saveFaces(ofstream& outfile, const QString &filename)
+{
 	if (filename.endsWith("off"))
 	{
 		for (int i = 0; i < numFaces; i++)
@@ -774,7 +778,8 @@ void Model2D<T>::saveFaces(ofstream& outfile, const QString &filename) {
 
 
 template<class T>
-void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, Point2D<T> p) {
+void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, Point2D<T> p)
+{
     glLineWidth(LINE_WIDTH);
     T right = left + meshWidth;
     T meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
@@ -803,7 +808,8 @@ void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, 
 }
 
 template<class T>
-void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T height, int v) {
+void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T height, int v)
+{
     glLineWidth(LINE_WIDTH);
     T right = left + meshWidth;
     T meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
@@ -863,7 +869,8 @@ void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T 
 }
 
 template<class T>
-void Model2D<T>::render(T left,T bottom,  T meshWidth, T width, T height) {
+void Model2D<T>::render(T left,T bottom,  T meshWidth, T width, T height)
+{
     glLineWidth(LINE_WIDTH);
     T right = left + meshWidth;
     T meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
@@ -943,7 +950,8 @@ void Model2D<T>::render(T left,T bottom,  T meshWidth, T width, T height) {
 }
 
 template<class T>
-int Model2D<T>::getClosestVertex(Point2D<T> point, T dist) { // linear time -- could make faster...
+int Model2D<T>::getClosestVertex(Point2D<T> point, T dist)
+{ // linear time -- could make faster...
     int closest = -1;
     T closestDistance = numeric_limits<T>::max();
 
@@ -960,23 +968,27 @@ int Model2D<T>::getClosestVertex(Point2D<T> point, T dist) { // linear time -- c
 }
 
 template<class T>
-void Model2D<T>::copyPositions(Model2D<T>& m) {
+void Model2D<T>::copyPositions(Model2D<T>& m)
+{
 	for (int i = 0; i < numVertices; i++)
 		vertices[i] = m.vertices[i];
 }
 
 template<class T>
-inline void Model2D<T>::changeDrawMode(bool m) {
+void Model2D<T>::changeDrawMode(bool m)
+{
 	drawVFMode = m;
 }
 
 template<class T>
-void Model2D<T>::setWireframeTrans(float m) {
+void Model2D<T>::setWireframeTrans(float m)
+{
 	wireframeTrans = m;
 }
 
 template<class T>
-void Model2D<T>::reuseVF() {
+void Model2D<T>::reuseVF()
+{
 	if (drawVFMode) {
 		for (int i = 0; i < numVertices; i++)
 			for (int j = 0; j < 2; j++)
@@ -986,7 +998,8 @@ void Model2D<T>::reuseVF() {
 
 template<class T>
 void Model2D<T>::addUndoAction(vector<int>& indices,
-		vector<Vector2D<T> >& displacements, T alpha) {
+		vector<Vector2D<T> >& displacements, T alpha)
+{
 	if (undoIndex == UNDOSIZE - 1) {
 		for (int i = 0; i < UNDOSIZE - 1; i++) {
 			undoVertices[i] = undoVertices[i + 1];
@@ -1006,7 +1019,8 @@ void Model2D<T>::addUndoAction(vector<int>& indices,
 
 template<class T>
 void Model2D<T>::redoDeform(vector<vector<int> >& logIndices,
-		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas) {
+		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas)
+{
 	if (undoIndex == UNDOSIZE - 1)
 		return;
 
@@ -1017,9 +1031,11 @@ void Model2D<T>::redoDeform(vector<vector<int> >& logIndices,
 	logAlphas.push_back(undoAlpha[undoIndex]);
 }
 
+
 template<class T>
 void Model2D<T>::undoDeform(vector<vector<int> >& logIndices,
-		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas) {
+		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas)
+{
 	if (undoIndex == 0)
 		return;
 
