@@ -1,5 +1,4 @@
 #include "simplesparsematrix.h"
-#include "logspiral.h"
 
 #include <amd.h>
 
@@ -161,7 +160,7 @@ int main(int argc, char **argv) {
     view.setScene(scene);
     view.show();
 
-    view.resize(800, 600);
+    view.resize(1024, 768);
 
     return app.exec();
 }

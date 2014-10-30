@@ -13,7 +13,7 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 INCLUDE(${QT_USE_FILE})
 
 SET(kvf2d_SOURCES 
-	deformationscene.cpp logspiral.cpp main.cpp model2d.cpp
+	deformationscene.cpp main.cpp model2d.cpp
 	simplesparsematrix.cpp vector2d.cpp 
 )
 

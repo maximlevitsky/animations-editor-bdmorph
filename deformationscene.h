@@ -14,7 +14,6 @@
 #include <set>
 #include <QCheckBox>
 
-#include "logspiral.h"
 using namespace std;
 
 #define ZOOM_FACTOR 1.2
