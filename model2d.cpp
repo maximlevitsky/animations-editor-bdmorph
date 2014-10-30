@@ -1,5 +1,4 @@
 #include "model2d.h"
-#include "logspiral.h"
 #include <ctime>
 #include <cmath>
 #include <fstream>
@@ -17,29 +16,6 @@ using namespace std;
 #undef min
 #undef max
 
-#define ALLOC_MEMORY(p,type,size) \
-p = (type *) malloc ((((size) <= 0) ? 1 : (size)) * sizeof (type)) ; \
-if (p == (type *) NULL) \
-{ \
-    qWarning ("malloc out of memory; requested %d elements of size %d\n", size, sizeof(type)) ; \
-    exit(1) ; \
-}
-
-#define REALLOC_MEMORY(p,type,size) \
-p = (type *) realloc (p,(((size) <= 0) ? 1 : (size)) * sizeof (type)) ; \
-if (p == (type *) NULL) \
-{ \
-    qWarning ("realloc out of memory; requested %d elements of size %d\n", size, sizeof(type)) ; \
-    exit(1) ; \
-}
-
-#define FREE_MEMORY(p,type) \
-if (p != (type *) NULL) \
-{ \
-    free (p) ; \
-    p = (type *) NULL ; \
-}
-
 void error_handler(int status, char *file, int line,  char *message) {
     qWarning("CHOLMOD error status %d", status);
     qWarning("File: %s", file);
@@ -47,7 +23,7 @@ void error_handler(int status, char *file, int line,  char *message) {
     qWarning("Message: %s", message);
 }
 
-
+/******************************************************************************************************************************/
 template<class T>
 Model2D<T>::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0)
 {
@@ -144,6 +120,7 @@ Model2D<T>::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans
     initialize();
 }
 
+/******************************************************************************************************************************/
 template<class T>
 Model2D<T>::Model2D(Model2D<T> &m)
 {
@@ -157,6 +134,26 @@ Model2D<T>::Model2D(Model2D<T> &m)
 	drawVFMode = m.drawVFMode;
     initialize();
 }
+/******************************************************************************************************************************/
+template<class T>
+Model2D<T>::~Model2D() {
+    FREE_MEMORY(Ax,double);
+    FREE_MEMORY(Parent, LDL_int);
+    FREE_MEMORY(Flag, LDL_int);
+    FREE_MEMORY(Lp, LDL_int);
+    FREE_MEMORY(Lnz, LDL_int);
+    FREE_MEMORY(D, double);
+    FREE_MEMORY(Pattern, LDL_int);
+    FREE_MEMORY(Y, double);
+    FREE_MEMORY(X, double);
+    FREE_MEMORY(Pfw, LDL_int);
+    FREE_MEMORY(Pinv, LDL_int);
+    FREE_MEMORY(Li, LDL_int);
+    FREE_MEMORY(Lx, double);
+    cholmod_free_factor(&L2, cm);
+    cholmod_finish(cm);
+}
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::initialize()
@@ -250,7 +247,8 @@ void Model2D<T>::initialize()
 
     neighbors.resize(numVertices);
     map< int , map<int,int> > edgeCount;
-    for (int i = 0; i < numFaces; i++) {
+    for (int i = 0; i < numFaces; i++)
+    {
         int a = faces[i][0], b = faces[i][1], c = faces[i][2];
         neighbors[a].insert(b);
         neighbors[a].insert(c);
@@ -358,28 +356,8 @@ void Model2D<T>::initialize()
     cholmod_free_dense(&B2, cm);
     cholmod_free_dense(&boundaryRHS, cm);
     free(rhsMove);
-
-    /////////////////////////////////////////////////////////
 }
-
-template<class T>
-Model2D<T>::~Model2D() {
-    FREE_MEMORY(Ax,double);
-    FREE_MEMORY(Parent, LDL_int);
-    FREE_MEMORY(Flag, LDL_int);
-    FREE_MEMORY(Lp, LDL_int);
-    FREE_MEMORY(Lnz, LDL_int);
-    FREE_MEMORY(D, double);
-    FREE_MEMORY(Pattern, LDL_int);
-    FREE_MEMORY(Y, double);
-    FREE_MEMORY(X, double);
-    FREE_MEMORY(Pfw, LDL_int);
-    FREE_MEMORY(Pinv, LDL_int);
-    FREE_MEMORY(Li, LDL_int);
-    FREE_MEMORY(Lx, double);
-    cholmod_free_factor(&L2, cm);
-    cholmod_finish(cm);
-}
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha)
@@ -391,7 +369,6 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
         }
         return;
     }
-
 
     time_t time1 = clock();
     getP(P);
@@ -451,9 +428,7 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
         Bx[i] = rhs[i];
 
     cholmod_factor *L = cholmod_analyze(A, cm);
-
     cholmod_factorize(A, L, cm);
-
     Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
 
     double* Xx = (double*)Xcholmod->x;
@@ -463,7 +438,6 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
     }
 
     // NOW, DIRICHLET SOLVE ////////////////////////////////////////////////////
-
     clock_t dirichletTime = clock();
 
     cholmod_dense *boundaryRHS = cholmod_zeros(2*numVertices, 1, cSparse.xtype, cm);
@@ -523,21 +497,19 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
     cSparse.packed = TRUE;
     A = &cSparse;
 
-    //cholmod_factor *L2 = cholmod_analyze(A, cm);
     cholmod_factorize(A, L2, cm);
     cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
     Xx = (double*)Xcholmod2->x; // UNCOMMENT TO RESTORE NON-BAD SOLVE
 
     qWarning("Dirichlet time: %g", (clock()-dirichletTime)/(double)CLOCKS_PER_SEC);
 
-    ////////////////////////////////////////////////////////////////////////////
-
+    ///////////////////////////////////////////////////////////////////////////
     // Try complex number trick /////
-
     // This log spiral implementation is slow and double-counts edges -- eventually we can make it
     // faster and parallelize
 
     newPoints.resize(numVertices);
+    vector<double> counts;
     counts.resize(numVertices);
 
     for (int i = 0; i < numVertices; i++) {
@@ -589,20 +561,16 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
     /////////////////////////////////
 
     vf.resize(numVertices);
-
     if (drawVFMode) {
         for (int i = 0; i < numVertices; i++) vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
     } else {
         for (int i = 0; i < numVertices; i++) {
-            //vertices[i][0] += Xx[i];
-            //vertices[i][1] += Xx[i+numVertices];
             Point2D<double> answer = newPoints[i]/counts[i];
             vertices[i] = Point2D<T>(answer.x,answer.y);
         }
     }
 
     cholmod_free_factor(&L, cm);
-    //cholmod_free_factor(&L2, cm);
     cholmod_free_dense(&Xcholmod, cm);
     cholmod_free_dense(&Xcholmod2, cm);
     cholmod_free_dense(&B, cm);
@@ -620,6 +588,9 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
     if (fps < 30) qWarning("LOW!");
     qWarning();
 }
+
+
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::getP(SimpleSparseMatrix<T> &prod)
@@ -672,6 +643,8 @@ void Model2D<T>::getP(SimpleSparseMatrix<T> &prod)
 
     pCount++;
 }
+
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::replacePoints(const QString &filename)
@@ -730,6 +703,8 @@ void Model2D<T>::replacePoints(const QString &filename)
 
 }
 
+/******************************************************************************************************************************/
+
 template<class T>
 void Model2D<T>::saveVertices(ofstream& outfile, const QString &filename)
 {
@@ -748,6 +723,8 @@ void Model2D<T>::saveVertices(ofstream& outfile, const QString &filename)
 	
 }
 
+/******************************************************************************************************************************/
+
 template<class T>
 void Model2D<T>::saveTextureUVs(ofstream& outfile, const QString &filename)
 {
@@ -758,6 +735,8 @@ void Model2D<T>::saveTextureUVs(ofstream& outfile, const QString &filename)
 		if (modelType == 2 && mtlFile != "") outfile << "usemtl Explorer_Default" << endl;
 	}
 }
+
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::saveFaces(ofstream& outfile, const QString &filename)
@@ -776,6 +755,7 @@ void Model2D<T>::saveFaces(ofstream& outfile, const QString &filename)
     
 }
 
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, Point2D<T> p)
@@ -806,6 +786,8 @@ void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, 
         glVertex2f(p[0]+s,p[1]-s);
     glEnd(/*GL_QUADS*/);
 }
+
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T height, int v)
@@ -867,6 +849,8 @@ void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T 
         glColor3f(1,0,0);
     }
 }
+
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::render(T left,T bottom,  T meshWidth, T width, T height)
@@ -967,6 +951,8 @@ int Model2D<T>::getClosestVertex(Point2D<T> point, T dist)
     return closest;
 }
 
+/******************************************************************************************************************************/
+
 template<class T>
 void Model2D<T>::copyPositions(Model2D<T>& m)
 {
@@ -996,6 +982,8 @@ void Model2D<T>::reuseVF()
 	}
 }
 
+/******************************************************************************************************************************/
+
 template<class T>
 void Model2D<T>::addUndoAction(vector<int>& indices,
 		vector<Vector2D<T> >& displacements, T alpha)
@@ -1017,6 +1005,9 @@ void Model2D<T>::addUndoAction(vector<int>& indices,
 	undoAlpha[undoIndex] = alpha;
 }
 
+/******************************************************************************************************************************/
+
+
 template<class T>
 void Model2D<T>::redoDeform(vector<vector<int> >& logIndices,
 		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas)
@@ -1031,6 +1022,7 @@ void Model2D<T>::redoDeform(vector<vector<int> >& logIndices,
 	logAlphas.push_back(undoAlpha[undoIndex]);
 }
 
+/******************************************************************************************************************************/
 
 template<class T>
 void Model2D<T>::undoDeform(vector<vector<int> >& logIndices,

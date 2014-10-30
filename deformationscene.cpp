@@ -11,6 +11,8 @@
 using namespace std;
 #include <stdio.h>
 
+
+/******************************************************************************************************************************/
 DeformationScene::DeformationScene(QGLWidget *w) :
 			model(NULL), origModel(NULL), selectedIndex(-1), alpha(.5), brush(10), wireframe(0), glWidget(w)
 {
@@ -120,6 +122,8 @@ DeformationScene::DeformationScene(QGLWidget *w) :
     }
 }
 
+/******************************************************************************************************************************/
+
 QDialog *DeformationScene::createDialog(const QString &windowTitle) const
 {
     QDialog *dialog = new QDialog(0, Qt::CustomizeWindowHint | Qt::WindowTitleHint);
@@ -132,6 +136,8 @@ QDialog *DeformationScene::createDialog(const QString &windowTitle) const
     return dialog;
 }
 
+/******************************************************************************************************************************/
+
 void DeformationScene::undoModel()
 {
 	if ( !model) return;
@@ -139,12 +145,15 @@ void DeformationScene::undoModel()
 	glWidget->repaint();
 }
 
+
 void DeformationScene::redoModel()
 {
 	if ( !model) return;
 	model->redoDeform(logIndices,logDisplacements,logAlphas);
 	glWidget->repaint();
 }
+
+/******************************************************************************************************************************/
 
 void DeformationScene::loadImage()
 {
@@ -200,7 +209,7 @@ void DeformationScene::loadImage()
 		}
 	}
 
-	qWarning("\n#vertices: %d, #segments: %d", V.size(), E.size()); 
+	qWarning("\n#vertices: %d, #segments: %d", (int)V.size(), (int)E.size());
 
 	ofstream outfile("temp.poly");
 	//vertices
@@ -221,19 +230,6 @@ void DeformationScene::loadImage()
 
 }
 
-
-void DeformationScene::resetPoints()
-{
-    QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
-
-    if (filename == "") return;
-
-    if (model) model->replacePoints(filename);
-
-	modelWidth = model->getWidth() * 200;
-	modelLocation = QPointF(width()/2, height()/2);
-    glWidget->repaint();
-}
 
 void DeformationScene::saveModel()
 {
@@ -294,6 +290,24 @@ void DeformationScene::loadModel()
     glWidget->repaint();
 }
 
+
+/******************************************************************************************************************************/
+
+void DeformationScene::resetPoints()
+{
+    QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
+
+    if (filename == "") return;
+
+    if (model) model->replacePoints(filename);
+
+	modelWidth = model->getWidth() * 200;
+	modelLocation = QPointF(width()/2, height()/2);
+    glWidget->repaint();
+}
+
+
+
 void DeformationScene::saveLog()
 {
     QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.txt"));
@@ -347,6 +361,9 @@ void DeformationScene::runLog()
     qWarning("DONE WITH RUN");
 }
 
+/******************************************************************************************************************************/
+
+
 void DeformationScene::chooseTexture()
 {
     glWidget->makeCurrent();
@@ -374,6 +391,8 @@ void DeformationScene::removeTexture()
     glWidget->repaint();
 }
 
+/******************************************************************************************************************************/
+
 void DeformationScene::modeChanged(bool m)
 {
     if (!origModel) return;
@@ -389,6 +408,7 @@ void DeformationScene::modeChanged(bool m)
         constraintVerts[0].resize(0);
     }
 }
+
 
 void DeformationScene::keyReleaseEvent(QKeyEvent *e)
 {
@@ -440,6 +460,8 @@ void DeformationScene::keyPressEvent(QKeyEvent *e)
     	QGraphicsScene::keyPressEvent(e);
     }
 }
+
+/******************************************************************************************************************************/
 
 void DeformationScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
@@ -576,6 +598,9 @@ void DeformationScene::wheelEvent(QGraphicsSceneWheelEvent *event)
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
 }
 
+/******************************************************************************************************************************/
+
+
 void DeformationScene::drawBackground(QPainter *painter, const QRectF &)
 {
 	glWidget->makeCurrent();
@@ -616,6 +641,8 @@ void DeformationScene::drawBackground(QPainter *painter, const QRectF &)
                 model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),oldVertices[i]);
     }
 }
+
+/******************************************************************************************************************************/
 
 
 int DeformationScene::closestIndex(QPointF pos)
