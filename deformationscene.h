@@ -93,7 +93,7 @@ private:
 	QLabel *meshLabel;
     QCheckBox *multitouchMode, *drawVectorField, *pinMode;
 
-    Model2D<double> *model, *origModel;
+    Model2D *model, *origModel;
     QPointF modelLocation;
     float modelWidth;
     int selectedIndex;

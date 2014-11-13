@@ -1,14 +1,14 @@
 #ifndef MODEL2D_H
 #define MODEL2D_H
 
+#include "vector2d.h"
+#include "cholmod_matrix.h"
+#include "Utils.h"
 #include <QString>
 #include <set>
 #include <vector>
 #include <limits>
 using namespace std;
-
-#include "vector2d.h"
-#include "simplesparsematrix.h"
 
 extern "C" {
 	#include <amd.h>
@@ -16,7 +16,6 @@ extern "C" {
 	#include <camd.h>
 	#include <cholmod.h>
 }
-
 #define UNDOSIZE 20
 
 /******************************************************************************************************************************/
@@ -45,123 +44,96 @@ if (p != (type *) NULL) \
 }
 
 /******************************************************************************************************************************/
-struct Face {
-    int f[3];
-    int &operator[](int i) {return f[i];}
-};
-
-
-/******************************************************************************************************************************/
-
-template <class T>
-struct LogSpiral {
-    Point2D<T> p0;
-    T c;
-    T alpha;
-
-    Point2D<T> evaluate(Point2D<T> p, T t)
-    {
-        T exponential = exp(c*t);
-        Vector2D<T> diff = p-p0;
-        T cosine = cos(t*alpha);
-        T sine = sin(t*alpha);
-
-        Vector2D<T> rotated(cosine*diff.x-sine*diff.y,sine*diff.x+cosine*diff.y);
-        return p0 + exponential * rotated;
-    }
-};
-
-/******************************************************************************************************************************/
-
-template<class T>
 class Model2D
 {
 public:
     Model2D(const QString &filename);
-    Model2D(Model2D<T> &m);
+    Model2D(Model2D &m);
     ~Model2D();
 
     void initialize();
-    void displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha);
-	void copyPositions(Model2D<T>& m);
+    void calculateModelStatistics();
+    void displaceMesh(vector<int> &indices, vector< Vector2D<double> > &displacements, double alpha);
+	void copyPositions(Model2D& m);
 	void reuseVF();
-    void getP(SimpleSparseMatrix<T> &prod);
+    void getP(CholmodSparseMatrix &prod);
 
-
-    T getMinX() { return minX; }
-    T getMaxX() { return maxX; }
-    T getMinY() { return minY; }
-    T getMaxY() { return maxY; }
-    T getWidth() { return maxX - minX; }
-    T getHeight() { return maxY - minY; }
+    double getMinX() { return minX; }
+    double getMaxX() { return maxX; }
+    double getMinY() { return minY; }
+    double getMaxY() { return maxY; }
+    double getWidth() { return maxX - minX; }
+    double getHeight() { return maxY - minY; }
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
-    int getClosestVertex(Point2D<T> point, T dist);
+    int getClosestVertex(Point2D<double> point, double dist);
 
 	/* rendering */
-	void renderVertex(T left, T bottom, T meshWidth, T width, T height, Point2D<T> p);
-    void render(T left, T bottom, T meshWidth, T width, T height);
-    void renderSelectedVertex(T left, T bottom, T meshWidth, T width, T height, int v);
+	void renderVertex(double left, double bottom, double meshWidth, double width, double height, Point2D<double> p);
+    void render(double left, double bottom, double meshWidth, double width, double height);
+    void renderSelectedVertex(double left, double bottom, double meshWidth, double width, double height, int v);
 	void changeDrawMode(bool m);
 	void setWireframeTrans(float m);
 
 	/* undo and redo code*/
 	void addUndoAction(vector<int>& indices,
-			vector<Vector2D<T> >& displacements, T alpha);
+			vector<Vector2D<double> >& displacements, double alpha);
 	void redoDeform(vector<vector<int> >& logIndices,
-			vector<vector<Vector2D<T> > >& logDisplacements,
-			vector<T>& logAlphas);
+			vector<vector<Vector2D<double> > >& logDisplacements,
+			vector<double>& logAlphas);
 	void undoDeform(vector<vector<int> >& logIndices,
-			vector<vector<Vector2D<T> > >& logDisplacements,
-			vector<T>& logAlphas);
+			vector<vector<Vector2D<double> > >& logDisplacements,
+			vector<double>& logAlphas);
 
 	/* save and load code */
     void replacePoints(const QString &filename);
     void saveVertices(ofstream& outfile, const QString &filename);
 	void saveTextureUVs(ofstream& outfile, const QString &filename);
 	void saveFaces(ofstream& outfile, const QString &filename);
+	void loadFromFile(const QString &filename);
 
 private:
+
 	/* model information */
-    int modelType; //1 - off, 2 - obj
-	string mtlFile;
-
-	vector< Point2D<T> > vertices;
-    vector< Point2D<T> > texCoords;
+	vector< Point2D<double> > vertices;
+    vector< Point2D<double> > texCoords;
     vector<Face> faces;
+    set<int> boundaryVertices;
 
+    int numVertices, numFaces;
+    double minX, maxX, minY, maxY;
+
+    /* vector field of last transformation  */
     vector< Vector2D<double> > vf;
     vector< Vector2D<double> > vfOrig;
 
-    vector< set<int> > neighbors;
-    set<int> boundaryVertices;
+    /* P matrix and its temp data */
+    CholmodSparseMatrix P;
+    CholmodSparseMatrix Pcopy;
+    CholmodSparseMatrix P2;
+    CholmodSparseMatrix dx2;
+    CholmodSparseMatrix dy2;
+    CholmodSparseMatrix stacked;
 
-    /* statistic */
-    int numVertices, numFaces;
-    T minX, maxX, minY, maxY;
-    int transCount, pCount;
+    /* pre-factor*/
+    cholmod_factor *L2;
+
+    /* temp data for */
+    vector< Point2D<double> > newPoints;
+    vector<double> counts;
 
 	/*undo stuff*/
-	vector< Point2D<T> > undoVertices[UNDOSIZE]; //saves vertices of different deforms
+	vector< Point2D<double> > undoVertices[UNDOSIZE]; //saves vertices of different deforms
 	int undoIndex; //points to current deform on undoArray
 	vector<int> undoIndices[UNDOSIZE];
-	vector< Vector2D<T> > undoDisplacements[UNDOSIZE];
-	T undoAlpha[UNDOSIZE];
+	vector< Vector2D<double> > undoDisplacements[UNDOSIZE];
+	double undoAlpha[UNDOSIZE];
 
 	/* settings */
     bool drawVFMode;
 	float wireframeTrans;
 
-    // we don't want to keep malloc'ing these things!
-    double *Ax, *Lx, *Y, *D, *X;
-    LDL_int *Ap, *Parent, *Flag, *Ai, *Lp, *Lnz, *Li, *Pattern, *Pfw, *Pinv;
-    SimpleSparseMatrix<T> covariance,P2,dx2,dy2,stacked,P,trans,Pcopy;
-
-    cholmod_sparse cSparse, *A;
-    std::vector<T> rhs;
     cholmod_common Common, *cm;
-    cholmod_factor *L2;
-    vector< Point2D<double> > newPoints;
 };
 
 /******************************************************************************************************************************/

@@ -1,4 +1,5 @@
 #include "model2d.h"
+#include "Utils.h"
 #include <ctime>
 #include <cmath>
 #include <fstream>
@@ -16,7 +17,27 @@ using namespace std;
 #undef min
 #undef max
 
-void error_handler(int status, char *file, int line,  char *message) {
+/******************************************************************************************************************************/
+struct LogSpiral
+{
+    Point2D<double> p0;
+    double c;
+    double alpha;
+
+    Point2D<double> evaluate(Point2D<double> p, double t)
+    {
+    	double exponential = exp(c*t);
+        Vector2D<double> diff = p-p0;
+        double cosine = cos(t*alpha);
+        double sine = sin(t*alpha);
+        Vector2D<double> rotated(cosine*diff.x-sine*diff.y,sine*diff.x+cosine*diff.y);
+        return p0 + exponential * rotated;
+    }
+};
+
+/******************************************************************************************************************************/
+void error_handler(int status, char *file, int line,  char *message)
+{
     qWarning("CHOLMOD error status %d", status);
     qWarning("File: %s", file);
     qWarning("Line: %d", line);
@@ -24,105 +45,17 @@ void error_handler(int status, char *file, int line,  char *message) {
 }
 
 /******************************************************************************************************************************/
-template<class T>
-Model2D<T>::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0)
+
+Model2D::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0)
 {
-    qWarning("File constructor");
-	if (filename.endsWith("obj")) //handle obj file
-	{
-		modelType = 2;
-		mtlFile = "";
-		numVertices = 0;
-		numFaces = 0;
-		ifstream infile(filename.toAscii());
-		bool is_vt = false;
-		T x,y,z;
-		string a,b,c;
-
-		while (!infile.eof())
-		{
-			// get line
-			string curLine;
-			getline(infile, curLine);
-
-			// read type of the line
-			istringstream issLine(curLine);
-			string linetype;
-			issLine >> linetype;
-
-			if (linetype == "v")
-			{
-				numVertices++;
-				issLine >> x >> y >> z;
-				Point2D<T> p(x,y);
-				vertices.push_back(p);
-				continue;
-			}
-			if (linetype == "vt")
-			{
-				is_vt = true;
-				issLine >> x >> y;
-				Point2D<T> p(x,y);
-				texCoords.push_back(p);
-				continue;
-			}
-			if (linetype == "f")
-			{
-				numFaces++;
-				issLine >> a >> b >> c;
-				char* a_dup = strdup(a.c_str()); char* b_dup = strdup(b.c_str()); char* c_dup = strdup(c.c_str());
-				char* aa = strtok(a_dup,"/");
-				char* bb = strtok(b_dup,"/");
-				char* cc = strtok(c_dup,"/");
-				Face fa;
-				fa.f[0] = atoi(aa)-1; fa.f[1] = atoi(bb)-1; fa.f[2] = atoi(cc)-1;
-				faces.push_back(fa);
-				continue;
-			}
-			if (linetype == "#") continue;
-			if (linetype == "mtllib") issLine >> mtlFile; //supported mtl: stores first line indicating needed mtl for future saved obj models
-		}
-		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
-		if (is_vt == false)
-		{
-			texCoords.resize(numVertices);
-			for (int i = 0; i < numVertices; i++)
-			texCoords[i] = vertices[i];
-		}
-	}
-
-    if (filename.endsWith("off")) //handle off file
-	{
-		modelType = 1;
-		ifstream infile(filename.toAscii());
-		string temp;
-		infile >> temp;
-
-		infile >> numVertices >> numFaces >> temp;
-
-		qWarning("Mesh:  %d vertices, %d faces", numVertices, numFaces);
-
-		vertices.resize(numVertices);
-		T z;
-		for (int i = 0; i < numVertices; i++)
-			infile >> vertices[i].x >> vertices[i].y >> z;
-
-		texCoords.resize(numVertices);
-		for (int i = 0; i < numVertices; i++)
-			texCoords[i] = vertices[i];
-
-		int three;
-		faces.resize(numFaces);
-		for (int i = 0; i < numFaces; i++)
-			infile >> three >> faces[i][0] >> faces[i][1] >> faces[i][2];
-
-	}
+	loadFromFile(filename);
+    calculateModelStatistics();
     initialize();
 }
 
 /******************************************************************************************************************************/
-template<class T>
-Model2D<T>::Model2D(Model2D<T> &m)
+
+Model2D::Model2D(Model2D &m)
 {
     qWarning("Copy constructor");
     numVertices = m.numVertices;
@@ -132,45 +65,28 @@ Model2D<T>::Model2D(Model2D<T> &m)
     faces = m.faces;
 	wireframeTrans = m.wireframeTrans;
 	drawVFMode = m.drawVFMode;
+
+	calculateModelStatistics();
     initialize();
 }
 /******************************************************************************************************************************/
-template<class T>
-Model2D<T>::~Model2D() {
-    FREE_MEMORY(Ax,double);
-    FREE_MEMORY(Parent, LDL_int);
-    FREE_MEMORY(Flag, LDL_int);
-    FREE_MEMORY(Lp, LDL_int);
-    FREE_MEMORY(Lnz, LDL_int);
-    FREE_MEMORY(D, double);
-    FREE_MEMORY(Pattern, LDL_int);
-    FREE_MEMORY(Y, double);
-    FREE_MEMORY(X, double);
-    FREE_MEMORY(Pfw, LDL_int);
-    FREE_MEMORY(Pinv, LDL_int);
-    FREE_MEMORY(Li, LDL_int);
-    FREE_MEMORY(Lx, double);
+Model2D::~Model2D()
+{
     cholmod_free_factor(&L2, cm);
     cholmod_finish(cm);
 }
 /******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::initialize()
+void Model2D::calculateModelStatistics()
 {
-    transCount = 0;
-    pCount = 0;
+    minX = numeric_limits<double>::max();
+    maxX = numeric_limits<double>::min();
+    minY = numeric_limits<double>::max();
+    maxY = numeric_limits<double>::min();
 
-    minX = numeric_limits<T>::max();
-    maxX = numeric_limits<T>::min();
-    minY = numeric_limits<T>::max();
-    maxY = numeric_limits<T>::min();
+    double sumX = 0.0;
+    double sumY = 0.0;
 
-	T sumX = 0.0;
-	T sumY = 0.0;
-
-    for (int i = 0; i < numVertices; i++)
-    {
+    for (int i = 0; i < numVertices; i++) {
         minX = min(minX, vertices[i].x);
         minY = min(minY, vertices[i].y);
         maxX = max(maxX, vertices[i].x);
@@ -178,13 +94,13 @@ void Model2D<T>::initialize()
 		sumX = sumX + vertices[i].x;
 		sumY = sumY + vertices[i].y;
     }
+
 	qWarning("minX  = %f , minY = %f, maxX = %f , maxY = %f", minX,minY,maxX,maxY);
 
-	T avgX = sumX/numVertices;
-	T avgY = sumY/numVertices;
+	double avgX = sumX/numVertices;
+	double avgY = sumY/numVertices;
 
-	for (int i=0; i<numVertices; i++)
-	{
+	for (int i=0; i<numVertices; i++) {
 		vertices[i].x = vertices[i].x - avgX;
 		vertices[i].y = vertices[i].y - avgY;
 	}
@@ -192,70 +108,12 @@ void Model2D<T>::initialize()
 	undoIndex = 0; //save for undo
 	undoVertices[0] = vertices; //save for undo
 
-    getP(P);
-
-    // do a second time for timing with memory allocated
-    clock_t t = clock();
-    P.transpose(trans);
-    qWarning("Transpose time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
-
-    t = clock();
-    if (transCount == 0)
-        trans.multiply(P, covariance);
-    else
-        trans.parallelMultiply(P, covariance);
-
-    transCount++;
-    qWarning("Covariance product time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
-
-
-    int nz = covariance.getNumNonzero();
-    int n = 2*numVertices;
-    ALLOC_MEMORY(Ax,double,nz);
-    ALLOC_MEMORY(Parent, LDL_int, n);
-    ALLOC_MEMORY(Flag, LDL_int, n);
-    ALLOC_MEMORY(Lp, LDL_int, n+1);
-    ALLOC_MEMORY(Lnz, LDL_int, n);
-    ALLOC_MEMORY(D, double, n);
-    ALLOC_MEMORY(Pattern, LDL_int, n) ;
-    ALLOC_MEMORY(Y, double, n);
-    ALLOC_MEMORY(X, double, n);
-    ALLOC_MEMORY(Pfw, LDL_int, n);
-    ALLOC_MEMORY(Pinv, LDL_int, n);
-    Li = NULL;
-    Lx = NULL;
-
-    Ai = covariance.getAi();
-    Ap = covariance.getAp();
-
-    qWarning("Computing permutation...");
-    t = clock();
-    double Info[AMD_INFO];
-    if (amd_order (n, Ap, Ai, Pfw, (double *) NULL, Info) < AMD_OK) {
-        qWarning("call to AMD failed\n");
-        exit(1);
-    }
-    amd_control((double*)NULL);
-    amd_info(Info);
-
-    qWarning("AMD time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
-
-    qWarning("Doing symbolic ldl...");
-    t = clock();
-    ldl_symbolic (2*numVertices, Ap, Ai, Lp, Parent, Lnz, Flag, Pfw, Pinv);
-    qWarning("Symbolic time: %g", (clock()-t)/(double)CLOCKS_PER_SEC);
-
-    neighbors.resize(numVertices);
     map< int , map<int,int> > edgeCount;
     for (int i = 0; i < numFaces; i++)
     {
-        int a = faces[i][0], b = faces[i][1], c = faces[i][2];
-        neighbors[a].insert(b);
-        neighbors[a].insert(c);
-        neighbors[b].insert(a);
-        neighbors[b].insert(c);
-        neighbors[c].insert(a);
-        neighbors[c].insert(b);
+        int a = faces[i][0];
+        int b = faces[i][1];
+        int c = faces[i][2];
         edgeCount[a][b]++;
         edgeCount[b][a]++;
         edgeCount[a][c]++;
@@ -280,236 +138,246 @@ void Model2D<T>::initialize()
             boundaryVertices.insert(c);
         }
     }
+}
 
+/******************************************************************************************************************************/
+void Model2D::initialize()
+{
     cm = &Common;
-    cholmod_start(cm);
-    cm->error_handler = error_handler;
+    cholmod_start(&Common);
+    Common.error_handler = error_handler;
 
-    /////////////////////////////////////////////////////////
+    getP(P);
+
+    CholmodSparseMatrix covariance;
+    CholmodSparseMatrix trans;
+
+    /**********************************************************************/
+    TimeMeasurment t;
+    P.transpose(trans);
+    qWarning("Transpose time: %i msec", t.measure_msec());
+
+    /**********************************************************************/
+    trans.multiply(P, covariance);
+    qWarning("Covariance product time: %i msec", t.measure_msec());
+
+    /**********************************************************************/
+    qWarning("Computing permutation...");
+
+    int nz = covariance.getNumNonzero();
+    int n = 2*numVertices;
+    LDL_int  *Parent, *Flag,  *Lp, *Lnz, *Pfw, *Pinv;
+    ALLOC_MEMORY(Parent, LDL_int, n);
+    ALLOC_MEMORY(Flag, LDL_int, n);
+    ALLOC_MEMORY(Lp, LDL_int, n+1);
+    ALLOC_MEMORY(Lnz, LDL_int, n);
+    ALLOC_MEMORY(Pfw, LDL_int, n);
+    ALLOC_MEMORY(Pinv, LDL_int, n);
+    LDL_int *Ap = covariance.getAp();
+
+    double Info[AMD_INFO];
+    if (amd_order (n, Ap, covariance.getAi(), Pfw, (double *) NULL, Info) < AMD_OK) {
+        qWarning("call to AMD failed\n");
+        exit(1);
+    }
+    amd_control((double*)NULL);
+    amd_info(Info);
+    qWarning("AMD time: %i msec", t.measure_msec());
+    /**********************************************************************/
+
+    qWarning("Doing symbolic ldl...");
+    ldl_symbolic (2*numVertices, Ap, covariance.getAi(), Lp, Parent, Lnz, Flag, Pfw, Pinv);
+    qWarning("Symbolic time: %i", t.measure_msec());
+
+    /**********************************************************************/
     // Prefactor
 
-    cholmod_dense *boundaryRHS = cholmod_zeros(2*numVertices, 1, CHOLMOD_REAL, cm);
-    double *boundaryX = (double*)boundaryRHS->x;
-
-    for (int i = 0; i < 2*numVertices; i++)
-        boundaryX[i] = 0;
+    CholmodVector boundaryRHS(2*numVertices,cm);
 
     // for fun constrain boundary to (1,1)
     for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
-        boundaryX[*it] = 1;
-        boundaryX[*it + numVertices] = 1;
+    	boundaryRHS[*it] = 1;
+    	boundaryRHS[*it + numVertices] = 1;
     }
 
-    pCount = 0;
     getP(Pcopy);
-    pCount = 0;
 
     double *rhsMove = (double*)malloc(Pcopy.numRows()*sizeof(double));
-
-    Pcopy.multiply(boundaryX, rhsMove);
-
+    Pcopy.multiply(boundaryRHS.getValues(), rhsMove);
     for (int i = 0; i < Pcopy.numRows(); i++)
         rhsMove[i] *= -1;
 
     Pcopy.zeroOutColumns(boundaryVertices);
     Pcopy.zeroOutColumns(boundaryVertices, numVertices);
 
-    cholmod_dense *B2 = cholmod_zeros(Pcopy.numCols(), 1, CHOLMOD_REAL, cm);
-    double *Bx = (double*)B2->x;
-    for (int i = 0; i < Pcopy.numCols(); i++) Bx[i] = 0;
+    CholmodVector B2(Pcopy.numCols(),cm);
 
-    Pcopy.transposeMultiply(rhsMove,Bx);
-
+    Pcopy.transposeMultiply(rhsMove,B2.getValues());
     vector<int> constrained;
     for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
         int bv = *it;
         constrained.push_back(*it);
         constrained.push_back(*it+numVertices);
-        Bx[bv] += 1;
-        Bx[bv+numVertices] += 1;
+        B2[bv] += 1;
+        B2[bv+numVertices] += 1;
     }
 
     Pcopy.addConstraint(constrained,1);
 
-    nz = Pcopy.getNumNonzero();
-    T *AxTemp = Pcopy.getAx();
-    REALLOC_MEMORY(Ax, double, nz);
-    for (int i = 0; i < nz; i++) Ax[i] = (double)AxTemp[i];
-    Ai = Pcopy.getAi();
-    Ap = Pcopy.getAp();
+    cholmod_sparse cSparse;
+    Pcopy.getCholmodMatrix(cSparse);
+    L2 = cholmod_analyze(&cSparse, cm);
 
-    cSparse.nrow = Pcopy.numCols(); // P is row-major, so cholmod thinks it's P*
-    cSparse.ncol = Pcopy.numRows();
-    cSparse.nzmax = Pcopy.getNumNonzero();
-    cSparse.p = Ap;
-    cSparse.i = Ai;
-    cSparse.x = Ax;
-    cSparse.stype = 0;
-    cSparse.itype = CHOLMOD_INT;
-    cSparse.xtype = CHOLMOD_REAL;
-    cSparse.sorted = 1;
-    cSparse.packed = TRUE;
-    A = &cSparse;
+    qWarning("Prefactor time: %i", t.measure_msec());
 
-    L2 = cholmod_analyze(A, cm);
-
-    cholmod_free_dense(&B2, cm);
-    cholmod_free_dense(&boundaryRHS, cm);
     free(rhsMove);
+    FREE_MEMORY(Parent, LDL_int);
+    FREE_MEMORY(Flag, LDL_int);
+    FREE_MEMORY(Lp, LDL_int);
+    FREE_MEMORY(Lnz, LDL_int);
+    FREE_MEMORY(Pfw, LDL_int);
+    FREE_MEMORY(Pinv, LDL_int);
 }
-/******************************************************************************************************************************/
 
-template<class T>
-void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displacements, T alpha)
+/******************************************************************************************************************************/
+void Model2D::getP(CholmodSparseMatrix &prod)
 {
-    if (indices.size() == 1) { // when only one vertex is constrained, move parallel
+    P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
+    dx2.reshape(numFaces, numVertices, 3*numFaces);
+    dy2.reshape(numFaces, numVertices, 3*numFaces);
+
+    // examine matrix push_back when in right order
+    P2.startMatrixFill();
+    dx2.startMatrixFill();
+    dy2.startMatrixFill();
+
+    for (int f = 0; f < numFaces; f++)
+    {
+        int i = faces[f][0], j = faces[f][1], k = faces[f][2];
+
+        int temp;
+        if (i > j) { temp = i; i = j; j = temp; }
+        if (i > k) { temp = i; i = k; k = temp; }
+        if (j > k) { temp = j; j = k; k = temp; }
+
+        Vector2D<double> d1 = vertices[i] - vertices[k];
+        Vector2D<double> d2 = vertices[j] - vertices[i];
+
+        double area = fabs(d1[1]*d2[0] - d1[0]*d2[1]);
+
+        Vector2D<double> c1(-d1[1]/area,d1[0]/area);
+        Vector2D<double> c2(-d2[1]/area,d2[0]/area);
+
+        dx2.addElement(f,i, -c1[0] - c2[0]);
+        dx2.addElement(f,j, c1[0]);
+        dx2.addElement(f,k, c2[0]);
+
+        dy2.addElement(f,i, -c1[1] - c2[1]);
+        dy2.addElement(f,j, c1[1]);
+        dy2.addElement(f,k, c2[1]);
+
+        P2.addElement(3*f,   f, 2);
+        P2.addElement(3*f+1, f+numFaces, SQRT_2);
+        P2.addElement(3*f+1, f+2*numFaces, SQRT_2);
+        P2.addElement(3*f+2, f+3*numFaces, 2);
+    }
+
+    int colShift[4] = {0, 0, numVertices, numVertices};
+
+    CholmodSparseMatrix *list[4] = {&dx2, &dy2, &dx2, &dy2};
+
+    stacked.stack(list, 4, colShift);
+    P2.multiply(stacked, prod);
+}
+
+/******************************************************************************************************************************/
+void Model2D::displaceMesh(vector<int> &indices, vector< Vector2D<double> > &displacements, double alpha)
+{
+    if (indices.size() == 1) {
+    	// when only one vertex is constrained, move parallel
         for (int i = 0; i < numVertices; i++) {
             vertices[i][0] += displacements[0].x;
             vertices[i][1] += displacements[0].y;
         }
         return;
     }
-
-    time_t time1 = clock();
+    TimeMeasurment total,t;
     getP(P);
     Pcopy.copy(P);
-    double constructTime = (clock() - time1)/(double)CLOCKS_PER_SEC;
-    qWarning("Construct P time: %g", constructTime);
+    qWarning("Construct P time:      %i msec", t.measure_msec());
 
-    time_t total_time = clock();
-    alpha = alpha / (2*indices.size()) * P.infinityNorm();
-
-    rhs.resize(2*numVertices);
-
-    for (int i = 0; i < 2*numVertices; i++) rhs[i] = 0;
-
-    for (unsigned int i = 0; i < indices.size(); i++) {
-        rhs[ indices[i] ] = displacements[i][0]*alpha*alpha;
-        rhs[ indices[i]+numVertices ] = displacements[i][1]*alpha*alpha;
-    }
-
+    /*++++++++++++++++++++++++++++++++++++++++++++++*/
     vector<int> indices2;
-    for (unsigned int i = 0; i < indices.size(); i++) {
+    for (unsigned int i = 0; i < indices.size(); i++)
+    {
         indices2.push_back(indices[i]);
         indices2.push_back(indices[i] + numVertices);
     }
 
+    alpha = alpha / (2*indices.size()) * P.infinityNorm();
     P.addConstraint(indices2, alpha);
-
-    int nz = P.getNumNonzero();
-    T *AxTemp = P.getAx();
-    REALLOC_MEMORY(Ax, double, nz);
-    for (int i = 0; i < nz; i++) Ax[i] = (double)AxTemp[i];
-    Ai = P.getAi();
-    Ap = P.getAp();
-
     cholmod_sparse cSparse;
-    cSparse.nrow = P.numCols(); // P is row-major, so cholmod thinks it's P*
-    cSparse.ncol = P.numRows();
-    cSparse.nzmax = P.getNumNonzero();
-    cSparse.p = Ap;
-    cSparse.i = Ai;
-    cSparse.x = Ax;
-    cSparse.stype = 0;
-    cSparse.itype = CHOLMOD_INT;
-    cSparse.xtype = CHOLMOD_REAL;
-    cSparse.sorted = 1;
-    cSparse.packed = TRUE;
-    cholmod_sparse *A = &cSparse;
+    P.getCholmodMatrix(cSparse);
 
-    // Try cholmod!
-    cholmod_dense *Xcholmod, *B;
-    int n = cSparse.nrow;
-
-    B = cholmod_zeros(n, 1, cSparse.xtype, cm);
-    double* Bx = (double*)B->x;
-
-    for (int i = 0; i < n; i++)
-        Bx[i] = rhs[i];
-
-    cholmod_factor *L = cholmod_analyze(A, cm);
-    cholmod_factorize(A, L, cm);
-    Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
-
-    double* Xx = (double*)Xcholmod->x;
-    if (drawVFMode) {
-        vfOrig.resize(numVertices);
-        for (int i = 0; i < numVertices; i++) vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+    CholmodVector B = CholmodVector(cSparse.nrow,cm);
+    for (unsigned int i = 0; i < indices.size(); i++)
+    {
+    	B[indices[i]] 			   = displacements[i][0]*alpha*alpha;
+    	B[indices[i]+numVertices]  = displacements[i][1]*alpha*alpha;
     }
 
-    // NOW, DIRICHLET SOLVE ////////////////////////////////////////////////////
-    clock_t dirichletTime = clock();
+    cholmod_factor *L = cholmod_analyze(&cSparse, cm);
+    cholmod_factorize(&cSparse, L, cm);
+    cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
+    double* Xx = (double*)Xcholmod->x;
 
-    cholmod_dense *boundaryRHS = cholmod_zeros(2*numVertices, 1, cSparse.xtype, cm);
-    double *boundaryX = (double*)boundaryRHS->x;
+    if (drawVFMode) {
+        vfOrig.resize(numVertices);
+        for (int i = 0; i < numVertices; i++)
+        	vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+    }
 
-    for (int i = 0; i < 2*numVertices; i++)
-        boundaryX[i] = 0;
+    qWarning("Solve time:            %i msec", t.measure_msec());
 
-    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
-        boundaryX[*it] = Xx[*it];
-        boundaryX[*it + numVertices] = Xx[*it + numVertices];
+    /*+++++DIRICHLET SOLVE +++++++++++++++++++++++++++++++++++++++++*/
+    CholmodVector boundaryRHS = CholmodVector(2*numVertices,cm);
+    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
+    {
+    	boundaryRHS[*it] = Xx[*it];
+    	boundaryRHS[*it + numVertices] = Xx[*it + numVertices];
     }
 
     double *rhsMove = (double*)malloc(Pcopy.numRows()*sizeof(double));
-    Pcopy.multiply(boundaryX, rhsMove);
-
+    Pcopy.multiply(boundaryRHS.getValues(), rhsMove);
     for (int i = 0; i < Pcopy.numRows(); i++)
         rhsMove[i] *= -1;
 
-    Pcopy.zeroOutColumns(boundaryVertices);
+    Pcopy.zeroOutColumns(boundaryVertices, 0);
     Pcopy.zeroOutColumns(boundaryVertices, numVertices);
 
-    cholmod_dense *B2 = cholmod_zeros(Pcopy.numCols(), 1, cSparse.xtype, cm);
-    Bx = (double*)B2->x;
-    for (int i = 0; i < Pcopy.numCols(); i++) Bx[i] = 0;
-
-    Pcopy.transposeMultiply(rhsMove,Bx);
+    CholmodVector B2(Pcopy.numCols(), cm);
+    Pcopy.transposeMultiply(rhsMove,B2.getValues());
 
     vector<int> constrained;
-    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
+    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
+    {
         int bv = *it;
         constrained.push_back(*it);
         constrained.push_back(*it+numVertices);
-        Bx[bv] += Xx[bv];
-        Bx[bv+numVertices] += Xx[bv+numVertices];
+        B2[bv] 			   += Xx[bv];
+        B2[bv+numVertices] += Xx[bv+numVertices];
     }
 
     Pcopy.addConstraint(constrained,1);
-
-    nz = Pcopy.getNumNonzero();
-    AxTemp = Pcopy.getAx();
-    REALLOC_MEMORY(Ax, double, nz);
-    for (int i = 0; i < nz; i++) Ax[i] = (double)AxTemp[i];
-    Ai = Pcopy.getAi();
-    Ap = Pcopy.getAp();
-
-    cSparse.nrow = Pcopy.numCols(); // P is row-major, so cholmod thinks it's P*
-    cSparse.ncol = Pcopy.numRows();
-    cSparse.nzmax = Pcopy.getNumNonzero();
-    cSparse.p = Ap;
-    cSparse.i = Ai;
-    cSparse.x = Ax;
-    cSparse.stype = 0;
-    cSparse.itype = CHOLMOD_INT;
-    cSparse.xtype = CHOLMOD_REAL;
-    cSparse.sorted = 1;
-    cSparse.packed = TRUE;
-    A = &cSparse;
-
-    cholmod_factorize(A, L2, cm);
+    Pcopy.getCholmodMatrix(cSparse);
+    cholmod_factorize(&cSparse, L2, cm);
     cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
-    Xx = (double*)Xcholmod2->x; // UNCOMMENT TO RESTORE NON-BAD SOLVE
 
-    qWarning("Dirichlet time: %g", (clock()-dirichletTime)/(double)CLOCKS_PER_SEC);
+    qWarning("Dirichlet time:        %i msec", t.measure_msec());
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Try complex number trick /////
-    // This log spiral implementation is slow and double-counts edges -- eventually we can make it
-    // faster and parallelize
-
+    /*+ LOG spiral +++++++++++++++++++++++++++++++++++++++++++++*/
+    Xx = (double*)Xcholmod2->x;
     newPoints.resize(numVertices);
-    vector<double> counts;
     counts.resize(numVertices);
 
     for (int i = 0; i < numVertices; i++) {
@@ -527,7 +395,6 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
             complex<double> v2(Xx[e2], Xx[e2+numVertices]);
             complex<double> p1(vertices[e1][0], vertices[e1][1]);
             complex<double> p2(vertices[e2][0], vertices[e2][1]);
-
             complex<double> z = (v1-v2)/(p1-p2);
             complex<double> p0 = (p2*v1-p1*v2)/(v1-v2);
 
@@ -537,241 +404,65 @@ void Model2D<T>::displaceMesh(vector<int> &indices, vector< Vector2D<T> > &displ
             Point2D<double> l1(vertices[e1][0], vertices[e1][1]);
             Point2D<double> l2(vertices[e2][0], vertices[e2][1]);
 
-            LogSpiral<double> spiral;
+            LogSpiral spiral;
             spiral.p0 = p;
             spiral.c = c;
             spiral.alpha = alpha;
 
-            Point2D<double> result1 = spiral.evaluate(l1,1);//logSpiral(p,c,alpha,l1,1);
-            Point2D<double> result2 = spiral.evaluate(l2,1);//logSpiral(p,c,alpha,l2,1);
+            Point2D<double> result1 = spiral.evaluate(l1,1);
+            Point2D<double> result2 = spiral.evaluate(l2,1);
 
             // compute cotangent weights
-            Vector2D<T> d1 = vertices[e1] - vertices[vtx];
-            Vector2D<T> d2 = vertices[e2] - vertices[vtx];
+            Vector2D<double> d1 = vertices[e1] - vertices[vtx];
+            Vector2D<double> d2 = vertices[e2] - vertices[vtx];
             double angle = fabs(rotationAngle(d1,d2));
             double cotangent = 1;// / tan(angle);
 
             counts[e1] += cotangent;
             counts[e2] += cotangent;
-
             newPoints[e1] += result1*cotangent;
             newPoints[e2] += result2*cotangent;
-        }
+    }
 
-    /////////////////////////////////
-
+    /*++++++++++++++++++++++++++++++++++++++++++++++*/
     vf.resize(numVertices);
     if (drawVFMode) {
-        for (int i = 0; i < numVertices; i++) vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+        for (int i = 0; i < numVertices; i++)
+        	vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
     } else {
-        for (int i = 0; i < numVertices; i++) {
-            Point2D<double> answer = newPoints[i]/counts[i];
-            vertices[i] = Point2D<T>(answer.x,answer.y);
-        }
+        for (int i = 0; i < numVertices; i++)
+            vertices[i] = newPoints[i] / counts[i];
     }
+
+    qWarning("Log spiral  time:      %i msec", t.measure_msec());
+    /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
     cholmod_free_factor(&L, cm);
     cholmod_free_dense(&Xcholmod, cm);
     cholmod_free_dense(&Xcholmod2, cm);
-    cholmod_free_dense(&B, cm);
-    cholmod_free_dense(&B2, cm);
-    cholmod_free_dense(&boundaryRHS, cm);
-
     free(rhsMove);
-    double totalSolveTime = (clock() - total_time)/(double)CLOCKS_PER_SEC;
-    qWarning("Total solve time: %g", totalSolveTime);
 
-
-    double fullTime = constructTime + totalSolveTime;
-    double fps = 1./fullTime;
-    qWarning("Total fps: %g", fps);
-    if (fps < 30) qWarning("LOW!");
+    int fullTime = total.measure_msec();
+    int FPS = 1000 / fullTime;
+    qWarning("Total solve time:      %i msec (%i FPS)", fullTime, FPS);
     qWarning();
 }
 
-
 /******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::getP(SimpleSparseMatrix<T> &prod)
-{
-    P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
-    dx2.reshape(numFaces, numVertices, 3*numFaces);
-    dy2.reshape(numFaces, numVertices, 3*numFaces);
-
-    // examine matrix push_back when in right order
-    P2.startMatrixFill();
-    dx2.startMatrixFill();
-    dy2.startMatrixFill();
-    for (int f = 0; f < numFaces; f++) {
-        int i = faces[f][0], j = faces[f][1], k = faces[f][2];
-
-        int temp;
-        if (i > j) { temp = i; i = j; j = temp; }
-        if (i > k) { temp = i; i = k; k = temp; }
-        if (j > k) { temp = j; j = k; k = temp; }
-
-        Vector2D<T> d1 = vertices[i] - vertices[k],
-                    d2 = vertices[j] - vertices[i];
-
-        T area = fabs(d1[1]*d2[0] - d1[0]*d2[1]);
-        Vector2D<T> c1(-d1[1]/area,d1[0]/area),
-                    c2(-d2[1]/area,d2[0]/area);
-
-        dx2.addElement(f,i,-c1[0] - c2[0]);
-        dx2.addElement(f,j,c1[0]);
-        dx2.addElement(f,k,c2[0]);
-
-        dy2.addElement(f,i,-c1[1] - c2[1]);
-        dy2.addElement(f,j,c1[1]);
-        dy2.addElement(f,k,c2[1]);
-
-        P2.addElement(3*f, f, 2);
-        P2.addElement(3*f+1, f+numFaces, SQRT_2);
-        P2.addElement(3*f+1, f+2*numFaces, SQRT_2);
-        P2.addElement(3*f+2, f+3*numFaces, 2);
-    }
-
-    int colShift[4] = {0, 0, numVertices, numVertices};
-
-    SimpleSparseMatrix<T> *list[4] = {&dx2, &dy2, &dx2, &dy2};
-
-    stacked.stack(list, 4, colShift);
-
-    if (pCount == 0) P2.multiply(stacked, prod);
-    else P2.parallelMultiply(stacked,prod);
-
-    pCount++;
-}
-
-/******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::replacePoints(const QString &filename)
-{
-	//todo: handle obj file too
-	ifstream infile(filename.toAscii());
-
-	if (filename.endsWith("off")) 
-	{
-		string temp;
-		infile >> temp;
-		infile >> numVertices >> numFaces >> temp;
-
-		qWarning("Mesh:  %d vertices, %d faces", numVertices, numFaces);
-
-		vertices.resize(numVertices);
-		T z;
-		for (int i = 0; i < numVertices; i++)
-			infile >> vertices[i].x >> vertices[i].y >> z;
-	}
-
-	if (filename.endsWith("obj")) 
-	{
-		numVertices = 0;
-		numFaces = 0;
-		vertices.clear();
-		T x,y,z;
-		
-		while (!infile.eof())
-		{	
-			// get line
-			string curLine;
-			getline(infile, curLine);
-
-			// read type of the line
-			istringstream issLine(curLine);
-			string linetype;
-			issLine >> linetype;
-
-			if (linetype == "v")
-			{
-				numVertices++;
-				issLine >> x >> y >> z;
-				Point2D<T> p(x,y);
-				vertices.push_back(p);
-				continue;
-			}
-			if (linetype == "f")
-			{
-				numFaces++;
-				continue;
-			}
-		}
-		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
-	}
-
-}
-
-/******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::saveVertices(ofstream& outfile, const QString &filename)
-{
-	if (filename.endsWith("off"))
-	{
-		for (int i = 0; i < numVertices; i++)
-			outfile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
-	}
-
-	if (filename.endsWith("obj"))
-	{
-		if (modelType == 2 && mtlFile != "") outfile << "mtllib " << mtlFile << endl;
-		for (int i = 0; i < numVertices; i++)
-			outfile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
-	}
-	
-}
-
-/******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::saveTextureUVs(ofstream& outfile, const QString &filename)
-{
-	if (filename.endsWith("obj"))
-	{
-		for (int i = 0; i < numVertices; i++)
-			outfile << "vt " << texCoords[i][0] << ' ' << texCoords[i][1] << endl;
-		if (modelType == 2 && mtlFile != "") outfile << "usemtl Explorer_Default" << endl;
-	}
-}
-
-/******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::saveFaces(ofstream& outfile, const QString &filename)
-{
-	if (filename.endsWith("off"))
-	{
-		for (int i = 0; i < numFaces; i++)
-			outfile << "3 " << faces[i][0] << ' ' << faces[i][1] << ' ' << faces[i][2] << endl;
-	}
-
-	if (filename.endsWith("obj"))
-	{
-		for (int i = 0; i < numFaces; i++)
-			outfile << "f " << faces[i][0]+1 << '/' << faces[i][0]+1 << ' ' << faces[i][1]+1 << '/' << faces[i][1]+1 << ' ' << faces[i][2]+1 << '/' << faces[i][2]+1 << endl;
-	}
-    
-}
-
-/******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, Point2D<T> p)
+void Model2D::renderVertex(double left, double bottom, double meshWidth, double width, double height, Point2D<double> p)
 {
     glLineWidth(LINE_WIDTH);
-    T right = left + meshWidth;
-    T meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
-    T top = bottom + meshHeight;
+    double right = left + meshWidth;
+    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
+    double top = bottom + meshHeight;
 
-    T wFrac = (right-left)/width;
-    T totWidth = (maxX - minX)/wFrac;
-    T lowX = minX - totWidth * left / width;
+    double wFrac = (right-left)/width;
+    double totWidth = (maxX - minX)/wFrac;
+    double lowX = minX - totWidth * left / width;
 
-    T hFrac = (top-bottom)/height;
-    T totHeight = (maxY - minY)/hFrac;
-    T lowY = minY - totHeight * bottom / height;
+    double hFrac = (top-bottom)/height;
+    double totHeight = (maxY - minY)/hFrac;
+    double lowY = minY - totHeight * bottom / height;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -788,29 +479,27 @@ void Model2D<T>::renderVertex(T left, T bottom, T meshWidth, T width, T height, 
 }
 
 /******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T height, int v)
+void Model2D::renderSelectedVertex(double left, double bottom, double meshWidth, double width, double height, int v)
 {
     glLineWidth(LINE_WIDTH);
-    T right = left + meshWidth;
-    T meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
-    T top = bottom + meshHeight;
+    double right = left + meshWidth;
+    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
+    double top = bottom + meshHeight;
 
-    T wFrac = (right-left)/width;
-    T totWidth = (maxX - minX)/wFrac;
-    T lowX = minX - totWidth * left / width;
+    double wFrac = (right-left)/width;
+    double totWidth = (maxX - minX)/wFrac;
+    double lowX = minX - totWidth * left / width;
 
-    T hFrac = (top-bottom)/height;
-    T totHeight = (maxY - minY)/hFrac;
-    T lowY = minY - totHeight * bottom / height;
+    double hFrac = (top-bottom)/height;
+    double totHeight = (maxY - minY)/hFrac;
+    double lowY = minY - totHeight * bottom / height;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(lowX, lowX+totWidth, lowY, lowY+totHeight, 0, 1);
     glMatrixMode(GL_MODELVIEW);
 
-    Point2D<T> p = vertices[v];
+    Point2D<double> p = vertices[v];
     float s=totWidth / 500 * POINT_SIZE_SCALE;
     glBegin(GL_QUADS);
         glVertex2f(p[0]-s,p[1]-s);
@@ -851,22 +540,20 @@ void Model2D<T>::renderSelectedVertex(T left, T bottom, T meshWidth, T width, T 
 }
 
 /******************************************************************************************************************************/
-
-template<class T>
-void Model2D<T>::render(T left,T bottom,  T meshWidth, T width, T height)
+void Model2D::render(double left,double bottom,  double meshWidth, double width, double height)
 {
     glLineWidth(LINE_WIDTH);
-    T right = left + meshWidth;
-    T meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
-    T top = bottom + meshHeight;
+    double right = left + meshWidth;
+    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
+    double top = bottom + meshHeight;
 
-    T wFrac = (right-left)/width;
-    T totWidth = (maxX - minX)/wFrac;
-    T lowX = minX - totWidth * left / width;
+    double wFrac = (right-left)/width;
+    double totWidth = (maxX - minX)/wFrac;
+    double lowX = minX - totWidth * left / width;
 
-    T hFrac = (top-bottom)/height;
-    T totHeight = (maxY - minY)/hFrac;
-    T lowY = minY - totHeight * bottom / height;
+    double hFrac = (top-bottom)/height;
+    double totHeight = (maxY - minY)/hFrac;
+    double lowY = minY - totHeight * bottom / height;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -932,15 +619,15 @@ void Model2D<T>::render(T left,T bottom,  T meshWidth, T width, T height)
 
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
+/******************************************************************************************************************************/
 
-template<class T>
-int Model2D<T>::getClosestVertex(Point2D<T> point, T dist)
+int Model2D::getClosestVertex(Point2D<double> point, double dist)
 { // linear time -- could make faster...
     int closest = -1;
-    T closestDistance = numeric_limits<T>::max();
+    double closestDistance = numeric_limits<double>::max();
 
     for (int i = 0; i < numVertices; i++) {
-        T distance = vertices[i].distanceSquared(point);
+        double distance = vertices[i].distanceSquared(point);
 
         if (distance < closestDistance && distance < dist) {
             closestDistance = distance;
@@ -953,27 +640,26 @@ int Model2D<T>::getClosestVertex(Point2D<T> point, T dist)
 
 /******************************************************************************************************************************/
 
-template<class T>
-void Model2D<T>::copyPositions(Model2D<T>& m)
+void Model2D::copyPositions(Model2D& m)
 {
 	for (int i = 0; i < numVertices; i++)
 		vertices[i] = m.vertices[i];
 }
 
-template<class T>
-void Model2D<T>::changeDrawMode(bool m)
+
+void Model2D::changeDrawMode(bool m)
 {
 	drawVFMode = m;
 }
 
-template<class T>
-void Model2D<T>::setWireframeTrans(float m)
+
+void Model2D::setWireframeTrans(float m)
 {
 	wireframeTrans = m;
 }
 
-template<class T>
-void Model2D<T>::reuseVF()
+
+void Model2D::reuseVF()
 {
 	if (drawVFMode) {
 		for (int i = 0; i < numVertices; i++)
@@ -984,9 +670,8 @@ void Model2D<T>::reuseVF()
 
 /******************************************************************************************************************************/
 
-template<class T>
-void Model2D<T>::addUndoAction(vector<int>& indices,
-		vector<Vector2D<T> >& displacements, T alpha)
+void Model2D::addUndoAction(vector<int>& indices,
+		vector<Vector2D<double> >& displacements, double alpha)
 {
 	if (undoIndex == UNDOSIZE - 1) {
 		for (int i = 0; i < UNDOSIZE - 1; i++) {
@@ -1007,10 +692,8 @@ void Model2D<T>::addUndoAction(vector<int>& indices,
 
 /******************************************************************************************************************************/
 
-
-template<class T>
-void Model2D<T>::redoDeform(vector<vector<int> >& logIndices,
-		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas)
+void Model2D::redoDeform(vector<vector<int> >& logIndices,
+		vector<vector<Vector2D<double> > >& logDisplacements, vector<double>& logAlphas)
 {
 	if (undoIndex == UNDOSIZE - 1)
 		return;
@@ -1024,9 +707,9 @@ void Model2D<T>::redoDeform(vector<vector<int> >& logIndices,
 
 /******************************************************************************************************************************/
 
-template<class T>
-void Model2D<T>::undoDeform(vector<vector<int> >& logIndices,
-		vector<vector<Vector2D<T> > >& logDisplacements, vector<T>& logAlphas)
+
+void Model2D::undoDeform(vector<vector<int> >& logIndices,
+		vector<vector<Vector2D<double> > >& logDisplacements, vector<double>& logAlphas)
 {
 	if (undoIndex == 0)
 		return;
@@ -1038,5 +721,195 @@ void Model2D<T>::undoDeform(vector<vector<int> >& logIndices,
 	logAlphas.pop_back();
 }
 
-template class Model2D<float>;
-template class Model2D<double>;
+/******************************************************************************************************************************/
+
+void Model2D::saveTextureUVs(ofstream& outfile, const QString &filename)
+{
+	if (filename.endsWith("obj"))
+	{
+		for (int i = 0; i < numVertices; i++)
+			outfile << "vt " << texCoords[i][0] << ' ' << texCoords[i][1] << endl;
+	}
+}
+
+/******************************************************************************************************************************/
+
+void Model2D::saveFaces(ofstream& outfile, const QString &filename)
+{
+	if (filename.endsWith("off"))
+	{
+		for (int i = 0; i < numFaces; i++)
+			outfile << "3 " << faces[i][0] << ' ' << faces[i][1] << ' ' << faces[i][2] << endl;
+	}
+
+	if (filename.endsWith("obj"))
+	{
+		for (int i = 0; i < numFaces; i++)
+			outfile << "f " << faces[i][0]+1 << '/' << faces[i][0]+1 << ' ' << faces[i][1]+1 << '/' << faces[i][1]+1 << ' ' << faces[i][2]+1 << '/' << faces[i][2]+1 << endl;
+	}
+
+}
+/******************************************************************************************************************************/
+
+void Model2D::saveVertices(ofstream& outfile, const QString &filename)
+{
+	if (filename.endsWith("off"))
+	{
+		for (int i = 0; i < numVertices; i++)
+			outfile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
+	}
+
+	if (filename.endsWith("obj"))
+	{
+		for (int i = 0; i < numVertices; i++)
+			outfile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
+	}
+
+}
+/******************************************************************************************************************************/
+void Model2D::replacePoints(const QString &filename)
+{
+	//todo: handle obj file too
+	ifstream infile(filename.toAscii());
+
+	if (filename.endsWith("off"))
+	{
+		string temp;
+		infile >> temp;
+		infile >> numVertices >> numFaces >> temp;
+
+		qWarning("Mesh:  %d vertices, %d faces", numVertices, numFaces);
+
+		vertices.resize(numVertices);
+		double z;
+		for (int i = 0; i < numVertices; i++)
+			infile >> vertices[i].x >> vertices[i].y >> z;
+	}
+
+	if (filename.endsWith("obj"))
+	{
+		numVertices = 0;
+		numFaces = 0;
+		vertices.clear();
+		double x,y,z;
+
+		while (!infile.eof())
+		{
+			// get line
+			string curLine;
+			getline(infile, curLine);
+
+			// read type of the line
+			istringstream issLine(curLine);
+			string linetype;
+			issLine >> linetype;
+
+			if (linetype == "v")
+			{
+				numVertices++;
+				issLine >> x >> y >> z;
+				Point2D<double> p(x,y);
+				vertices.push_back(p);
+				continue;
+			}
+			if (linetype == "f")
+			{
+				numFaces++;
+				continue;
+			}
+		}
+		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
+	}
+
+}
+
+/******************************************************************************************************************************/
+void Model2D::loadFromFile(const QString & filename)
+{
+	if (filename.endsWith("obj")) //handle obj file
+	{
+		numVertices = 0;
+		numFaces = 0;
+		ifstream infile(filename.toAscii());
+		bool is_vt = false;
+		double x,y,z;
+		string a,b,c;
+
+		while (!infile.eof())
+		{
+			// get line
+			string curLine;
+			getline(infile, curLine);
+
+			// read type of the line
+			istringstream issLine(curLine);
+			string linetype;
+			issLine >> linetype;
+
+			if (linetype == "v")
+			{
+				numVertices++;
+				issLine >> x >> y >> z;
+				Point2D<double> p(x,y);
+				vertices.push_back(p);
+				continue;
+			}
+			if (linetype == "vt")
+			{
+				is_vt = true;
+				issLine >> x >> y;
+				Point2D<double> p(x,y);
+				texCoords.push_back(p);
+				continue;
+			}
+			if (linetype == "f")
+			{
+				numFaces++;
+				issLine >> a >> b >> c;
+				char* a_dup = strdup(a.c_str()); char* b_dup = strdup(b.c_str()); char* c_dup = strdup(c.c_str());
+				char* aa = strtok(a_dup,"/");
+				char* bb = strtok(b_dup,"/");
+				char* cc = strtok(c_dup,"/");
+				Face fa;
+				fa.f[0] = atoi(aa)-1; fa.f[1] = atoi(bb)-1; fa.f[2] = atoi(cc)-1;
+				faces.push_back(fa);
+				continue;
+			}
+			if (linetype == "#") continue;
+			if (linetype == "mtllib") continue;
+		}
+		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
+		if (is_vt == false)
+		{
+			texCoords.resize(numVertices);
+			for (int i = 0; i < numVertices; i++)
+			texCoords[i] = vertices[i];
+		}
+	}
+
+    if (filename.endsWith("off")) //handle off file
+	{
+		ifstream infile(filename.toAscii());
+		string temp;
+		infile >> temp;
+
+		infile >> numVertices >> numFaces >> temp;
+
+		qWarning("Mesh:  %d vertices, %d faces", numVertices, numFaces);
+
+		vertices.resize(numVertices);
+		double z;
+		for (int i = 0; i < numVertices; i++)
+			infile >> vertices[i].x >> vertices[i].y >> z;
+
+		texCoords.resize(numVertices);
+		for (int i = 0; i < numVertices; i++)
+			texCoords[i] = vertices[i];
+
+		int three;
+		faces.resize(numFaces);
+		for (int i = 0; i < numFaces; i++)
+			infile >> three >> faces[i][0] >> faces[i][1] >> faces[i][2];
+
+	}
+}

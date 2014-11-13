@@ -11,7 +11,6 @@
 using namespace std;
 #include <stdio.h>
 
-
 /******************************************************************************************************************************/
 DeformationScene::DeformationScene(QGLWidget *w) :
 			model(NULL), origModel(NULL), selectedIndex(-1), alpha(.5), brush(10), wireframe(0), glWidget(w)
@@ -266,14 +265,14 @@ void DeformationScene::loadModel()
     if (origModel) delete origModel;
 	
     qWarning("Making a new model");
-    model = new Model2D<double>(filename);
+    model = new Model2D(filename);
 	model->setWireframeTrans((double)wireframe/100);
 //	model->setWireframeTrans(wireframeSlider->value());
 	model->changeDrawMode(drawVectorField->isChecked());
 	QPixmap texture = QPixmap(16,16);
     texture.fill(QColor(200,200,255));
     textureRef = glWidget->bindTexture(texture);
-    origModel = new Model2D<double>(filename);
+    origModel = new Model2D(filename);
     qWarning("Done loading");
 
 	modelWidth = model->getWidth() * 200;
@@ -459,6 +458,8 @@ void DeformationScene::keyPressEvent(QKeyEvent *e)
     default:
     	QGraphicsScene::keyPressEvent(e);
     }
+
+    update();
 }
 
 /******************************************************************************************************************************/

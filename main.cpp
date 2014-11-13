@@ -1,4 +1,5 @@
-#include "simplesparsematrix.h"
+#include "cholmod_matrix.h"
+
 
 #include <amd.h>
 
