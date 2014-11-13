@@ -12,31 +12,27 @@
 #include <cholmod.h>
 #include "cholmod_matrix.h"
 
-using std::vector;
-using std::ofstream;
-using std::set;
-
 class KVF
 {
 public:
-	KVF(vector<Face> &faces, vector<Point2> *vertices, set<Vertex> &boundaryVertices, cholmod_common *cm);
-    void displaceMesh(vector<int> &indices, vector<Vector2> &displacements, double alpha, bool drawVFMode);
+	KVF(std::vector<Face> &faces, std::vector<Point2> *vertices, std::set<Vertex> &boundaryVertices, cholmod_common *cm);
+    void displaceMesh(std::vector<int> &indices, std::vector<Vector2> &displacements, double alpha, bool drawVFMode);
     void reuseVF();
     ~KVF();
 
-    vector< Vector2>& getVF() { return vf; }
-    vector< Vector2>& getVFOrig() { return vfOrig; }
+    std::vector< Vector2>& getVF() { return vf; }
+    std::vector< Vector2>& getVFOrig() { return vfOrig; }
 private:
 	/* model information */
-    vector<Face>  &faces;
-	vector<Point2> *verticesPtr;
-    set<Vertex> boundaryVertices;
+    std::vector<Face>  &faces;
+    std::vector<Point2> *verticesPtr;
+    std::set<Vertex> boundaryVertices;
     int numVertices;
     int numFaces;
 
     /* vector field of last transformation  */
-    vector< Vector2> vf;
-    vector< Vector2> vfOrig;
+    std::vector< Vector2> vf;
+    std::vector< Vector2> vfOrig;
 
     /* P matrix and its temp data */
     CholmodSparseMatrix P;
@@ -50,8 +46,8 @@ private:
     cholmod_factor *L2;
 
     /* temp data for */
-    vector< Point2> newPoints;
-    vector<double> counts;
+    std::vector< Point2> newPoints;
+    std::vector<double> counts;
 
     cholmod_common *cm;
 	void getP(CholmodSparseMatrix &prod);

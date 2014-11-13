@@ -11,7 +11,6 @@
 #include <iostream>
 #include <map>
 #include <cholmod.h>
-using namespace std;
 
 class ParallelMatrixMultiplier;
 // stores a row-major sparse matrix in the format required by LDL
@@ -48,7 +47,7 @@ public:
 
     void startMatrixFill() { curLocation = 0; lastR = -1; numNonzero = 0; }
 	double* addElement(int r, int c, double value);
-	void addConstraint(const vector<int>& rows, double alpha);
+	void addConstraint(const std::vector<int>& rows, double alpha);
 
 	/********************************************************************/
 
@@ -60,7 +59,7 @@ public:
     void multiply(double* x, double* b);
 	void transposeMultiply(double* x, double* b);
 
-	void zeroOutColumns(set<int>& cols, int shift = 0);
+	void zeroOutColumns(std::set<int>& cols, int shift = 0);
 	void copy(CholmodSparseMatrix& m);
 
 	double infinityNorm();

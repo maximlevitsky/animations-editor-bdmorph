@@ -14,8 +14,6 @@
 #include <set>
 #include <QCheckBox>
 
-using namespace std;
-
 #define ZOOM_FACTOR 1.2
 
 #include "model2d.h"
@@ -25,7 +23,7 @@ class DeformationScene : public QGraphicsScene
     Q_OBJECT
 
 public:
-    void setPointsToRender(vector<int> &p) {
+    void setPointsToRender(std::vector<int> &p) {
         pointsToRender = p;
         if (p.size() > 0) oldVertices = p;
     }
@@ -40,8 +38,8 @@ public:
 
 	Vector2D<double> screenToModelVec(QPointF v);
 
-	void displaceMesh(vector<int> indices,
-			vector<Vector2D<double> > displacements);
+	void displaceMesh(std::vector<int> indices,
+			std::vector<Vector2D<double> > displacements);
 
 public slots:
 	void undoModel();
@@ -98,7 +96,7 @@ private:
     float modelWidth;
     int selectedIndex;
 
-    set<int> pinned;
+    std::set<int> pinned;
     double alpha;
 	double brush;
 	int wireframe;
@@ -107,16 +105,15 @@ private:
 
     QPointF mousePos;
 
-    vector<int> pointsToRender;
+    std::vector<int> pointsToRender;
 
     GLuint textureRef;
 
-    vector< vector<int> > constraintVerts;
-    vector<int> oldVertices;
-
-    vector< vector< Vector2D<double> > > logDisplacements;
-    vector< vector<int> > logIndices;
-    vector< double > logAlphas;
+    std::vector< std::vector<int> > constraintVerts;
+    std::vector<int> oldVertices;
+    std::vector< std::vector< Vector2D<double> > > logDisplacements;
+    std::vector<std::vector<int> > logIndices;
+    std::vector< double > logAlphas;
 
 };
 

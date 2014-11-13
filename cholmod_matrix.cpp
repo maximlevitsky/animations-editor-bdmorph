@@ -4,8 +4,6 @@
 #include <limits>
 #include <QString>
 #define ABS(x) (((x)<0)?-(x):(x))
-using namespace std;
-
 
 class ParallelMatrixMultiplier : public QThread
 {
@@ -15,7 +13,7 @@ public:
 
 protected:
     void run() {
-        map<int, double> rowValues; // for a given column, holds nonzero values
+    	std::map<int, double> rowValues; // for a given column, holds nonzero values
 
         for (int i = firstRow; i < lastRow; i++) { // compute the i-th row
             rowValues.clear(); // start out with zeroes
@@ -33,7 +31,7 @@ protected:
 
             // this better traverse in sorted order...
             int count = result->rowStart[i];
-            for (typename map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
+            for (typename std::map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
                 result->column[count] = it->first;
                 result->values[count] = it->second;
                 count++;
@@ -135,7 +133,7 @@ void CholmodSparseMatrix::stack(CholmodSparseMatrix **matrices, int numMatrices,
     for (int i = 0; i < numMatrices; i++) {
         nonzeroSum += matrices[i]->numNonzero;
         rowSum += matrices[i]->nr;
-        maxCol = max(maxCol, matrices[i]->nc + colShifts[i]);
+        maxCol = std::max(maxCol, matrices[i]->nc + colShifts[i]);
     }
 
     result.setCapacity(nonzeroSum);
@@ -184,7 +182,7 @@ void CholmodSparseMatrix::parallelMultiply(CholmodSparseMatrix &m, CholmodSparse
 
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &result) {
-    map<int, double> rowValues; // for a given column, holds nonzero values
+	std::map<int, double> rowValues; // for a given column, holds nonzero values
     int curNonzero = 0;
 
     result.setRows(nr);
@@ -211,7 +209,7 @@ void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &
         while (curNonzero + (int)rowValues.size() > result.capacity) result.doubleCapacity();
 
         // this better traverse in sorted order...
-        for (typename map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
+        for (typename std::map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
             //if (ABS(it->second) > numeric_limits::epsilon())
                 result.addElement(i,it->first,it->second);
         }
@@ -235,7 +233,7 @@ CholmodSparseMatrix& CholmodSparseMatrix::operator =(
 }
 
 /******************************************************************************************************************************/
-void CholmodSparseMatrix::addConstraint(const vector<int>& rows,double alpha)
+void CholmodSparseMatrix::addConstraint(const std::vector<int>& rows,double alpha)
 {
 	int oldRows = nr;
 	reshape(nr + rows.size(), nc, capacity + rows.size());
@@ -287,7 +285,7 @@ void CholmodSparseMatrix::transposeMultiply(double* x, double* b)
 }
 
 /******************************************************************************************************************************/
-void CholmodSparseMatrix::zeroOutColumns(set<int>& cols, int shift)
+void CholmodSparseMatrix::zeroOutColumns(std::set<int>& cols, int shift)
 {
 	for (int i = 0; i < numNonzero; i++)
 		if (cols.count(column[i] - shift) >= 1)

@@ -8,8 +8,10 @@
 #include <fstream>
 #include <QGesture>
 #include <ctime>
-using namespace std;
 #include <stdio.h>
+
+using std::max;
+using std::min;
 
 /******************************************************************************************************************************/
 DeformationScene::DeformationScene(QGLWidget *w) :
@@ -164,8 +166,8 @@ void DeformationScene::loadImage()
 	image = image.mirrored(false,true);
 	qWarning("width: %d, height: %d", image.width(), image.height()); 
 
-	vector<QPointF> V; //vertices
-	vector<pair<int,int> > E; //segments
+	std::vector<QPointF> V; //vertices
+	std::vector<std::pair<int,int> > E; //segments
 	int Vmap[354][354] = {{0}}; //added stroke 2 in each side of the map
 	int stroke = 2;
 	for (int i=stroke; i<image.width()+stroke; i++) {
@@ -200,17 +202,17 @@ void DeformationScene::loadImage()
 	for (int i=0; i<image.width()+2*stroke; i++) {
 		for (int j=0; j<image.height()+2*stroke; j++) {
 			if (j+1 < image.height()+2*stroke && Vmap[i][j] > 0 && Vmap[i][j+1] > 0) {
-				E.push_back(make_pair(Vmap[i][j],Vmap[i][j+1]));
+				E.push_back(std::make_pair(Vmap[i][j],Vmap[i][j+1]));
 			}
 			if (i+1 < image.width()+2*stroke && Vmap[i][j] > 0 && Vmap[i+1][j] > 0) {
-				E.push_back(make_pair(Vmap[i][j],Vmap[i+1][j]));
+				E.push_back(std::make_pair(Vmap[i][j],Vmap[i+1][j]));
 			}
 		}
 	}
 
 	qWarning("\n#vertices: %d, #segments: %d", (int)V.size(), (int)E.size());
 
-	ofstream outfile("temp.poly");
+	std::ofstream outfile("temp.poly");
 	//vertices
 	outfile << V.size() << " 2 0 1" << endl;
 	for (int i=1; i<=V.size(); i++) {
@@ -235,7 +237,7 @@ void DeformationScene::saveModel()
     QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
 
     if ( filename == "" || (!(model)) ) return;
-	ofstream outfile(filename.toAscii());
+    std::ofstream outfile(filename.toAscii());
 
 	if (filename.endsWith("off"))
 	{
@@ -313,7 +315,7 @@ void DeformationScene::saveLog()
 
     if (filename == "") return;
 
-    ofstream outfile(filename.toAscii());
+    std::ofstream outfile(filename.toAscii());
 
     outfile << logIndices.size() << endl;
     for (unsigned int i = 0; i < logIndices.size(); i++) {
@@ -328,7 +330,7 @@ void DeformationScene::runLog()
 {
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose log"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
-    ifstream infile(filename.toAscii());
+    std::ifstream infile(filename.toAscii());
 
     qWarning("STARTING RUN");
 
@@ -342,8 +344,8 @@ void DeformationScene::runLog()
         int numDisplacements;
         infile >> numDisplacements;
 
-        vector< Vector2D<double> > displacements(numDisplacements);
-        vector<int> indices(numDisplacements);
+        std::vector< Vector2D<double> > displacements(numDisplacements);
+        std::vector<int> indices(numDisplacements);
 
         for (int j = 0; j < numDisplacements; j++)
             infile >> indices[j] >> displacements[j][0] >> displacements[j][1];
@@ -552,12 +554,12 @@ void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         	return;
 
 
-        vector<int> indices;
-		vector< Vector2D<double> > displacements;
+        std::vector<int> indices;
+        std::vector< Vector2D<double> > displacements;
 		indices.push_back(selectedIndex);
 		displacements.push_back(Vector2D<double>(diff.x(),-diff.y()));
 
-		for (set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
+		for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
 		{
 			indices.push_back(*it);
 			displacements.push_back(Vector2D<double>(0,0));
@@ -634,7 +636,7 @@ void DeformationScene::drawBackground(QPainter *painter, const QRectF &)
 
 
         glColor3f(1,1,0); //highlighted anchors
-        for (set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
+        for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
             model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),*it);
 
         if (drawVectorField->isChecked())
@@ -665,9 +667,9 @@ Vector2D<double> DeformationScene::screenToModelVec(QPointF v)
 	return Vector2D<double>(v.x(), -v.y());
 }
 
-void DeformationScene::displaceMesh(vector<int> indices,vector<Vector2D<double> > displacements)
+void DeformationScene::displaceMesh(std::vector<int> indices,std::vector<Vector2D<double> > displacements)
 {
-	for (set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
+	for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
 	{
 		indices.push_back(*it);
 		displacements.push_back(Vector2D<double>(0, 0));

@@ -8,12 +8,9 @@
 #include <set>
 #include <vector>
 #include <limits>
-using namespace std;
-
 #include "KVF.h"
 
 #define UNDOSIZE 20
-
 
 /******************************************************************************************************************************/
 class Model2D
@@ -24,7 +21,7 @@ public:
     ~Model2D();
 
     void calculateModelStatistics();
-    void displaceMesh(vector<int> &indices, vector< Vector2D<double> > &displacements, double alpha);
+    void displaceMesh(std::vector<int> &indices, std::vector< Vector2D<double> > &displacements, double alpha);
 	void copyPositions(Model2D& m);
 	void reuseVF();
     void getP(CholmodSparseMatrix &prod);
@@ -47,38 +44,37 @@ public:
 	void setWireframeTrans(float m);
 
 	/* undo and redo code*/
-	void addUndoAction(vector<int>& indices,
-			vector<Vector2D<double> >& displacements, double alpha);
-	void redoDeform(vector<vector<int> >& logIndices,
-			vector<vector<Vector2D<double> > >& logDisplacements,
-			vector<double>& logAlphas);
-	void undoDeform(vector<vector<int> >& logIndices,
-			vector<vector<Vector2D<double> > >& logDisplacements,
-			vector<double>& logAlphas);
+	void addUndoAction(std::vector<int>& indices,
+			std::vector<Vector2D<double> >& displacements, double alpha);
+	void redoDeform(std::vector<std::vector<int> >& logIndices,
+			std::vector<std::vector<Vector2D<double> > >& logDisplacements,
+			std::vector<double>& logAlphas);
+	void undoDeform(std::vector<std::vector<int> >& logIndices,
+			std::vector<std::vector<Vector2D<double> > >& logDisplacements,
+			std::vector<double>& logAlphas);
 
 	/* save and load code */
     void replacePoints(const QString &filename);
-    void saveVertices(ofstream& outfile, const QString &filename);
-	void saveTextureUVs(ofstream& outfile, const QString &filename);
-	void saveFaces(ofstream& outfile, const QString &filename);
+    void saveVertices(std::ofstream& outfile, const QString &filename);
+	void saveTextureUVs(std::ofstream& outfile, const QString &filename);
+	void saveFaces(std::ofstream& outfile, const QString &filename);
 	void loadFromFile(const QString &filename);
 
 private:
-
 	/* model information */
-	vector< Point2D<double> > vertices;
-    vector< Point2D<double> > texCoords;
-    vector<Face> faces;
-    set<int> boundaryVertices;
+	std::vector< Point2D<double> > vertices;
+	std::vector< Point2D<double> > texCoords;
+	std::vector<Face> faces;
+	std::set<int> boundaryVertices;
 
     int numVertices, numFaces;
     double minX, maxX, minY, maxY;
 
 	/*undo stuff*/
-	vector< Point2D<double> > undoVertices[UNDOSIZE]; //saves vertices of different deforms
+    std::vector< Point2> undoVertices[UNDOSIZE]; //saves vertices of different deforms
 	int undoIndex; //points to current deform on undoArray
-	vector<int> undoIndices[UNDOSIZE];
-	vector< Vector2D<double> > undoDisplacements[UNDOSIZE];
+	std::vector<int> undoIndices[UNDOSIZE];
+	std::vector< Vector2> undoDisplacements[UNDOSIZE];
 	double undoAlpha[UNDOSIZE];
 
 	/* settings */

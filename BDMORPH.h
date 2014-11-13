@@ -108,7 +108,7 @@ private:
 class BDMORPH
 {
 public:
-	BDMORPH(vector<Face> &faces, vector<int> &boundaryVertexes, int vertexCount,int startVertex);
+	BDMORPH(std::vector<Face> &faces, std::vector<int> &boundaryVertexes, int vertexCount,int startVertex);
 	bool solve(double t,Point2 *vertexes1, Point2* vertexes2, Point2* vertexes_out);
 private:
 	/* sizes */

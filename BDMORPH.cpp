@@ -246,8 +246,8 @@ void BDMORPH_BUILDER::compute_vertex_info(Vertex v0, int neighbourCount,
 }
 /*****************************************************************************************************/
 BDMORPH::BDMORPH(
-		vector<Face> &faces, 				/* all the faces of the mesh*/
-		vector<Vertex> &boundaryVertexes,  /* vertexes on the boundary - we will ignore these */
+		std::vector<Face> &faces, 				/* all the faces of the mesh*/
+		std::vector<Vertex> &boundaryVertexes,  /* vertexes on the boundary - we will ignore these */
 		int vertexCount, 					/* total number of vertexes - since we don't need
 											vertex positions,  this is all we need*/
 		Vertex startVertex,					/* vertex to start from*/

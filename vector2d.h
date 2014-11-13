@@ -4,8 +4,6 @@
 #include <cmath>
 #include <complex>
 #include <QPoint>
-using namespace std;
-
 // adapted from http://www.terathon.com/code/vector2d.html
 
 template<class T>
@@ -31,7 +29,7 @@ class Vector2D {
 
         Vector2D<T>() : x(0), y(0) {}
 
-        Vector2D<T>(complex<T> v) : x(real(v)), y(imag(v)) {}
+        Vector2D<T>(std::complex<T> v) : x(std::real(v)), y(std::imag(v)) {}
 
         Vector2D<T>(QPointF p) : x(p.x()), y(p.y()) {}
 
@@ -132,7 +130,7 @@ class Vector2D {
 
         Vector2D<T>& rotate(T angle);
 
-        complex<T> toComplex() { return complex<T>(x,y); }
+        std::complex<T> toComplex() { return std::complex<T>(x,y); }
 };
 
 template<class T>
@@ -146,7 +144,7 @@ class Point2D : public Vector2D<T> {
 
         Point2D<T>(T r, T s) : Vector2D<T>(r, s) {}
 
-        Point2D<T>(complex<T> v) : Vector2D<T>(v) {}
+        Point2D<T>(std::complex<T> v) : Vector2D<T>(v) {}
 
         Point2D<T>& operator =(const Vector2D<T>& v) {
             this->x = v.x;

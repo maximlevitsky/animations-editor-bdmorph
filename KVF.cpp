@@ -33,7 +33,7 @@ struct LogSpiral
 };
 
 /*****************************************************************************************************/
-KVF::KVF(vector<Face> &faces, vector<Point2> *vertices, set<Vertex> &boundaryVertices, cholmod_common *cm) :
+KVF::KVF(std::vector<Face> &faces, std::vector<Point2> *vertices, std::set<Vertex> &boundaryVertices, cholmod_common *cm) :
 	faces(faces),
 	verticesPtr(vertices),
 	boundaryVertices(boundaryVertices),
@@ -89,7 +89,7 @@ KVF::KVF(vector<Face> &faces, vector<Point2> *vertices, set<Vertex> &boundaryVer
     CholmodVector boundaryRHS(2*numVertices,cm);
 
     // for fun constrain boundary to (1,1)
-    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
+    for (std::set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
     	boundaryRHS[*it] = 1;
     	boundaryRHS[*it + numVertices] = 1;
     }
@@ -107,8 +107,8 @@ KVF::KVF(vector<Face> &faces, vector<Point2> *vertices, set<Vertex> &boundaryVer
     CholmodVector B2(Pcopy.numCols(),cm);
 
     Pcopy.transposeMultiply(rhsMove,B2.getValues());
-    vector<int> constrained;
-    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
+    std::vector<int> constrained;
+    for (std::set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it) {
         int bv = *it;
         constrained.push_back(*it);
         constrained.push_back(*it+numVertices);
@@ -150,7 +150,7 @@ void KVF::getP(CholmodSparseMatrix &prod)
     dx2.startMatrixFill();
     dy2.startMatrixFill();
 
-    vector<Point2> &vertices = *verticesPtr;
+    std::vector<Point2> &vertices = *verticesPtr;
 
     for (int f = 0; f < numFaces; f++)
     {
@@ -192,9 +192,9 @@ void KVF::getP(CholmodSparseMatrix &prod)
 }
 
 /*****************************************************************************************************/
-void KVF::displaceMesh(vector<int> &indices, vector<Vector2> &displacements, double alpha, bool drawVFMode)
+void KVF::displaceMesh(std::vector<int> &indices, std::vector<Vector2> &displacements, double alpha, bool drawVFMode)
 {
-    vector<Point2> &vertices = *verticesPtr;
+	std::vector<Point2> &vertices = *verticesPtr;
 
     if (indices.size() == 1) {
     	// when only one vertex is constrained, move parallel
@@ -210,7 +210,7 @@ void KVF::displaceMesh(vector<int> &indices, vector<Vector2> &displacements, dou
     printf("Construct P time:      %i msec\n", t.measure_msec());
 
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
-    vector<int> indices2;
+    std::vector<int> indices2;
     for (unsigned int i = 0; i < indices.size(); i++)
     {
         indices2.push_back(indices[i]);
@@ -244,7 +244,7 @@ void KVF::displaceMesh(vector<int> &indices, vector<Vector2> &displacements, dou
 
     /*+++++DIRICHLET SOLVE +++++++++++++++++++++++++++++++++++++++++*/
     CholmodVector boundaryRHS = CholmodVector(2*numVertices,cm);
-    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
+    for (std::set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
     {
     	boundaryRHS[*it] = Xx[*it];
     	boundaryRHS[*it + numVertices] = Xx[*it + numVertices];
@@ -261,8 +261,8 @@ void KVF::displaceMesh(vector<int> &indices, vector<Vector2> &displacements, dou
     CholmodVector B2(Pcopy.numCols(), cm);
     Pcopy.transposeMultiply(rhsMove,B2.getValues());
 
-    vector<int> constrained;
-    for (set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
+    std::vector<int> constrained;
+    for (std::set<int>::iterator it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
     {
         int bv = *it;
         constrained.push_back(*it);
@@ -294,12 +294,12 @@ void KVF::displaceMesh(vector<int> &indices, vector<Vector2> &displacements, dou
             int e2 = faces[i][(j+1)%3];
             int vtx = faces[i][(j+2)%3];
 
-            complex<double> v1(Xx[e1], Xx[e1+numVertices]);
-            complex<double> v2(Xx[e2], Xx[e2+numVertices]);
-            complex<double> p1(vertices[e1][0], vertices[e1][1]);
-            complex<double> p2(vertices[e2][0], vertices[e2][1]);
-            complex<double> z = (v1-v2)/(p1-p2);
-            complex<double> p0 = (p2*v1-p1*v2)/(v1-v2);
+            std::complex<double> v1(Xx[e1], Xx[e1+numVertices]);
+            std::complex<double> v2(Xx[e2], Xx[e2+numVertices]);
+            std::complex<double> p1(vertices[e1][0], vertices[e1][1]);
+            std::complex<double> p2(vertices[e2][0], vertices[e2][1]);
+            std::complex<double> z = (v1-v2)/(p1-p2);
+            std::complex<double> p0 = (p2*v1-p1*v2)/(v1-v2);
 
             double c = z.real();
             double alpha = z.imag();
@@ -354,7 +354,7 @@ void KVF::displaceMesh(vector<int> &indices, vector<Vector2> &displacements, dou
 /*****************************************************************************************************/
 void KVF::reuseVF()
 {
-    vector<Point2> &vertices = *verticesPtr;
+	std::vector<Point2> &vertices = *verticesPtr;
 
 	for (int i = 0; i < numVertices; i++)
 		for (int j = 0; j < 2; j++)

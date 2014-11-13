@@ -11,7 +11,6 @@
 #define POINT_SIZE_SCALE 2
 #define VF_SCALE 1
 #define LINE_WIDTH 2
-using namespace std;
 
 /******************************************************************************************************************************/
 void error_handler(int status, char *file, int line,  char *message)
@@ -27,19 +26,19 @@ Model2D::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0)
 {
 	loadFromFile(filename);
 
-    minX = numeric_limits<double>::max();
-    maxX = numeric_limits<double>::min();
-    minY = numeric_limits<double>::max();
-    maxY = numeric_limits<double>::min();
+    minX = std::numeric_limits<double>::max();
+    maxX = std::numeric_limits<double>::min();
+    minY = std::numeric_limits<double>::max();
+    maxY = std::numeric_limits<double>::min();
 
     double sumX = 0.0;
     double sumY = 0.0;
 
     for (int i = 0; i < numVertices; i++) {
-        minX = min(minX, vertices[i].x);
-        minY = min(minY, vertices[i].y);
-        maxX = max(maxX, vertices[i].x);
-        maxY = max(maxY, vertices[i].y);
+        minX = std::min(minX, vertices[i].x);
+        minY = std::min(minY, vertices[i].y);
+        maxX = std::max(maxX, vertices[i].x);
+        maxY = std::max(maxY, vertices[i].y);
 		sumX = sumX + vertices[i].x;
 		sumY = sumY + vertices[i].y;
     }
@@ -57,7 +56,7 @@ Model2D::Model2D(const QString &filename) : drawVFMode(false), wireframeTrans(0)
 	undoIndex = 0; //save for undo
 	undoVertices[0] = vertices; //save for undo
 
-    map< int , map<int,int> > edgeCount;
+	std::map< int , std::map<int,int> > edgeCount;
     for (int i = 0; i < numFaces; i++)
     {
         int a = faces[i][0];
@@ -100,7 +99,7 @@ Model2D::~Model2D()
     cholmod_finish(&Common);
 }
 /******************************************************************************************************************************/
-void Model2D::displaceMesh(vector<int> &indices, vector< Vector2D<double> > &displacements, double alpha)
+void Model2D::displaceMesh(std::vector<int> &indices, std::vector< Vector2D<double> > &displacements, double alpha)
 {
 	kvf_algo->displaceMesh(indices, displacements, alpha, drawVFMode);
 }
@@ -164,8 +163,8 @@ void Model2D::renderSelectedVertex(double left, double bottom, double meshWidth,
         glVertex2f(p[0]+s,p[1]-s);
     glEnd(/*GL_QUADS*/);
 
-    vector< Vector2> &vf = kvf_algo->getVF();
-    vector< Vector2> &vfOrig = kvf_algo->getVFOrig();
+    std::vector< Vector2> &vf = kvf_algo->getVF();
+    std::vector< Vector2> &vfOrig = kvf_algo->getVFOrig();
 
     if (drawVFMode && vf.size() == numVertices && vfOrig.size() == numVertices) {
         double totalNorm = 0;
@@ -242,8 +241,8 @@ void Model2D::render(double left,double bottom,  double meshWidth, double width,
 		}
 	glEnd();
 
-    vector< Vector2> &vf = kvf_algo->getVF();
-    vector< Vector2> &vfOrig = kvf_algo->getVFOrig();
+	std::vector< Vector2> &vf = kvf_algo->getVF();
+	std::vector< Vector2> &vfOrig = kvf_algo->getVFOrig();
 
     if (drawVFMode && vf.size() == numVertices && vfOrig.size() == numVertices) {
         double totalNorm = 0;
@@ -284,7 +283,7 @@ void Model2D::render(double left,double bottom,  double meshWidth, double width,
 int Model2D::getClosestVertex(Point2D<double> point, double dist)
 { // linear time -- could make faster...
     int closest = -1;
-    double closestDistance = numeric_limits<double>::max();
+    double closestDistance = std::numeric_limits<double>::max();
 
     for (int i = 0; i < numVertices; i++) {
         double distance = vertices[i].distanceSquared(point);
@@ -323,8 +322,8 @@ void Model2D::reuseVF()
 	}
 }
 /******************************************************************************************************************************/
-void Model2D::addUndoAction(vector<int>& indices,
-		vector<Vector2D<double> >& displacements, double alpha)
+void Model2D::addUndoAction(std::vector<int>& indices,
+		std::vector<Vector2D<double> >& displacements, double alpha)
 {
 	if (undoIndex == UNDOSIZE - 1) {
 		for (int i = 0; i < UNDOSIZE - 1; i++) {
@@ -344,8 +343,8 @@ void Model2D::addUndoAction(vector<int>& indices,
 }
 
 /******************************************************************************************************************************/
-void Model2D::redoDeform(vector<vector<int> >& logIndices,
-		vector<vector<Vector2D<double> > >& logDisplacements, vector<double>& logAlphas)
+void Model2D::redoDeform(std::vector<std::vector<int> >& logIndices,
+		std::vector<std::vector<Vector2D<double> > >& logDisplacements, std::vector<double>& logAlphas)
 {
 	if (undoIndex == UNDOSIZE - 1)
 		return;
@@ -358,8 +357,8 @@ void Model2D::redoDeform(vector<vector<int> >& logIndices,
 }
 
 /******************************************************************************************************************************/
-void Model2D::undoDeform(vector<vector<int> >& logIndices,
-		vector<vector<Vector2D<double> > >& logDisplacements, vector<double>& logAlphas)
+void Model2D::undoDeform(std::vector<std::vector<int> >& logIndices,
+		std::vector<std::vector<Vector2D<double> > >& logDisplacements, std::vector<double>& logAlphas)
 {
 	if (undoIndex == 0)
 		return;
@@ -371,7 +370,7 @@ void Model2D::undoDeform(vector<vector<int> >& logIndices,
 	logAlphas.pop_back();
 }
 /******************************************************************************************************************************/
-void Model2D::saveTextureUVs(ofstream& outfile, const QString &filename)
+void Model2D::saveTextureUVs(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("obj"))
 	{
@@ -380,7 +379,7 @@ void Model2D::saveTextureUVs(ofstream& outfile, const QString &filename)
 	}
 }
 /******************************************************************************************************************************/
-void Model2D::saveFaces(ofstream& outfile, const QString &filename)
+void Model2D::saveFaces(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("off"))
 	{
@@ -396,7 +395,7 @@ void Model2D::saveFaces(ofstream& outfile, const QString &filename)
 
 }
 /******************************************************************************************************************************/
-void Model2D::saveVertices(ofstream& outfile, const QString &filename)
+void Model2D::saveVertices(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("off"))
 	{
@@ -413,11 +412,11 @@ void Model2D::saveVertices(ofstream& outfile, const QString &filename)
 void Model2D::replacePoints(const QString &filename)
 {
 	//todo: handle obj file too
-	ifstream infile(filename.toAscii());
+	std::ifstream infile(filename.toAscii());
 
 	if (filename.endsWith("off"))
 	{
-		string temp;
+		std::string temp;
 		infile >> temp;
 		infile >> numVertices >> numFaces >> temp;
 
@@ -439,12 +438,12 @@ void Model2D::replacePoints(const QString &filename)
 		while (!infile.eof())
 		{
 			// get line
-			string curLine;
-			getline(infile, curLine);
+			std::string curLine;
+			std::getline(infile, curLine);
 
 			// read type of the line
-			istringstream issLine(curLine);
-			string linetype;
+			std::istringstream issLine(curLine);
+			std::string linetype;
 			issLine >> linetype;
 
 			if (linetype == "v")
@@ -472,20 +471,20 @@ void Model2D::loadFromFile(const QString & filename)
 	{
 		numVertices = 0;
 		numFaces = 0;
-		ifstream infile(filename.toAscii());
+		std::ifstream infile(filename.toAscii());
 		bool is_vt = false;
 		double x,y,z;
-		string a,b,c;
+		std::string a,b,c;
 
 		while (!infile.eof())
 		{
 			// get line
-			string curLine;
-			getline(infile, curLine);
+			std::string curLine;
+			std::getline(infile, curLine);
 
 			// read type of the line
-			istringstream issLine(curLine);
-			string linetype;
+			std::istringstream issLine(curLine);
+			std::string linetype;
 			issLine >> linetype;
 
 			if (linetype == "v")
@@ -531,8 +530,8 @@ void Model2D::loadFromFile(const QString & filename)
 
     if (filename.endsWith("off")) //handle off file
 	{
-		ifstream infile(filename.toAscii());
-		string temp;
+    	std::ifstream infile(filename.toAscii());
+    	std::string temp;
 		infile >> temp;
 
 		infile >> numVertices >> numFaces >> temp;
