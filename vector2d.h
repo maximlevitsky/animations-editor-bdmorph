@@ -211,7 +211,7 @@ inline Point2D<T> operator *(T t, const Point2D<T>& p) {
     return (Point2D<T>(t * p.x, t * p.y));
 }
 
-typedef Vector2D<double> Vector;
-typedef Point2D<double> Point;
+typedef Vector2D<double> Vector2;
+typedef Point2D<double> Point2;
 
 #endif // Vector2D<T>_H

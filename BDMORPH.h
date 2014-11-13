@@ -109,7 +109,7 @@ class BDMORPH
 {
 public:
 	BDMORPH(vector<Face> &faces, vector<int> &boundaryVertexes, int vertexCount,int startVertex);
-	bool solve(double t,Point *vertexes1, Point* vertexes2, Point* vertexes_out);
+	bool solve(double t,Point2 *vertexes1, Point2* vertexes2, Point2* vertexes_out);
 private:
 	/* sizes */
 	int edges_count,faces_count,vertexes_count;
@@ -131,9 +131,9 @@ private:
 	double* temp_data;	/* array to hold temporary data for newton iteration*/
 
 private:
-	void initialize_solver(double t,Point *vertexes1, Point* vertexes2);
+	void initialize_solver(double t,Point2 *vertexes1, Point2* vertexes2);
 	bool newton_iteration(int iteration);
-	void extract_solution(Point *vertexes_out);
+	void extract_solution(Point2 *vertexes_out);
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
 	cholmod_common *cm;
 

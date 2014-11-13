@@ -3,6 +3,26 @@
 
 #include <ctime>
 #include <vector>
+#include <stdint.h>
+
+/***********************************************************************************************/
+
+#define ALLOC_MEMORY(p,type,size) \
+p = (type *) malloc ((((size) <= 0) ? 1 : (size)) * sizeof (type)); \
+if (p == (type *) NULL) \
+{ \
+    qWarning ("malloc out of memory; requested %d elements of size %d\n", (int)size, (int)sizeof(type)) ; \
+    exit(1) ; \
+}
+
+/***********************************************************************************************/
+
+#define FREE_MEMORY(p,type) \
+if (p != (type *) NULL) \
+{ \
+    free (p) ; \
+    p = (type *) NULL ; \
+}
 
 /***********************************************************************************************/
 
@@ -91,7 +111,7 @@ public:
 
 	void get_stream(CmdStream &out) {
 		int size = cmd_stream.size();
-		out.stream = malloc(size);
+		out.stream = (uint8_t*)malloc(size);
 		out.end = out.stream + size;
 	}
 };

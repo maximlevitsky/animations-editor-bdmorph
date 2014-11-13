@@ -14,7 +14,8 @@ INCLUDE(${QT_USE_FILE})
 
 SET(kvf2d_SOURCES 
 	deformationscene.cpp main.cpp model2d.cpp
-	simplesparsematrix.cpp vector2d.cpp 
+	KVF.cpp
+	cholmod_matrix.cpp vector2d.cpp 
 )
 
 SET(kvf2d_HEADERS deformationscene.h)

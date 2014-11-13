@@ -10,38 +10,10 @@
 #include <limits>
 using namespace std;
 
-extern "C" {
-	#include <amd.h>
-	#include <ldl.h>
-	#include <camd.h>
-	#include <cholmod.h>
-}
+#include "KVF.h"
+
 #define UNDOSIZE 20
 
-/******************************************************************************************************************************/
-
-#define ALLOC_MEMORY(p,type,size) \
-p = (type *) malloc ((((size) <= 0) ? 1 : (size)) * sizeof (type)) ; \
-if (p == (type *) NULL) \
-{ \
-    qWarning ("malloc out of memory; requested %d elements of size %d\n", (int)size, (int)sizeof(type)) ; \
-    exit(1) ; \
-}
-
-#define REALLOC_MEMORY(p,type,size) \
-p = (type *) realloc (p,(((size) <= 0) ? 1 : (size)) * sizeof (type)) ; \
-if (p == (type *) NULL) \
-{ \
-    qWarning ("realloc out of memory; requested %d elements of size %d\n", (int)size, (int)sizeof(type)) ; \
-    exit(1) ; \
-}
-
-#define FREE_MEMORY(p,type) \
-if (p != (type *) NULL) \
-{ \
-    free (p) ; \
-    p = (type *) NULL ; \
-}
 
 /******************************************************************************************************************************/
 class Model2D
@@ -51,7 +23,6 @@ public:
     Model2D(Model2D &m);
     ~Model2D();
 
-    void initialize();
     void calculateModelStatistics();
     void displaceMesh(vector<int> &indices, vector< Vector2D<double> > &displacements, double alpha);
 	void copyPositions(Model2D& m);
@@ -103,25 +74,6 @@ private:
     int numVertices, numFaces;
     double minX, maxX, minY, maxY;
 
-    /* vector field of last transformation  */
-    vector< Vector2D<double> > vf;
-    vector< Vector2D<double> > vfOrig;
-
-    /* P matrix and its temp data */
-    CholmodSparseMatrix P;
-    CholmodSparseMatrix Pcopy;
-    CholmodSparseMatrix P2;
-    CholmodSparseMatrix dx2;
-    CholmodSparseMatrix dy2;
-    CholmodSparseMatrix stacked;
-
-    /* pre-factor*/
-    cholmod_factor *L2;
-
-    /* temp data for */
-    vector< Point2D<double> > newPoints;
-    vector<double> counts;
-
 	/*undo stuff*/
 	vector< Point2D<double> > undoVertices[UNDOSIZE]; //saves vertices of different deforms
 	int undoIndex; //points to current deform on undoArray
@@ -133,10 +85,11 @@ private:
     bool drawVFMode;
 	float wireframeTrans;
 
-    cholmod_common Common, *cm;
+    cholmod_common Common;
+
+    KVF* kvf_algo;
 };
 
 /******************************************************************************************************************************/
-
 
 #endif // MODEL2D_H

@@ -343,7 +343,7 @@ BDMORPH::BDMORPH(
 }
 
 /*****************************************************************************************************/
-bool BDMORPH::solve(double t, Point *vertexes_a, Point* vertexes_b, Point* vertexes_out)
+bool BDMORPH::solve(double t, Point2 *vertexes_a, Point2* vertexes_b, Point2* vertexes_out)
 {
 	initialize_solver(t,vertexes_a,vertexes_b);
 
@@ -362,7 +362,7 @@ bool BDMORPH::solve(double t, Point *vertexes_a, Point* vertexes_b, Point* verte
 
 /*****************************************************************************************************/
 
-void BDMORPH::initialize_solver(double t,Point *vertexes_a, Point* vertexes_b)
+void BDMORPH::initialize_solver(double t,Point2 *vertexes_a, Point2* vertexes_b)
 {
 	CmdStream commands = init_cmd_stream;
 	int edge_num = 0;
@@ -470,7 +470,7 @@ bool BDMORPH::newton_iteration(int iteration)
 }
 
 /*****************************************************************************************************/
-void BDMORPH::extract_solution(Point *out)
+void BDMORPH::extract_solution(Point2 *out)
 {
 	CmdStream cmd = extract_solution_cmd_stream;
 	uint16_t tmp_idx = 0;
@@ -497,16 +497,16 @@ void BDMORPH::extract_solution(Point *out)
 		}
 		case LOAD_VERTEX_POSITION:
 		{
-			Point& p = out[cmd.dword()];
+			Point2& p = out[cmd.dword()];
 			temp_data[tmp_idx++] = p.x;
 			temp_data[tmp_idx++] = p.y;
 			break;
 		}
 		case COMPUTE_VERTEX:
 		{
-			Point* p0 = (Point*)&temp_data[cmd.word()];
-			Point* p1 = (Point*)&temp_data[cmd.word()];
-			Point& p2 = out[cmd.dword()];
+			Point2* p0 = (Point2*)&temp_data[cmd.word()];
+			Point2* p1 = (Point2*)&temp_data[cmd.word()];
+			Point2& p2 = out[cmd.dword()];
 
 			double d   = temp_data[cmd.word()];
 			double r0d = temp_data[cmd.word()] / d;
