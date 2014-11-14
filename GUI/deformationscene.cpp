@@ -155,7 +155,6 @@ void DeformationScene::redoModel()
 }
 
 /******************************************************************************************************************************/
-
 void DeformationScene::loadImage()
 {
 	QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.png *.jpg *.bmp"));
@@ -228,9 +227,7 @@ void DeformationScene::loadImage()
 
 	system("cc -O -o triangle triangle.c -lm");
 	system("triangle -pqDgPNE temp");
-
 }
-
 
 void DeformationScene::saveModel()
 {
@@ -629,19 +626,19 @@ void DeformationScene::drawBackground(QPainter *painter, const QRectF &)
         glColor3f(1,0,0);
 
         if (selectedIndex != -1)
-                model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),selectedIndex);
+                model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),selectedIndex);
 
         for (int i = 0; i < pointsToRender.size(); i++)
-			model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),pointsToRender[i]);
+			model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),pointsToRender[i]);
 
 
         glColor3f(1,1,0); //highlighted anchors
         for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
-            model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),*it);
+            model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),*it);
 
         if (drawVectorField->isChecked())
             for (unsigned int i = 0; i < oldVertices.size(); i++)
-                model->renderSelectedVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),oldVertices[i]);
+                model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),oldVertices[i]);
     }
 }
 

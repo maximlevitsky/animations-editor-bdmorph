@@ -8,17 +8,23 @@ FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(SUITESPARESE REQUIRED)
 
 SET(QT_USE_QTOPENGL TRUE)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS})
-include_directories(${EIGEN3_INCLUDE_DIR})
 INCLUDE(${QT_USE_FILE})
 
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(. ./GUI ./core ./utils)
+
 SET(kvf2d_SOURCES 
-	deformationscene.cpp main.cpp model2d.cpp
-	KVF.cpp
-	cholmod_matrix.cpp vector2d.cpp 
+
+	GUI/deformationscene.cpp GUI/main.cpp GUI/graphics_view.cpp	
+
+	core/model2d.cpp core/KVF.cpp
+
+	utils/cholmod_matrix.cpp utils/vector2d.cpp 
+
 )
 
-SET(kvf2d_HEADERS deformationscene.h)
+SET(kvf2d_HEADERS GUI/deformationscene.h)
 
 QT4_WRAP_CPP(kvf2d_HEADERS_MOC ${kvf2d_HEADERS})
 

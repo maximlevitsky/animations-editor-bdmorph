@@ -104,37 +104,7 @@ void Model2D::displaceMesh(std::vector<int> &indices, std::vector< Vector2D<doub
 	kvf_algo->displaceMesh(indices, displacements, alpha, drawVFMode);
 }
 /******************************************************************************************************************************/
-void Model2D::renderVertex(double left, double bottom, double meshWidth, double width, double height, Point2D<double> p)
-{
-    glLineWidth(LINE_WIDTH);
-    double right = left + meshWidth;
-    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
-    double top = bottom + meshHeight;
-
-    double wFrac = (right-left)/width;
-    double totWidth = (maxX - minX)/wFrac;
-    double lowX = minX - totWidth * left / width;
-
-    double hFrac = (top-bottom)/height;
-    double totHeight = (maxY - minY)/hFrac;
-    double lowY = minY - totHeight * bottom / height;
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	glOrtho(lowX, lowX+totWidth, lowY, lowY+totHeight, 0, 1);
-    glMatrixMode(GL_MODELVIEW);
-
-    float s=totWidth / 500 * POINT_SIZE_SCALE;
-    glBegin(GL_QUADS);
-        glVertex2f(p[0]-s,p[1]-s);
-        glVertex2f(p[0]-s,p[1]+s);
-        glVertex2f(p[0]+s,p[1]+s);
-        glVertex2f(p[0]+s,p[1]-s);
-    glEnd(/*GL_QUADS*/);
-}
-
-/******************************************************************************************************************************/
-void Model2D::renderSelectedVertex(double left, double bottom, double meshWidth, double width, double height, int v)
+void Model2D::renderVertex(double left, double bottom, double meshWidth, double width, double height, int v)
 {
     glLineWidth(LINE_WIDTH);
     double right = left + meshWidth;

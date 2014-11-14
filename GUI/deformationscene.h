@@ -86,7 +86,8 @@ protected:
 private:
     QGLWidget *glWidget;
     QDialog *createDialog(const QString &windowTitle) const;
-    QWidget *undoButton, *redoButton, *imageButton, *modelButton, *chooseTextureButton, *removeTextureButton, *clearButton, *loadGeometry, *saveButton, *resetButton;
+    QWidget *undoButton, *redoButton, *imageButton, *modelButton;
+    QWidget *chooseTextureButton, *removeTextureButton, *clearButton, *loadGeometry, *saveButton, *resetButton;
     QSlider *alphaSlider, *brushSlider, *wireframeSlider;
 	QLabel *meshLabel;
     QCheckBox *multitouchMode, *drawVectorField, *pinMode;

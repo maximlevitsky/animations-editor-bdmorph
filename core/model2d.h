@@ -37,9 +37,8 @@ public:
     int getClosestVertex(Point2D<double> point, double dist);
 
 	/* rendering */
-	void renderVertex(double left, double bottom, double meshWidth, double width, double height, Point2D<double> p);
     void render(double left, double bottom, double meshWidth, double width, double height);
-    void renderSelectedVertex(double left, double bottom, double meshWidth, double width, double height, int v);
+    void renderVertex(double left, double bottom, double meshWidth, double width, double height, int v);
 	void changeDrawMode(bool m);
 	void setWireframeTrans(float m);
 
@@ -62,19 +61,20 @@ public:
 
 private:
 	/* model information */
-	std::vector< Point2D<double> > vertices;
-	std::vector< Point2D<double> > texCoords;
+	std::vector<Point2> vertices;
 	std::vector<Face> faces;
 	std::set<int> boundaryVertices;
 
+	/* not really used junk */
+	std::vector<Point2> texCoords;
     int numVertices, numFaces;
     double minX, maxX, minY, maxY;
 
 	/*undo stuff*/
-    std::vector< Point2> undoVertices[UNDOSIZE]; //saves vertices of different deforms
+    std::vector<Point2> undoVertices[UNDOSIZE]; //saves vertices of different deforms
 	int undoIndex; //points to current deform on undoArray
 	std::vector<int> undoIndices[UNDOSIZE];
-	std::vector< Vector2> undoDisplacements[UNDOSIZE];
+	std::vector<Vector2> undoDisplacements[UNDOSIZE];
 	double undoAlpha[UNDOSIZE];
 
 	/* settings */
