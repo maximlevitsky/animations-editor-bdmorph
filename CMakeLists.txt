@@ -14,19 +14,20 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(. ./GUI ./core ./utils)
 
-SET(kvf2d_SOURCES 
-
-	GUI/deformationscene.cpp GUI/main.cpp GUI/graphics_view.cpp	
-
+SET(kvf2d_SOURCES
+	GUI/MainScene.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp
+	GUI/AnimationPanel.cpp
+	
 	core/model2d.cpp core/KVF.cpp
-
 	utils/cholmod_matrix.cpp utils/vector2d.cpp 
-
 )
 
-SET(kvf2d_HEADERS GUI/deformationscene.h)
+SET(kvf2d_HEADERS GUI/MainScene.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h)
+SET(kvf2d_FORMS GUI/MainWindow.ui GUI/SidePanel.ui GUI/AnimationPanel.ui)
 
 QT4_WRAP_CPP(kvf2d_HEADERS_MOC ${kvf2d_HEADERS})
+QT4_WRAP_UI(kvf2d_FORMS_HEADERS ${kvf2d_FORMS})
 
-ADD_EXECUTABLE(kvf2d ${kvf2d_SOURCES} ${kvf2d_HEADERS_MOC})
+ADD_EXECUTABLE(kvf2d ${kvf2d_SOURCES} ${kvf2d_HEADERS_MOC} ${kvf2d_FORMS_HEADERS})
+
 TARGET_LINK_LIBRARIES(kvf2d ${QT_LIBRARIES} ${OPENGL_LIBRARIES} ${SUITESPARSE_LIBRARIES} )

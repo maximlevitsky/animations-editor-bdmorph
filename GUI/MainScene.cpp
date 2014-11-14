@@ -1,4 +1,4 @@
-#include "deformationscene.h"
+#include "MainScene.h"
 
 #define TANGENT_WIDTH 20
 #include <QtGui>
@@ -14,13 +14,16 @@ using std::max;
 using std::min;
 
 /******************************************************************************************************************************/
-DeformationScene::DeformationScene(QGLWidget *w) :
-			model(NULL), origModel(NULL), selectedIndex(-1), alpha(.5), brush(10), wireframe(0), glWidget(w)
+MainScene::MainScene(QWidget* parent) :
+			model(NULL), origModel(NULL), selectedIndex(-1), alpha(.5), brush(10), wireframe(0),
+			QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
-    glWidget->setAttribute(Qt::WA_AcceptTouchEvents);
-    glWidget->setAttribute(Qt::WA_StaticContents);
+    setAttribute(Qt::WA_AcceptTouchEvents);
+    setAttribute(Qt::WA_StaticContents);
 
-    glWidget->makeCurrent();
+    setFocusPolicy(Qt::WheelFocus);
+
+    makeCurrent();
     glEnable(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -31,11 +34,11 @@ DeformationScene::DeformationScene(QGLWidget *w) :
     QPixmap texture = QPixmap(16,16);
     texture.fill(QColor(200,200,255));
 
-    textureRef = glWidget->bindTexture(texture);
+    textureRef = bindTexture(texture);
 
 	QPalette plt;
     plt.setColor(QPalette::WindowText, Qt::white);
-    QWidget *deformBox = createDialog(tr("Deformation Tools"));
+    //QWidget *deformBox = createDialog(tr("Deformation Tools"));
 	undoButton = new QPushButton(tr("Undo"));
 	connect(undoButton, SIGNAL(clicked()), this, SLOT(undoModel()));
 	redoButton = new QPushButton(tr("Redo"));
@@ -60,21 +63,8 @@ DeformationScene::DeformationScene(QGLWidget *w) :
 	connect(clearButton, SIGNAL(clicked()), this, SLOT(clearPins()));
     resetButton = new QPushButton(tr("Reset points"));
 	connect(resetButton, SIGNAL(clicked()), this, SLOT(restorePoints()));
-	deformBox->layout()->addWidget(undoButton);
-	deformBox->layout()->addWidget(redoButton);
-	deformBox->layout()->addWidget(pinMode);
-	deformBox->layout()->addWidget(multitouchMode);
-	deformBox->layout()->addWidget(new QLabel("<font color=white>Brush (1 to 100):</font>"));
-    deformBox->layout()->addWidget(brushSlider);
-    deformBox->resize(100,50);
-    deformBox->layout()->addWidget(new QLabel("<font color=white>Alpha (0 to 2):</font>"));
-    deformBox->layout()->addWidget(alphaSlider);
-    deformBox->resize(100,50);
-	deformBox->layout()->addWidget(clearButton);
-	deformBox->layout()->addWidget(resetButton);
-    addWidget(deformBox);
 
-	QWidget *effectBox = createDialog(tr("Wireframe"));
+
 	drawVectorField = new QCheckBox("Draw VF");
 	drawVectorField->setPalette(plt);
     wireframeSlider = new QSlider();
@@ -84,14 +74,8 @@ DeformationScene::DeformationScene(QGLWidget *w) :
 	connect(drawVectorField, SIGNAL(toggled(bool)), this, SLOT(drawModeChanged(bool)));
 	connect(wireframeSlider, SIGNAL(valueChanged(int)), this, SLOT(changeWireframe(int)));
 	meshLabel = new QLabel("<font color=yellow>#Vertices: -<br>#Faces: -</font>");
-	effectBox->layout()->addWidget(new QLabel("<font color=white>Wireframe (0 to 100):</font>"));
-	effectBox->layout()->addWidget(wireframeSlider);
-	effectBox->resize(100,50);
-	effectBox->layout()->addWidget(meshLabel);
-	effectBox->layout()->addWidget(drawVectorField);
-	addWidget(effectBox);
+	//addWidget(effectBox);
 
-    QWidget *controls = createDialog(tr("Controls"));
 	chooseTextureButton = new QPushButton(tr("Load texture"));
     removeTextureButton = new QPushButton(tr("Remove texture"));
 	imageButton = new QPushButton(tr("Load image"));
@@ -104,58 +88,26 @@ DeformationScene::DeformationScene(QGLWidget *w) :
 	connect(modelButton, SIGNAL(clicked()), this, SLOT(loadModel()));
     connect(saveButton, SIGNAL(clicked()), this, SLOT(saveModel()));
     connect(loadGeometry, SIGNAL(clicked()), this, SLOT(resetPoints()));
-	controls->layout()->addWidget(modelButton);
-	controls->layout()->addWidget(saveButton);
-	controls->layout()->addWidget(imageButton);
-    controls->layout()->addWidget(chooseTextureButton);
-    controls->layout()->addWidget(removeTextureButton);
-    controls->layout()->addWidget(loadGeometry);
-    addWidget(controls);
-
-    QPointF pos(10, 10);
-    foreach (QGraphicsItem *item, items()) {
-        item->setFlag(QGraphicsItem::ItemIsMovable);
-        item->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
-
-        const QRectF rect = item->boundingRect();
-        item->setPos(pos.x() - rect.x(), pos.y() - rect.y());
-        pos += QPointF(0, 10 + rect.height());
-    }
 }
 
 /******************************************************************************************************************************/
-
-QDialog *DeformationScene::createDialog(const QString &windowTitle) const
-{
-    QDialog *dialog = new QDialog(0, Qt::CustomizeWindowHint | Qt::WindowTitleHint);
-
-    dialog->setStyleSheet("QDialog { background-color: black; }");
-    dialog->setWindowOpacity(0.8);
-    dialog->setWindowTitle(windowTitle);
-    dialog->setLayout(new QVBoxLayout);
-
-    return dialog;
-}
-
-/******************************************************************************************************************************/
-
-void DeformationScene::undoModel()
+void MainScene::undoModel()
 {
 	if ( !model) return;
 	model->undoDeform(logIndices,logDisplacements,logAlphas);
-	glWidget->repaint();
-}
-
-
-void DeformationScene::redoModel()
-{
-	if ( !model) return;
-	model->redoDeform(logIndices,logDisplacements,logAlphas);
-	glWidget->repaint();
+	repaint();
 }
 
 /******************************************************************************************************************************/
-void DeformationScene::loadImage()
+void MainScene::redoModel()
+{
+	if ( !model) return;
+	model->redoDeform(logIndices,logDisplacements,logAlphas);
+	repaint();
+}
+
+/******************************************************************************************************************************/
+void MainScene::loadImage()
 {
 	QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.png *.jpg *.bmp"));
 	QImage image(filename);
@@ -228,8 +180,9 @@ void DeformationScene::loadImage()
 	system("cc -O -o triangle triangle.c -lm");
 	system("triangle -pqDgPNE temp");
 }
+/******************************************************************************************************************************/
 
-void DeformationScene::saveModel()
+void MainScene::saveModel()
 {
     QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
 
@@ -251,8 +204,8 @@ void DeformationScene::saveModel()
 		model->saveFaces(outfile,filename);
 	}
 }
-
-void DeformationScene::loadModel()
+/******************************************************************************************************************************/
+void MainScene::loadModel()
 {
     pinned.clear();
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
@@ -270,7 +223,7 @@ void DeformationScene::loadModel()
 	model->changeDrawMode(drawVectorField->isChecked());
 	QPixmap texture = QPixmap(16,16);
     texture.fill(QColor(200,200,255));
-    textureRef = glWidget->bindTexture(texture);
+    textureRef = bindTexture(texture);
     origModel = new Model2D(filename);
     qWarning("Done loading");
 
@@ -285,13 +238,11 @@ void DeformationScene::loadModel()
 	meshText += "</font>";
 	meshLabel->setText(meshText); 
 
-    glWidget->repaint();
+    repaint();
 }
 
-
 /******************************************************************************************************************************/
-
-void DeformationScene::resetPoints()
+void MainScene::resetPoints()
 {
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
 
@@ -301,12 +252,11 @@ void DeformationScene::resetPoints()
 
 	modelWidth = model->getWidth() * 200;
 	modelLocation = QPointF(width()/2, height()/2);
-    glWidget->repaint();
+    repaint();
 }
 
-
-
-void DeformationScene::saveLog()
+/******************************************************************************************************************************/
+void MainScene::saveLog()
 {
     QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.txt"));
 
@@ -322,8 +272,8 @@ void DeformationScene::saveLog()
             outfile << logIndices[i][j] << ' ' << logDisplacements[i][j][0] << ' ' << logDisplacements[i][j][1] << endl;
     }
 }
-
-void DeformationScene::runLog()
+/******************************************************************************************************************************/
+void MainScene::runLog()
 {
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose log"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
@@ -349,7 +299,7 @@ void DeformationScene::runLog()
 
         model->displaceMesh(indices,displacements,alpha);
         update();
-        glWidget->repaint();
+        repaint();
 
         qWarning("ALPHA: %g", alpha);
         for (int j = 0; j < displacements.size(); j++)
@@ -360,38 +310,35 @@ void DeformationScene::runLog()
 }
 
 /******************************************************************************************************************************/
-
-
-void DeformationScene::chooseTexture()
+void MainScene::chooseTexture()
 {
-    glWidget->makeCurrent();
+    makeCurrent();
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
     glEnable(GL_TEXTURE_2D);
 	if (filename == NULL) {
 		QPixmap texture = QPixmap(16,16);
 		texture.fill(QColor(200,200,255));
-		textureRef = glWidget->bindTexture(texture);
+		textureRef = bindTexture(texture);
 	}
     else {
-		textureRef = glWidget->bindTexture(QPixmap(filename),GL_TEXTURE_2D);
+		textureRef = bindTexture(QPixmap(filename),GL_TEXTURE_2D);
 	}
-    glWidget->repaint();
+    repaint();
 }
-
-void DeformationScene::removeTexture()
+/******************************************************************************************************************************/
+void MainScene::removeTexture()
 {
-    glWidget->makeCurrent();
+    makeCurrent();
 	glEnable(GL_TEXTURE_2D);
 	QPixmap texture = QPixmap(16,16);
     texture.fill(QColor(200,200,255));
-    textureRef = glWidget->bindTexture(texture);
+    textureRef = bindTexture(texture);
    // glEnable(GL_TEXTURE_2D);
-    glWidget->repaint();
+    repaint();
 }
-
 /******************************************************************************************************************************/
 
-void DeformationScene::modeChanged(bool m)
+void MainScene::modeChanged(bool m)
 {
     if (!origModel) return;
 
@@ -407,17 +354,150 @@ void DeformationScene::modeChanged(bool m)
     }
 }
 
-
-void DeformationScene::keyReleaseEvent(QKeyEvent *e)
+/******************************************************************************************************************************/
+void MainScene::paintGL()
 {
-    switch(e->key()) {
-    default:
-    	QGraphicsScene::keyPressEvent(e);
-    	break;
+    glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_DONT_CARE);
+
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POLYGON_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glClearColor(0.99,0.99,0.99, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glViewport(0,0,(GLint)width(), (GLint)height());
+
+    if (model)
+    {
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, textureRef);
+        model->render(modelLocation.x(),modelLocation.y(),modelWidth,width(),height());
+        glColor3f(1,0,0);
+
+        if (selectedIndex != -1)
+                model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),selectedIndex);
+
+        for (int i = 0; i < pointsToRender.size(); i++)
+			model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),pointsToRender[i]);
+
+
+        glColor3f(1,1,0); //highlighted anchors
+        for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
+            model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),*it);
+
+        if (drawVectorField->isChecked())
+            for (unsigned int i = 0; i < oldVertices.size(); i++)
+                model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),oldVertices[i]);
     }
 }
 
-void DeformationScene::keyPressEvent(QKeyEvent *e)
+bool MainScene::event(QEvent *event)
+{
+	switch (event->type()) {
+	case QEvent::TouchBegin:
+	case QEvent::TouchUpdate:
+	case QEvent::TouchEnd:
+		touchEvent(static_cast<QTouchEvent*>(event));
+		return true;
+	default:
+		return QWidget::event(event);
+	}
+}
+
+/******************************************************************************************************************************/
+void MainScene::touchEvent(QTouchEvent* te)
+{
+	QList<QTouchEvent::TouchPoint> points = te->touchPoints();
+	if (isPinModeChecked())
+		return; //if pin mode is checked, directed to mousepress event.
+
+	if (!isMultitouchModeChecked() && points.count() == 2) {
+		//zoom only in normal mode
+		QTouchEvent::TouchPoint p0 = points.first();
+		QTouchEvent::TouchPoint p1 = points.last();
+		QLineF line1(p0.startPos(), p1.startPos());
+		QLineF line2(p0.pos(), p1.pos());
+		qreal scaleFactor = line2.length() / line1.length();
+		zoom(scaleFactor + (1 - scaleFactor) / 1.05);
+		return;
+	}
+
+	if (te->type() == QEvent::TouchEnd) {
+		idToLocation.clear();
+		std::vector<int> v;
+		setPointsToRender(v);
+		return;
+	}
+
+	// fix set of pins
+	std::set<int> ids;
+	for (int i = 0; i < points.size(); i++) {
+		QTouchEvent::TouchPoint p = points[i];
+		if (idToLocation.count(p.id()) == 0) {
+			idToLocation[p.id()] = p.pos();
+			touchToVertex[p.id()] = closestIndex(p.pos());
+		}
+		ids.insert(p.id());
+	}
+
+	std::map<int, QPointF>::iterator it = idToLocation.begin();
+	std::set<int> toRemove;
+	while (it != idToLocation.end()) {
+		if (ids.count(it->first) == 0)
+			toRemove.insert(it->first);
+
+		++it;
+	}
+
+	for (std::set<int>::iterator iter = toRemove.begin();iter != toRemove.end(); ++iter)
+		idToLocation.erase(*iter);
+
+	// figure out if anything moved significantly
+	double maxDistance = 0;
+
+	for (int i = 0; i < points.size(); i++) {
+		QPointF loc = points[i].pos();
+		QPointF old = idToLocation[points[i].id()];
+		QPointF diff = old - loc;
+		double d = sqrt(diff.x() * diff.x() + diff.y() * diff.y());
+		if (d > maxDistance)
+			maxDistance = d;
+	}
+
+	if (maxDistance >= 1) {
+		// moved more than one pixel!
+		std::vector<int> ids;
+		std::vector<Vector2D<double> > displacements;
+		for (int i = 0; i < points.size(); i++) {
+			QPointF displacement = points[i].pos()
+					- idToLocation[points[i].id()];
+			if (touchToVertex[points[i].id()] == -1)
+				continue;
+
+			ids.push_back(touchToVertex[points[i].id()]);
+			displacements.push_back(screenToModelVec(displacement));
+			idToLocation[points[i].id()] = points[i].pos();
+		}
+		if (ids.size() > 0)
+			displaceMesh(ids, displacements);
+	}
+
+	std::vector<int> v;
+	for (std::map<int, QPointF>::iterator it = idToLocation.begin();
+			it != idToLocation.end(); ++it)
+		v.push_back(touchToVertex[it->first]);
+	setPointsToRender(v);
+}
+
+/******************************************************************************************************************************/
+void MainScene::keyReleaseEvent(QKeyEvent *e)
+{
+}
+/******************************************************************************************************************************/
+void MainScene::keyPressEvent(QKeyEvent *e)
 {
     switch(e->key()) {
     case Qt::Key_Up:
@@ -454,42 +534,31 @@ void DeformationScene::keyPressEvent(QKeyEvent *e)
     case Qt::Key_S:
     	saveLog();
     	break;
-    default:
-    	QGraphicsScene::keyPressEvent(e);
     }
-
     update();
 }
-
 /******************************************************************************************************************************/
-
-void DeformationScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
+void MainScene::mousePressEvent(QMouseEvent *event)
 {
-    glWidget->setCursor(Qt::BlankCursor);
-    QGraphicsScene::mousePressEvent(event);
-
-    if (event->isAccepted()) return;
-
-    QPointF pos = event->scenePos(); // (0,0) is upper left
+    setCursor(Qt::BlankCursor);
+    QPointF pos = event->pos(); // (0,0) is upper left
     pos.setY(height()-pos.y()-1);
 
     QPointF origPos = pos;
+    lastPos = event->pos();
 
     if (model)
     {
         pos -= modelLocation;
         pos *= model->getWidth() / modelWidth;
         pos += QPointF(model->getMinX(),model->getMinY());
-
         Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
         if ((mods & Qt::ShiftModifier) || pinMode->isChecked())
         {
             int i = model->getClosestVertex(Point2D<double>(pos.x(),pos.y()),brush*model->getWidth()/modelWidth);
-
             if (i == -1)
             	return;
-
             if (pinned.count(i))
             	pinned.erase(i);
             else
@@ -504,43 +573,26 @@ void DeformationScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 				selectedIndex = vertex;
         }
     }
-
     event->accept();
 }
-
-void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+/******************************************************************************************************************************/
+void MainScene::mouseMoveEvent(QMouseEvent *event)
 {
-    QGraphicsScene::mouseMoveEvent(event);
-
     if (!model) return;
-    if (event->isAccepted()) return;
-
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
+
+	QPointF oldPos = lastPos;
+    QPointF curPos = event->pos();
+    lastPos = curPos;
 
 	if ((event->buttons() & Qt::RightButton) && selectedIndex >= 0)
 	{
-		mousePos = event->scenePos();
-        mousePos.setY(height()-mousePos.y()-1);
-        mousePos -= modelLocation;
-        mousePos *= model->getWidth() / modelWidth;
-        mousePos += QPointF(model->getMinX(),model->getMinY());
-
-		QPointF oldPos = event->lastScenePos();
-        QPointF curPos = event->scenePos();
         QPointF diff = curPos - oldPos;
 		move(QPointF(diff.x(),-diff.y()));
 	} 
 
     if ((event->buttons() & Qt::LeftButton) && (!(mods & Qt::ShiftModifier)) && !pinMode->isChecked() && selectedIndex >= 0)
     {
-        mousePos = event->scenePos();
-        mousePos.setY(height()-mousePos.y()-1);
-        mousePos -= modelLocation;
-        mousePos *= model->getWidth() / modelWidth;
-        mousePos += QPointF(model->getMinX(),model->getMinY());
-
-        QPointF oldPos = event->lastScenePos();
-        QPointF curPos = event->scenePos();
         QPointF diff = curPos - oldPos;
 
         diff *= model->getWidth() / modelWidth;
@@ -575,77 +627,27 @@ void DeformationScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         event->accept();
         update();
     }
-
-    glWidget->repaint();
+    repaint();
 }
 
-
-void DeformationScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+/******************************************************************************************************************************/
+void MainScene::mouseReleaseEvent(QMouseEvent *event)
 {
-    glWidget->setCursor(Qt::ArrowCursor);
-
-    QGraphicsScene::mouseReleaseEvent(event);
-    if (event->isAccepted()) return;
+    setCursor(Qt::ArrowCursor);
     selectedIndex = -1;
     update();
 }
 
-
-void DeformationScene::wheelEvent(QGraphicsSceneWheelEvent *event)
+/******************************************************************************************************************************/
+void MainScene::wheelEvent(QWheelEvent *event)
 {
-	QGraphicsScene::wheelEvent(event);
-	if (event->isAccepted()) return;
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
+	update();
 }
 
 /******************************************************************************************************************************/
-
-
-void DeformationScene::drawBackground(QPainter *painter, const QRectF &)
-{
-	glWidget->makeCurrent();
-
-    //glHint(GL_POINT_SMOOTH_HINT, GL_DONT_CARE);
-    glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_DONT_CARE);
-
-    glEnable(GL_LINE_SMOOTH);
-    //glEnable(GL_POINT_SMOOTH);
-    glEnable(GL_POLYGON_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glClearColor(1.,1.,1., 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (model)
-    {
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, textureRef);
-        model->render(modelLocation.x(),modelLocation.y(),modelWidth,width(),height());
-        glColor3f(1,0,0);
-
-        if (selectedIndex != -1)
-                model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),selectedIndex);
-
-        for (int i = 0; i < pointsToRender.size(); i++)
-			model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),pointsToRender[i]);
-
-
-        glColor3f(1,1,0); //highlighted anchors
-        for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
-            model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),*it);
-
-        if (drawVectorField->isChecked())
-            for (unsigned int i = 0; i < oldVertices.size(); i++)
-                model->renderVertex(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(),oldVertices[i]);
-    }
-}
-
 /******************************************************************************************************************************/
-
-
-int DeformationScene::closestIndex(QPointF pos)
+int MainScene::closestIndex(QPointF pos)
 {
 	if (!model)
 		return -1;
@@ -658,13 +660,14 @@ int DeformationScene::closestIndex(QPointF pos)
 	return model->getClosestVertex(Point2D<double>(pos.x(), pos.y()), 5 * model->getWidth() / modelWidth);
 }
 
-Vector2D<double> DeformationScene::screenToModelVec(QPointF v)
+/******************************************************************************************************************************/
+Vector2D<double> MainScene::screenToModelVec(QPointF v)
 {
 	v *= model->getWidth() / modelWidth;
 	return Vector2D<double>(v.x(), -v.y());
 }
-
-void DeformationScene::displaceMesh(std::vector<int> indices,std::vector<Vector2D<double> > displacements)
+/******************************************************************************************************************************/
+void MainScene::displaceMesh(std::vector<int> indices,std::vector<Vector2D<double> > displacements)
 {
 	for (std::set<int>::iterator it = pinned.begin(); it != pinned.end(); ++it)
 	{
@@ -680,8 +683,8 @@ void DeformationScene::displaceMesh(std::vector<int> indices,std::vector<Vector2
 		model->addUndoAction(indices, displacements, alpha);
 	}
 }
-
-void DeformationScene::restorePoints()
+/******************************************************************************************************************************/
+void MainScene::restorePoints()
 {
 	model->copyPositions(*origModel);
 }

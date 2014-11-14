@@ -13,31 +13,30 @@
 #include <QGLWidget>
 #include <set>
 #include <QCheckBox>
+#include <qwidget.h>
 
 #define ZOOM_FACTOR 1.2
 
 #include "model2d.h"
 
-class DeformationScene : public QGraphicsScene
+class MainScene : public QGLWidget
 {
     Q_OBJECT
-
 public:
     void setPointsToRender(std::vector<int> &p) {
         pointsToRender = p;
         if (p.size() > 0) oldVertices = p;
     }
 
-    DeformationScene(QGLWidget *w);
-    ~DeformationScene() { if (model) delete model; }
-    void drawBackground(QPainter *painter, const QRectF &rect);
+    MainScene(QWidget* parent);
+    ~MainScene() { if (model) delete model; }
+
+    void paintGL();
     void zoom(double factor) {modelWidth *= factor;}
     void move(QPointF direction) {modelLocation += direction;}
     void updateLogSpiral(int which);
 	int closestIndex(QPointF pos);
-
 	Vector2D<double> screenToModelVec(QPointF v);
-
 	void displaceMesh(std::vector<int> indices,
 			std::vector<Vector2D<double> > displacements);
 
@@ -71,21 +70,20 @@ public slots:
 
     void resetPoints();
 	void restorePoints();
-
     void saveLog();
     void runLog();
 
 protected:
-	void wheelEvent(QGraphicsSceneWheelEvent *event);
-    void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
-    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
-    void keyPressEvent(QKeyEvent *e);
-    void keyReleaseEvent(QKeyEvent *e);
-
+    bool event(QEvent *);
+	void mouseMoveEvent (QMouseEvent * event);
+	void mousePressEvent ( QMouseEvent * event );
+	void mouseReleaseEvent(QMouseEvent * event);
+	void wheelEvent (QWheelEvent * event );
+	void keyPressEvent ( QKeyEvent * event );
+	void keyReleaseEvent ( QKeyEvent * event );
 private:
-    QGLWidget *glWidget;
-    QDialog *createDialog(const QString &windowTitle) const;
+    void touchEvent(QTouchEvent* te);
+
     QWidget *undoButton, *redoButton, *imageButton, *modelButton;
     QWidget *chooseTextureButton, *removeTextureButton, *clearButton, *loadGeometry, *saveButton, *resetButton;
     QSlider *alphaSlider, *brushSlider, *wireframeSlider;
@@ -104,8 +102,6 @@ private:
 
     unsigned int texHandle;
 
-    QPointF mousePos;
-
     std::vector<int> pointsToRender;
 
     GLuint textureRef;
@@ -115,6 +111,11 @@ private:
     std::vector< std::vector< Vector2D<double> > > logDisplacements;
     std::vector<std::vector<int> > logIndices;
     std::vector< double > logAlphas;
+
+    QPointF lastPos;
+
+    std::map<int, QPointF> idToLocation;
+    std::map<int, int> touchToVertex;
 
 };
 

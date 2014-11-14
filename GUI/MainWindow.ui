@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>972</width>
+    <height>759</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>KVF deformation with BDMORPH animations</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing">
+     <number>5</number>
+    </property>
+    <property name="margin">
+     <number>5</number>
+    </property>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>972</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuModel">
+    <property name="title">
+     <string>Model</string>
+    </property>
+    <addaction name="actionLoad_mesh"/>
+    <addaction name="actionLoad_texture"/>
+    <addaction name="actionReset_texture"/>
+   </widget>
+   <widget class="QMenu" name="menuMode">
+    <property name="title">
+     <string>Mode</string>
+    </property>
+    <addaction name="actionVector_field"/>
+    <addaction name="actionDeformation"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionWireframe"/>
+   </widget>
+   <addaction name="menuModel"/>
+   <addaction name="menuView"/>
+   <addaction name="menuMode"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionLoad_mesh">
+   <property name="text">
+    <string>Load mesh</string>
+   </property>
+  </action>
+  <action name="actionLoad_texture">
+   <property name="text">
+    <string>Load texture</string>
+   </property>
+  </action>
+  <action name="actionReset_texture">
+   <property name="text">
+    <string>Reset texture</string>
+   </property>
+  </action>
+  <action name="actionVector_field">
+   <property name="text">
+    <string>Vector field</string>
+   </property>
+  </action>
+  <action name="actionDeformation">
+   <property name="text">
+    <string>Deformation</string>
+   </property>
+  </action>
+  <action name="actionWireframe">
+   <property name="text">
+    <string>Wireframe</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
