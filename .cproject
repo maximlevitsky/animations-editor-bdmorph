@@ -38,7 +38,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/core}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/GUI}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/utils}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/maxim/Technion/kvf/"/>
+									<listOptionValue builtIn="false" value="/home/maxim/Technion/kvf_debug/"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1345561444" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>

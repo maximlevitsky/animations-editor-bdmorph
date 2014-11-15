@@ -1,0 +1,73 @@
+void MainScene::loadImage()
+{
+	QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.png *.jpg *.bmp"));
+	QImage image(filename);
+	if (image.isNull()) return;
+
+	image = image.scaled(350,350,Qt::KeepAspectRatio);
+	image = image.mirrored(false,true);
+	qWarning("width: %d, height: %d", image.width(), image.height()); 
+
+	std::vector<QPointF> V; //vertices
+	std::vector<std::pair<int,int> > E; //segments
+	int Vmap[354][354] = {{0}}; //added stroke 2 in each side of the map
+	int stroke = 2;
+	for (int i=stroke; i<image.width()+stroke; i++) {
+		for (int j=stroke; j<image.height()+stroke; j++) {
+			if ((filename.endsWith("png") && qAlpha(image.pixel(i-stroke,j-stroke)) >= 250) ||
+				((filename.endsWith("jpg") || filename.endsWith("bmp")) && qGray(image.pixel(i-stroke,j-stroke)) <= 250)) {
+				for (int k=i-stroke; k<=i+stroke; k++) {
+					for (int l=j-stroke; l<=j+stroke; l++) {
+						Vmap[k][l] = -1;
+					}
+				}
+			}
+		}
+	}
+
+	int count = 0;
+	for (int i=0; i<image.width()+2*stroke; i++) {
+		for (int j=0; j<image.height()+2*stroke; j++) {
+			if (Vmap[i][j] == -1) {
+				if (Vmap[max(0,i-1)][j] == 0 || Vmap[i][max(0,j-1)] == 0 || 
+					Vmap[min(image.width()+2*stroke-1,i+1)][j] == 0 || Vmap[i][min(image.height()+2*stroke-1,j+1)] == 0 ||
+					Vmap[max(0,i-1)][max(0,j-1)] == 0 || Vmap[max(0,i-1)][min(image.height()+2*stroke-1,j+1)] == 0 ||
+					Vmap[min(image.width()+2*stroke-1,i+1)][max(0,j-1)] == 0 || Vmap[min(image.width()+2*stroke-1,i+1)][min(image.height()+2*stroke-1,j+1)] == 0) {
+						count++;
+						Vmap[i][j] = count;
+						V.push_back(QPointF(i,j));
+				}
+			}
+		}
+	}
+
+	for (int i=0; i<image.width()+2*stroke; i++) {
+		for (int j=0; j<image.height()+2*stroke; j++) {
+			if (j+1 < image.height()+2*stroke && Vmap[i][j] > 0 && Vmap[i][j+1] > 0) {
+				E.push_back(std::make_pair(Vmap[i][j],Vmap[i][j+1]));
+			}
+			if (i+1 < image.width()+2*stroke && Vmap[i][j] > 0 && Vmap[i+1][j] > 0) {
+				E.push_back(std::make_pair(Vmap[i][j],Vmap[i+1][j]));
+			}
+		}
+	}
+
+	qWarning("\n#vertices: %d, #segments: %d", (int)V.size(), (int)E.size());
+
+	std::ofstream outfile("temp.poly");
+	//vertices
+	outfile << V.size() << " 2 0 1" << endl;
+	for (int i=1; i<=V.size(); i++) {
+		outfile << i << ' ' << V[i-1].x()/(image.width()+stroke) << ' ' << V[i-1].y()/(image.height()+stroke) << " 1 " << endl;
+	}
+	//segments
+	outfile << E.size() << " 1" << endl;
+	for (int i=1; i<=E.size(); i++) {
+		outfile << i << ' ' << E[i-1].first << ' ' << E[i-1].second << " 1 " << endl;
+	}
+	//holes
+	outfile << '0' << endl;
+
+	system("cc -O -o triangle triangle.c -lm");
+	system("triangle -pqDgPNE temp");
+}

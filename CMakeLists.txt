@@ -14,11 +14,11 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(. ./GUI ./core ./utils)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 SET(kvf2d_SOURCES
-	GUI/MainScene.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp
-	GUI/AnimationPanel.cpp
-	
-	core/model2d.cpp core/KVF.cpp
+	GUI/MainScene.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp
+	core/Model.cpp core/KVFModel.cpp
 	utils/cholmod_matrix.cpp utils/vector2d.cpp 
 )
 

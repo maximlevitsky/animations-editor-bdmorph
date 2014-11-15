@@ -245,7 +245,7 @@ void BDMORPH_BUILDER::compute_vertex_info(Vertex v0, int neighbourCount,
 	}
 }
 /*****************************************************************************************************/
-BDMORPH::BDMORPH(
+BDMORPHModel::BDMORPHModel(
 		std::vector<Face> &faces, 				/* all the faces of the mesh*/
 		std::vector<Vertex> &boundaryVertexes,  /* vertexes on the boundary - we will ignore these */
 		int vertexCount, 					/* total number of vertexes - since we don't need
@@ -343,7 +343,7 @@ BDMORPH::BDMORPH(
 }
 
 /*****************************************************************************************************/
-bool BDMORPH::solve(double t, Point2 *vertexes_a, Point2* vertexes_b, Point2* vertexes_out)
+bool BDMORPHModel::solve(double t, Point2 *vertexes_a, Point2* vertexes_b, Point2* vertexes_out)
 {
 	initialize_solver(t,vertexes_a,vertexes_b);
 
@@ -362,7 +362,7 @@ bool BDMORPH::solve(double t, Point2 *vertexes_a, Point2* vertexes_b, Point2* ve
 
 /*****************************************************************************************************/
 
-void BDMORPH::initialize_solver(double t,Point2 *vertexes_a, Point2* vertexes_b)
+void BDMORPHModel::initialize_solver(double t,Point2 *vertexes_a, Point2* vertexes_b)
 {
 	CmdStream commands = init_cmd_stream;
 	int edge_num = 0;
@@ -379,7 +379,7 @@ void BDMORPH::initialize_solver(double t,Point2 *vertexes_a, Point2* vertexes_b)
 }
 
 /*****************************************************************************************************/
-bool BDMORPH::newton_iteration(int iteration)
+bool BDMORPHModel::newton_iteration(int iteration)
 {
 	uint16_t tmp_idx = 0; /* this is uint16_t on purpose to overflow when reaches maximum value*/
 	int edge_num = 0; double grad_sum = 0;
@@ -470,7 +470,7 @@ bool BDMORPH::newton_iteration(int iteration)
 }
 
 /*****************************************************************************************************/
-void BDMORPH::extract_solution(Point2 *out)
+void BDMORPHModel::extract_solution(Point2 *out)
 {
 	CmdStream cmd = extract_solution_cmd_stream;
 	uint16_t tmp_idx = 0;

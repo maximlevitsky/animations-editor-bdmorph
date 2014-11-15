@@ -1,0 +1,319 @@
+#include "Model.h"
+#include "Utils.h"
+#include <ctime>
+#include <cmath>
+#include <fstream>
+#include <string>
+#include <algorithm>
+#include <limits>
+#include <QtOpenGL>
+
+#define LINE_WIDTH 2
+
+/******************************************************************************************************************************/
+void error_handler(int status, char *file, int line,  char *message)
+{
+    qWarning("CHOLMOD error status %d", status);
+    qWarning("File: %s", file);
+    qWarning("Line: %d", line);
+    qWarning("Message: %s", message);
+}
+
+/******************************************************************************************************************************/
+MeshModel::MeshModel() :
+		wireframeTrans(0),
+		faces(NULL),
+		boundaryVertices(NULL)
+{
+
+}
+
+/******************************************************************************************************************************/
+MeshModel::MeshModel(const QString &filename) :
+		wireframeTrans(0),
+		faces(new std::vector<Face>),
+		boundaryVertices(new std::set<Vertex>)
+{
+
+	/* TODO: initializing common here is not good */
+	cm = new cholmod_common;
+
+	/* TODO: think more about data sharing between models */
+
+	loadFromFile(filename);
+
+    minX = std::numeric_limits<double>::max();
+    maxX = std::numeric_limits<double>::min();
+    minY = std::numeric_limits<double>::max();
+    maxY = std::numeric_limits<double>::min();
+
+    double sumX = 0.0;
+    double sumY = 0.0;
+
+    for (int i = 0; i < numVertices; i++) {
+        minX = std::min(minX, vertices[i].x);
+        minY = std::min(minY, vertices[i].y);
+        maxX = std::max(maxX, vertices[i].x);
+        maxY = std::max(maxY, vertices[i].y);
+		sumX = sumX + vertices[i].x;
+		sumY = sumY + vertices[i].y;
+    }
+
+	qWarning("minX  = %f , minY = %f, maxX = %f , maxY = %f", minX,minY,maxX,maxY);
+
+	double avgX = sumX/numVertices;
+	double avgY = sumY/numVertices;
+
+	for (int i=0; i<numVertices; i++) {
+		vertices[i].x = vertices[i].x - avgX;
+		vertices[i].y = vertices[i].y - avgY;
+	}
+
+	std::map< int , std::map<int,int> > edgeCount;
+    for (int i = 0; i < numFaces; i++)
+    {
+        int a = (*faces)[i][0];
+        int b = (*faces)[i][1];
+        int c = (*faces)[i][2];
+        edgeCount[a][b]++;
+        edgeCount[b][a]++;
+        edgeCount[a][c]++;
+        edgeCount[c][a]++;
+        edgeCount[c][b]++;
+        edgeCount[b][c]++;
+    }
+
+    for (int i = 0; i < numFaces; i++)
+    {
+        int a = (*faces)[i][0], b = (*faces)[i][1], c = (*faces)[i][2];
+        if (edgeCount[a][b] == 1) {
+            boundaryVertices->insert(a);
+            boundaryVertices->insert(b);
+        }
+        if (edgeCount[b][c] == 1) {
+            boundaryVertices->insert(b);
+            boundaryVertices->insert(c);
+        }
+        if (edgeCount[a][c] == 1) {
+            boundaryVertices->insert(a);
+            boundaryVertices->insert(c);
+        }
+    }
+
+    cholmod_start(cm);
+    cm->error_handler = error_handler;
+}
+
+/******************************************************************************************************************************/
+void MeshModel::loadFromFile(const QString & filename)
+{
+	if (filename.endsWith("obj")) //handle obj file
+	{
+		numVertices = 0;
+		numFaces = 0;
+		std::ifstream infile(filename.toAscii());
+		bool is_vt = false;
+		double x,y,z;
+		std::string a,b,c;
+
+		while (!infile.eof())
+		{
+			// get line
+			std::string curLine;
+			std::getline(infile, curLine);
+
+			// read type of the line
+			std::istringstream issLine(curLine);
+			std::string linetype;
+			issLine >> linetype;
+
+			if (linetype == "v")
+			{
+				numVertices++;
+				issLine >> x >> y >> z;
+				Point2D<double> p(x,y);
+				vertices.push_back(p);
+				continue;
+			}
+			if (linetype == "vt")
+			{
+				is_vt = true;
+				issLine >> x >> y;
+				Point2D<double> p(x,y);
+				texCoords.push_back(p);
+				continue;
+			}
+			if (linetype == "f")
+			{
+				numFaces++;
+				issLine >> a >> b >> c;
+				char* a_dup = strdup(a.c_str()); char* b_dup = strdup(b.c_str()); char* c_dup = strdup(c.c_str());
+				char* aa = strtok(a_dup,"/");
+				char* bb = strtok(b_dup,"/");
+				char* cc = strtok(c_dup,"/");
+				Face fa;
+				fa.f[0] = atoi(aa)-1; fa.f[1] = atoi(bb)-1; fa.f[2] = atoi(cc)-1;
+				faces->push_back(fa);
+				continue;
+			}
+			if (linetype == "#") continue;
+			if (linetype == "mtllib") continue;
+		}
+		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
+		if (is_vt == false)
+		{
+			texCoords.resize(numVertices);
+			for (int i = 0; i < numVertices; i++)
+			texCoords[i] = vertices[i];
+		}
+	}
+
+    if (filename.endsWith("off")) //handle off file
+	{
+    	std::ifstream infile(filename.toAscii());
+    	std::string temp;
+		infile >> temp;
+
+		infile >> numVertices >> numFaces >> temp;
+
+		qWarning("Mesh:  %d vertices, %d faces", numVertices, numFaces);
+
+		vertices.resize(numVertices);
+		double z;
+		for (int i = 0; i < numVertices; i++)
+			infile >> vertices[i].x >> vertices[i].y >> z;
+
+		texCoords.resize(numVertices);
+		for (int i = 0; i < numVertices; i++)
+			texCoords[i] = vertices[i];
+
+		int three;
+		faces->resize(numFaces);
+		for (int i = 0; i < numFaces; i++)
+			infile >> three >> (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
+	}
+}
+MeshModel::~MeshModel()
+{
+    delete faces;
+    delete boundaryVertices;
+    cholmod_finish(cm);
+    delete cm;
+}
+
+/******************************************************************************************************************************/
+void MeshModel::render(double left,double bottom,  double meshWidth, double width, double height)
+{
+    glLineWidth(LINE_WIDTH);
+    double right = left + meshWidth;
+    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
+    double top = bottom + meshHeight;
+
+    double wFrac = (right-left)/width;
+    double totWidth = (maxX - minX)/wFrac;
+    double lowX = minX - totWidth * left / width;
+
+    double hFrac = (top-bottom)/height;
+    double totHeight = (maxY - minY)/hFrac;
+    double lowY = minY - totHeight * bottom / height;
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(lowX, lowX+totWidth, lowY, lowY+totHeight, 0, 1);
+    glMatrixMode(GL_MODELVIEW);
+
+	glColor3f(1,1,1);
+	glEnable(GL_TEXTURE_2D);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // GL_LINE
+	glBegin(GL_TRIANGLES);
+	for (int i = 0; i < numFaces; i++)
+		for (int j = 0; j < 3; j++) {
+			glTexCoord2f(texCoords[ (*faces)[i][j] ][0],texCoords[ (*faces)[i][j] ][1]);
+			glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
+		}
+	glEnd(/*GL_TRIANGLES*/);
+	glDisable(GL_TEXTURE_2D);
+
+	//wireframe overlay
+	glColor4f(0,0,0,wireframeTrans);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glBegin(GL_TRIANGLES);
+	for (int i = 0; i < numFaces; i++)
+		for (int j = 0; j < 3; j++) {
+			glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
+		}
+	glEnd();
+
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+}
+/******************************************************************************************************************************/
+int MeshModel::getClosestVertex(Point2D<double> point)
+{
+    int closest = -1;
+    double closestDistance = std::numeric_limits<double>::max();
+
+    for (int i = 0; i < numVertices; i++)
+    {
+        double distance = vertices[i].distanceSquared(point);
+        if (distance < closestDistance)
+        {
+            closestDistance = distance;
+            closest = i;
+        }
+    }
+    return closest;
+}
+
+/******************************************************************************************************************************/
+void MeshModel::copyPositions(MeshModel& m)
+{
+	for (int i = 0; i < numVertices; i++)
+		vertices[i] = m.vertices[i];
+}
+/******************************************************************************************************************************/
+void MeshModel::setWireframeTrans(float m)
+{
+	wireframeTrans = m;
+}
+
+/******************************************************************************************************************************/
+void MeshModel::saveTextureUVs(std::ofstream& outfile, const QString &filename)
+{
+	if (filename.endsWith("obj"))
+	{
+		for (int i = 0; i < numVertices; i++)
+			outfile << "vt " << texCoords[i][0] << ' ' << texCoords[i][1] << endl;
+	}
+}
+/******************************************************************************************************************************/
+void MeshModel::saveFaces(std::ofstream& outfile, const QString &filename)
+{
+	if (filename.endsWith("off"))
+	{
+		for (int i = 0; i < numFaces; i++)
+			outfile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << endl;
+	}
+
+	if (filename.endsWith("obj"))
+	{
+		for (int i = 0; i < numFaces; i++)
+			outfile << "f " << (*faces)[i][0]+1 << '/' << (*faces)[i][0]+1 << ' ' <<
+			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' << (*faces)[i][2]+1 << '/' << (*faces)[i][2]+1 << endl;
+	}
+
+}
+/******************************************************************************************************************************/
+void MeshModel::saveVertices(std::ofstream& outfile, const QString &filename)
+{
+	if (filename.endsWith("off"))
+	{
+		for (int i = 0; i < numVertices; i++)
+			outfile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
+	}
+	if (filename.endsWith("obj"))
+	{
+		for (int i = 0; i < numVertices; i++)
+			outfile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
+	}
+}
+/******************************************************************************************************************************/

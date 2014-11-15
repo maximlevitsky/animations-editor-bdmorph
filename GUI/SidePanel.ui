@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>sidePanel</class>
  <widget class="QDockWidget" name="sidePanel">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>261</width>
+    <height>593</height>
+   </rect>
+  </property>
   <property name="features">
    <set>QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetMovable</set>
   </property>
@@ -48,16 +56,23 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Load:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QPushButton" name="pushButton_10">
+          <widget class="QPushButton" name="btnLoadTexture">
            <property name="text">
             <string>Load texture</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_9">
+          <widget class="QPushButton" name="btnLoadModel">
            <property name="text">
             <string>Load model</string>
            </property>
@@ -66,29 +81,22 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_6">
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
          <item>
-          <widget class="QPushButton" name="pushButton_12">
+          <widget class="QPushButton" name="btnResetTexture">
            <property name="text">
-            <string>Replay log</string>
+            <string>Reset texture</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_13">
+          <widget class="QPushButton" name="btnResetTransform">
            <property name="text">
-            <string>Save log</string>
+            <string>Reset transform</string>
            </property>
           </widget>
          </item>
         </layout>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButton_8">
-         <property name="text">
-          <string>Load image</string>
-         </property>
-        </widget>
        </item>
       </layout>
      </widget>
@@ -112,14 +120,14 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <widget class="QPushButton" name="pushButton_6">
+          <widget class="QPushButton" name="btnResetPins">
            <property name="text">
             <string>Reset pins</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_7">
+          <widget class="QPushButton" name="btnResetMesh">
            <property name="text">
             <string>Reset mesh</string>
            </property>
@@ -128,16 +136,34 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <item>
+          <widget class="QPushButton" name="btnSaveLog">
+           <property name="text">
+            <string>Save log</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnReplayLog">
+           <property name="text">
+            <string>Replay log</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="btnUndo">
            <property name="text">
             <string>Undo</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="btnRedo">
            <property name="text">
             <string>Redo</string>
            </property>
@@ -145,21 +171,21 @@
          </item>
         </layout>
        </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>30</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
-    </item>
-    <item>
-     <spacer name="verticalSpacer">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>30</height>
-       </size>
-      </property>
-     </spacer>
     </item>
     <item>
      <widget class="QFrame" name="frame_4">
@@ -178,21 +204,21 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_5">
+        <widget class="QPushButton" name="btnModePinsEdit">
          <property name="text">
           <string>Edt pinned vertices</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_4">
+        <widget class="QPushButton" name="btnModeShowVF">
          <property name="text">
           <string>Compute vector field</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_3">
+        <widget class="QPushButton" name="btnModeDeformation">
          <property name="text">
           <string>Deformate mesh</string>
          </property>
@@ -206,7 +232,13 @@
         </widget>
        </item>
        <item>
-        <widget class="QSlider" name="horizontalSlider_5">
+        <widget class="QSlider" name="sliderAlpha">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -223,7 +255,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QSlider" name="horizontalSlider_6">
+        <widget class="QSlider" name="sliderWireframeTransparency">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
