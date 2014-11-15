@@ -50,25 +50,21 @@ void MainScene::loadModel()
     qWarning("Making a new model");
 
     model = new MeshModel(filename);
-
 	keyframeModel = new KVFModel(model);
-    keyframeModel->setWireframeTrans((double)wireframeTransparency/100);
-
 
 	QPixmap texture = QPixmap(16,16);
     texture.fill(QColor(200,200,255));
     textureRef = bindTexture(texture);
     qWarning("Done loading");
 
-	modelWidth = keyframeModel->getWidth() * 200;
-	modelLocation = QPointF(width()/2, height()/2);
-
+    resetTransform();
     QString verticesNum = QString::number(keyframeModel->getNumVertices());
 	QString facesNum = QString::number(keyframeModel->getNumFaces());
 
 	/* TODO: show facenum/vertexnum in statusbar*/
     repaint();
 }
+/******************************************************************************************************************************/
 
 void MainScene::saveModel()
 {
@@ -121,11 +117,9 @@ void MainScene::resetTexture()
 }
 
 /******************************************************************************************************************************/
-
 void  MainScene::resetPoints()
 {
-	keyframeModel->copyPositions(*model);
-	keyframeModel->historyReset();
+	keyframeModel->resetDeformations();
 	repaint();
 }
 /******************************************************************************************************************************/
@@ -191,12 +185,9 @@ void MainScene::drawModeChanged(bool m) {
 }
 
 /******************************************************************************************************************************/
-void MainScene::changeWireframe(int i) {
-	if (keyframeModel)
-		keyframeModel->setWireframeTrans((double) (i) / 100);
-
+void MainScene::changeWireframe(int i)
+{
 	wireframeTransparency = i;
-
 	update();
 	repaint();
 }
@@ -206,7 +197,14 @@ void MainScene::clearPins()
 {
 	if (keyframeModel)
 		keyframeModel->clearPins();
+	update();
+	repaint();
+}
 
+void MainScene::resetTransform()
+{
+	modelWidth = keyframeModel->getWidth() * 200;
+	modelLocation = QPointF(width()/2, height()/2);
 	update();
 	repaint();
 }
@@ -235,7 +233,7 @@ void MainScene::paintGL()
         /* TODO: move projection dummy settings from model, here */
 
     	/* render the model*/
-        keyframeModel->render(modelLocation.x(),modelLocation.y(),modelWidth,width(),height());
+        keyframeModel->render(modelLocation.x(),modelLocation.y(),modelWidth,width(),height(), (double)wireframeTransparency/100);
 
         /* render the VF*/
         keyframeModel->renderVF();
@@ -331,8 +329,7 @@ bool MainScene::touchEvent(QTouchEvent* te)
 	if (maxDistance >= 1)
 	{
 		// moved more than one pixel!
-		std::vector<DisplacedVertex> disps;
-		std::vector<Vector2D<double> > displacements;
+		std::set<DisplacedVertex> disps;
 
 		for (int i = 0; i < touchPoints.size(); i++)
 		{
@@ -341,7 +338,7 @@ bool MainScene::touchEvent(QTouchEvent* te)
 			if (touchToVertex[touchPoints[i].id()] == -1)
 				continue;
 
-			disps.push_back(DisplacedVertex(touchToVertex[touchPoints[i].id()], screenToModelVec(displacement)));
+			disps.insert(DisplacedVertex(touchToVertex[touchPoints[i].id()], screenToModelVec(displacement)));
 			touchPointLocations[touchPoints[i].id()] = touchPoints[i].pos();
 		}
 		if (disps.size() > 0)
@@ -446,8 +443,8 @@ void MainScene::mouseMoveEvent(QMouseEvent *event)
         if (diff.rx() == 0 && diff.ry() == 0)
         	return;
 
-        std::vector<DisplacedVertex> disps;
-        disps.push_back(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),-diff.y())));
+        std::set<DisplacedVertex> disps;
+        disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),-diff.y())));
 		keyframeModel->displaceMesh(disps);
         update();
     }

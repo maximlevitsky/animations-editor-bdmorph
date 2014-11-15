@@ -15,6 +15,7 @@
 class ParallelMatrixMultiplier;
 // stores a row-major sparse matrix in the format required by LDL
 
+/******************************************************************************************************************************/
 class CholmodSparseMatrix
 {
 public:
@@ -122,8 +123,7 @@ private:
     int curLocation;
     int lastR;
 };
-
-
+/******************************************************************************************************************************/
 class CholmodVector
 {
 public:
@@ -169,5 +169,8 @@ private:
 	cholmod_dense* values;
 	cholmod_common *cm;
 };
+
+/******************************************************************************************************************************/
+cholmod_common* cholmod_get_common();
 
 #endif // SIMPLESPARSEMATRIX_H

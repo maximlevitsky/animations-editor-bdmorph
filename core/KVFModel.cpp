@@ -14,7 +14,6 @@ extern "C" {
 
 #define SQRT_2 1.41421356
 
-
 #include "KVFModel.h"
 /*****************************************************************************************************/
 struct LogSpiral
@@ -44,6 +43,7 @@ KVFModel::KVFModel(MeshModel* model) :
 	faces = model->faces;
 	boundaryVertices = model->boundaryVertices;
 	vertices = model->vertices;
+	initialVertexes = model->vertices;
 
 	historyReset();
 
@@ -91,7 +91,7 @@ KVFModel::KVFModel(MeshModel* model) :
     /**********************************************************************/
     // Prefactor
 
-    CholmodVector boundaryRHS(2*numVertices,cm);
+    CholmodVector boundaryRHS(2*numVertices,cholmod_get_common());
 
     // for fun constrain boundary to (1,1)
     for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it) {
@@ -109,7 +109,7 @@ KVFModel::KVFModel(MeshModel* model) :
     Pcopy.zeroOutColumns(*boundaryVertices);
     Pcopy.zeroOutColumns(*boundaryVertices, numVertices);
 
-    CholmodVector B2(Pcopy.numCols(),cm);
+    CholmodVector B2(Pcopy.numCols(),cholmod_get_common());
 
     Pcopy.transposeMultiply(rhsMove,B2.getValues());
     std::vector<int> constrained;
@@ -125,7 +125,7 @@ KVFModel::KVFModel(MeshModel* model) :
 
     cholmod_sparse cSparse;
     Pcopy.getCholmodMatrix(cSparse);
-    L2 = cholmod_analyze(&cSparse, cm);
+    L2 = cholmod_analyze(&cSparse, cholmod_get_common());
 
     printf("Prefactor time: %i\n", t.measure_msec());
 
@@ -138,13 +138,9 @@ KVFModel::KVFModel(MeshModel* model) :
     FREE_MEMORY(Pinv, LDL_int);
 }
 /******************************************************************************************************************************/
-
 KVFModel::~KVFModel()
 {
-	cholmod_free_factor(&L2, cm);
-	faces = NULL;
-	boundaryVertices = NULL;
-	cm = NULL;
+	cholmod_free_factor(&L2, cholmod_get_common());
 }
 
 /******************************************************************************************************************************/
@@ -199,9 +195,15 @@ void KVFModel::getP(CholmodSparseMatrix &prod)
 }
 
 /*****************************************************************************************************/
-void KVFModel::displaceMesh(std::vector<DisplacedVertex> disps)
+void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
 {
-    /*++++++++++++++++++++++++++++++++++++++++++++++*/
+    TimeMeasurment total,t;
+    cholmod_common* cm = cholmod_get_common();
+
+	vfOrig.clear();
+	vf.clear();
+
+	/*++++++++++++++++++++++++++++++++++++++++++++++*/
     if (pinnedVertexes.empty() && disps.size() == 1)
     {
     	// when only one vertex is constrained, move parallel
@@ -214,15 +216,26 @@ void KVFModel::displaceMesh(std::vector<DisplacedVertex> disps)
     }
 
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
-    std::vector<DisplacedVertex> allDisplacements = disps;
+    std::vector<DisplacedVertex> allDisplacements;
     for (auto iter = pinnedVertexes.begin(); iter != pinnedVertexes.end() ; iter++)
     {
-    	/* TODO: if vertex is given as displaced but its only pinned, don't add it here */
     	allDisplacements.push_back(DisplacedVertex(*iter, Vector2(0,0)));
     }
+
+    bool addedDisplacements = false;
+    for (auto iter = disps.begin(); iter != disps.end() ; iter++)
+    {
+    	if (pinnedVertexes.count(iter->v) == 0) {
+    		allDisplacements.push_back(*iter);
+    		addedDisplacements = true;
+    	}
+    }
+
+    if (addedDisplacements == false)
+    	return;
+
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
-    TimeMeasurment total,t;
     getP(P);
     Pcopy.copy(P);
     printf("Construct P time:      %i msec\n", t.measure_msec());
@@ -303,7 +316,7 @@ void KVFModel::displaceMesh(std::vector<DisplacedVertex> disps)
 
     for (int i = 0; i < numVertices; i++) {
         counts[i] = 0;
-        newPoints[i] = Point2D<double>(0,0);
+        newPoints[i] = Point2(0,0);
     }
 
     for (int i = 0; i < faces->size(); i++) {
@@ -321,21 +334,21 @@ void KVFModel::displaceMesh(std::vector<DisplacedVertex> disps)
 
             double c = z.real();
             double alpha = z.imag();
-            Point2D<double> p(p0.real(),p0.imag());
-            Point2D<double> l1(vertices[e1][0], vertices[e1][1]);
-            Point2D<double> l2(vertices[e2][0], vertices[e2][1]);
+            Point2 p(p0.real(),p0.imag());
+            Point2 l1(vertices[e1][0], vertices[e1][1]);
+            Point2 l2(vertices[e2][0], vertices[e2][1]);
 
             LogSpiral spiral;
             spiral.p0 = p;
             spiral.c = c;
             spiral.alpha = alpha;
 
-            Point2D<double> result1 = spiral.evaluate(l1,1);
-            Point2D<double> result2 = spiral.evaluate(l2,1);
+            Point2 result1 = spiral.evaluate(l1,1);
+            Point2 result2 = spiral.evaluate(l2,1);
 
             // compute cotangent weights
-            Vector2D<double> d1 = vertices[e1] - vertices[vtx];
-            Vector2D<double> d2 = vertices[e2] - vertices[vtx];
+            Vector2 d1 = vertices[e1] - vertices[vtx];
+            Vector2 d2 = vertices[e2] - vertices[vtx];
             double angle = fabs(rotationAngle(d1,d2));
             double cotangent = 1;// / tan(angle);
 
@@ -378,8 +391,14 @@ void KVFModel::reuseVF()
 		for (int j = 0; j < 2; j++)
 			vertices[i][j] += vf[i][j] * .5;
 }
-/*****************************************************************************************************/
 
+void KVFModel::resetDeformations()
+{
+	historyReset();
+	vertices = initialVertexes;
+}
+
+/*****************************************************************************************************/
 void KVFModel::renderVertex(double left, double bottom, double meshWidth, double width, double height, int v)
 {
 	#define POINT_SIZE_SCALE 2
@@ -483,9 +502,10 @@ void KVFModel::renderVF()
     }
 }
 
+/* TODO: test undo/redo/log = lot of bugs there now */
+
 /******************************************************************************************************************************/
-/******************************************************************************************************************************/
-void  KVFModel::historyAdd(std::vector<DisplacedVertex> &disps)
+void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
 {
 	/* advance in undo vertex buffer one circular step and forget about redo*/
 	undoVerticesCount = std::min(UNDOSIZE, undoVerticesCount+1);
@@ -545,6 +565,79 @@ bool KVFModel::historyRedo()
 }
 
 /******************************************************************************************************************************/
+void KVFModel::historySaveToFile(std::ofstream& outfile)
+{
+    outfile << (int)undolog.size() << std::endl;
+
+    for (unsigned int i = 0; i < undolog.size(); i++)
+    {
+    	LogItem &item = undolog[i];
+
+        outfile << item.alpha << endl;
+
+        /* store pinned vertexes */
+        outfile << item.pinnedVertexes.size() << endl;
+        for (auto iter = item.pinnedVertexes.begin() ; iter != item.pinnedVertexes.end() ; iter++)
+        	outfile << *iter  << endl;
+
+        /* store displacements */
+        outfile << item.displacedVertexes.size() << endl;
+        for (auto iter = item.displacedVertexes.begin(); iter != item.displacedVertexes.end() ; iter++)
+        	outfile << iter->v << ' ' << iter->displacement[0] << ' ' << iter->displacement[1];
+    }
+}
+/******************************************************************************************************************************/
+
+void KVFModel::historyLoadFromFile(std::ifstream& infile)
+{
+    double alpha;
+    infile >> alpha;
+    setAlpha(alpha);
+
+    /* load pinned vertexes */
+	pinnedVertexes.clear();
+    int numPinned;
+    infile >> numPinned;
+    for (int i = 0 ; i < numPinned ; i++) {
+    	Vertex v;
+    	infile  >> v;
+    	pinnedVertexes.insert(v);
+    }
+
+    /* load displacements */
+    int numDisplacements;
+    infile >> numDisplacements;
+    std::set<DisplacedVertex> displacements;
+    for (int j = 0; j < numDisplacements; j++) {
+    	DisplacedVertex v;
+    	infile >> v.v >> v.displacement[0] >> v.displacement[1];
+    	displacements.insert(v);
+    }
+
+    /* apply displacement */
+    setDrawVFMode(false);
+    displaceMesh(displacements);
+}
+/******************************************************************************************************************************/
+
+void KVFModel::historyReset()
+{
+	undoVerticesPosition = 0;
+	redoVerticesCount = 0;
+
+	undoVertices[undoVerticesPosition] = vertices;
+	undoVerticesCount = 1;
+
+	undolog.clear();
+	redolog.clear();
+
+	LogItem item;
+	item.alpha = alpha1;
+	item.pinnedVertexes = pinnedVertexes;
+	undolog.push_back(item);
+}
+
+
 void KVFModel::setAlpha(double alpha)
 {
 	alpha1 = alpha;
@@ -573,77 +666,3 @@ void KVFModel::clearPins()
 {
 	pinnedVertexes.clear();
 }
-
-/******************************************************************************************************************************/
-void KVFModel::historySaveToFile(std::ofstream& outfile)
-{
-    outfile << (int)undolog.size() << std::endl;
-
-    for (unsigned int i = 0; i < undolog.size(); i++)
-    {
-    	LogItem &item = undolog[i];
-
-        outfile << item.alpha << endl;
-
-        /* store pinned vertexes */
-        outfile << item.pinnedVertexes.size() << endl;
-        for (auto iter = item.pinnedVertexes.begin() ; iter != item.pinnedVertexes.end() ; iter++)
-        	outfile << *iter  << endl;
-
-        /* store displacements */
-        outfile << item.displacedVertexes.size() << endl;
-        for (auto iter = item.displacedVertexes.begin(); iter != item.displacedVertexes.end() ; iter++)
-        	outfile << iter->v << ' ' << iter->displacement[0] << ' ' << iter->displacement[1];
-    }
-}
-/******************************************************************************************************************************/
-void KVFModel::historyLoadFromFile(std::ifstream& infile)
-{
-    double alpha;
-    infile >> alpha;
-    setAlpha(alpha);
-
-    /* load pinned vertexes */
-	pinnedVertexes.clear();
-    int numPinned;
-    infile >> numPinned;
-    for (int i = 0 ; i < numPinned ; i++) {
-    	Vertex v;
-    	infile  >> v;
-    	pinnedVertexes.insert(v);
-    }
-
-    /* load displacements */
-    int numDisplacements;
-    infile >> numDisplacements;
-    std::vector<DisplacedVertex> displacements;
-    for (int j = 0; j < numDisplacements; j++) {
-    	DisplacedVertex v;
-    	infile >> v.v >> v.displacement[0] >> v.displacement[1];
-    	displacements.push_back(v);
-    }
-
-    /* apply displacement */
-    setDrawVFMode(false);
-    displaceMesh(displacements);
-}
-
-/******************************************************************************************************************************/
-void KVFModel::historyReset()
-{
-	undoVerticesPosition = 0;
-	redoVerticesCount = 0;
-
-	undoVertices[undoVerticesPosition] = vertices;
-	undoVerticesCount = 1;
-
-	undolog.clear();
-	redolog.clear();
-
-	LogItem item;
-	item.alpha = alpha1;
-	item.pinnedVertexes = pinnedVertexes;
-	undolog.push_back(item);
-}
-
-

@@ -462,9 +462,9 @@ bool BDMORPHModel::newton_iteration(int iteration)
 	EnergyHessian.multiply(K.getValues(),NewtonRHS.getValues());
 	NewtonRHS.sub(EnergyGradient);
 
-	cholmod_factor *L = cholmod_analyze(&hessian_cholmod, cm);
-	cholmod_factorize(&hessian_cholmod, L, cm);
-	cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, NewtonRHS, cm);
+	cholmod_factor *L = cholmod_analyze(&hessian_cholmod, cholmod_get_common());
+	cholmod_factorize(&hessian_cholmod, L, cholmod_get_common());
+	cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, NewtonRHS, cholmod_get_common());
 	K.setData(Xcholmod);
 	return false;
 }

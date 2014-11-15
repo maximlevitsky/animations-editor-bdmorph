@@ -6,13 +6,13 @@
 #include <QString>
 #include <set>
 #include <vector>
-#include <cholmod.h>
 
 /******************************************************************************************************************************/
 class MeshModel
 {
 public:
     MeshModel(const QString &filename);
+    MeshModel(const MeshModel& other);
     ~MeshModel();
 	void copyPositions(MeshModel& m);
 
@@ -27,9 +27,7 @@ public:
     int getClosestVertex(Point2D<double> point);
 
 	/* rendering */
-    void render(double left, double bottom, double meshWidth, double width, double height);
-	void setWireframeTrans(float m);
-
+    void render(double left, double bottom, double meshWidth, double width, double height, double wireframeTrans);
 
 	/* save and load code */
     void replacePoints(const QString &filename);
@@ -37,24 +35,20 @@ public:
 	void saveTextureUVs(std::ofstream& outfile, const QString &filename);
 	void saveFaces(std::ofstream& outfile, const QString &filename);
 	void loadFromFile(const QString &filename);
-protected:
-	 MeshModel();
 
-public: /* TODO*/
-	/* model information */
+	/* common shared model information */
 	std::vector<Face> *faces;
 	std::set<int> *boundaryVertices;
-	std::vector<Point2> vertices;
-
-	/* not really used junk */
-	std::vector<Point2> texCoords;
-    int numVertices, numFaces;
+	std::vector<Point2> *texCoords;
     double minX, maxX, minY, maxY;
+    int numVertices, numFaces;
 
-	/* settings */
-	float wireframeTrans;
-    cholmod_common *cm;
+	/* vertices - one per each model */
+	std::vector<Point2> vertices;
+protected:
+	 MeshModel();
 private:
+    bool loadedFromFile;
 };
 
 /******************************************************************************************************************************/

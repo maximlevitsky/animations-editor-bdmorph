@@ -51,6 +51,8 @@ public slots:
     void saveLog();
     void runLog();
 
+    void resetTransform();
+
 private:
     /* transformations*/
 	int closestIndex(QPointF pos);

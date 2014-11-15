@@ -65,16 +65,16 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QPushButton" name="btnLoadTexture">
+          <widget class="QPushButton" name="btnLoadModel">
            <property name="text">
-            <string>Load texture</string>
+            <string>Load model</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="btnLoadModel">
+          <widget class="QPushButton" name="btnLoadTexture">
            <property name="text">
-            <string>Load model</string>
+            <string>Load texture</string>
            </property>
           </widget>
          </item>
@@ -83,16 +83,16 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_4">
          <item>
-          <widget class="QPushButton" name="btnResetTexture">
+          <widget class="QPushButton" name="btnResetMesh">
            <property name="text">
-            <string>Reset texture</string>
+            <string>Reset model</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="btnResetTransform">
+          <widget class="QPushButton" name="btnResetTexture">
            <property name="text">
-            <string>Reset transform</string>
+            <string>Reset texture</string>
            </property>
           </widget>
          </item>
@@ -127,9 +127,9 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="btnResetMesh">
+          <widget class="QPushButton" name="btnResetTransform">
            <property name="text">
-            <string>Reset mesh</string>
+            <string>Reset transform</string>
            </property>
           </widget>
          </item>

@@ -11,35 +11,47 @@
 #define LINE_WIDTH 2
 
 /******************************************************************************************************************************/
-void error_handler(int status, char *file, int line,  char *message)
-{
-    qWarning("CHOLMOD error status %d", status);
-    qWarning("File: %s", file);
-    qWarning("Line: %d", line);
-    qWarning("Message: %s", message);
-}
-
-/******************************************************************************************************************************/
 MeshModel::MeshModel() :
-		wireframeTrans(0),
 		faces(NULL),
-		boundaryVertices(NULL)
-{
+		boundaryVertices(NULL),
+		texCoords(NULL),
+		loadedFromFile(false)
+{}
 
+/******************************************************************************************************************************/
+MeshModel::~MeshModel()
+{
+	if (loadedFromFile)
+	{
+		delete faces;
+		delete boundaryVertices;
+		delete texCoords;
+	}
 }
 
 /******************************************************************************************************************************/
-MeshModel::MeshModel(const QString &filename) :
-		wireframeTrans(0),
-		faces(new std::vector<Face>),
-		boundaryVertices(new std::set<Vertex>)
+MeshModel::MeshModel(const MeshModel& other):
+		faces(other.faces),
+		boundaryVertices(other.boundaryVertices),
+		texCoords(other.texCoords),
+		minX(other.minX),
+		minY(other.minY),
+		maxX(other.maxX),
+		maxY(other.maxY),
+		numVertices(other.numVertices),
+		numFaces(other.numFaces),
+		vertices(other.vertices),
+		loadedFromFile(false)
 {
+}
+/******************************************************************************************************************************/
 
-	/* TODO: initializing common here is not good */
-	cm = new cholmod_common;
-
-	/* TODO: think more about data sharing between models */
-
+MeshModel::MeshModel(const QString &filename) :
+		faces(new std::vector<Face>),
+		boundaryVertices(new std::set<Vertex>),
+		texCoords(new std::vector<Point2>),
+		loadedFromFile(true)
+{
 	loadFromFile(filename);
 
     minX = std::numeric_limits<double>::max();
@@ -59,7 +71,7 @@ MeshModel::MeshModel(const QString &filename) :
 		sumY = sumY + vertices[i].y;
     }
 
-	qWarning("minX  = %f , minY = %f, maxX = %f , maxY = %f", minX,minY,maxX,maxY);
+	printf("minX  = %f , minY = %f, maxX = %f , maxY = %f\n", minX,minY,maxX,maxY);
 
 	double avgX = sumX/numVertices;
 	double avgY = sumY/numVertices;
@@ -99,9 +111,6 @@ MeshModel::MeshModel(const QString &filename) :
             boundaryVertices->insert(c);
         }
     }
-
-    cholmod_start(cm);
-    cm->error_handler = error_handler;
 }
 
 /******************************************************************************************************************************/
@@ -140,7 +149,7 @@ void MeshModel::loadFromFile(const QString & filename)
 				is_vt = true;
 				issLine >> x >> y;
 				Point2D<double> p(x,y);
-				texCoords.push_back(p);
+				texCoords->push_back(p);
 				continue;
 			}
 			if (linetype == "f")
@@ -162,9 +171,9 @@ void MeshModel::loadFromFile(const QString & filename)
 		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
 		if (is_vt == false)
 		{
-			texCoords.resize(numVertices);
+			texCoords->resize(numVertices);
 			for (int i = 0; i < numVertices; i++)
-			texCoords[i] = vertices[i];
+			(*texCoords)[i] = vertices[i];
 		}
 	}
 
@@ -183,9 +192,9 @@ void MeshModel::loadFromFile(const QString & filename)
 		for (int i = 0; i < numVertices; i++)
 			infile >> vertices[i].x >> vertices[i].y >> z;
 
-		texCoords.resize(numVertices);
+		texCoords->resize(numVertices);
 		for (int i = 0; i < numVertices; i++)
-			texCoords[i] = vertices[i];
+			(*texCoords)[i] = vertices[i];
 
 		int three;
 		faces->resize(numFaces);
@@ -193,16 +202,9 @@ void MeshModel::loadFromFile(const QString & filename)
 			infile >> three >> (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
 	}
 }
-MeshModel::~MeshModel()
-{
-    delete faces;
-    delete boundaryVertices;
-    cholmod_finish(cm);
-    delete cm;
-}
 
 /******************************************************************************************************************************/
-void MeshModel::render(double left,double bottom,  double meshWidth, double width, double height)
+void MeshModel::render(double left,double bottom,  double meshWidth, double width, double height, double wireframeTrans)
 {
     glLineWidth(LINE_WIDTH);
     double right = left + meshWidth;
@@ -228,7 +230,7 @@ void MeshModel::render(double left,double bottom,  double meshWidth, double widt
 	glBegin(GL_TRIANGLES);
 	for (int i = 0; i < numFaces; i++)
 		for (int j = 0; j < 3; j++) {
-			glTexCoord2f(texCoords[ (*faces)[i][j] ][0],texCoords[ (*faces)[i][j] ][1]);
+			glTexCoord2f((*texCoords)[ (*faces)[i][j] ][0],(*texCoords)[ (*faces)[i][j] ][1]);
 			glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
 		}
 	glEnd(/*GL_TRIANGLES*/);
@@ -263,7 +265,6 @@ int MeshModel::getClosestVertex(Point2D<double> point)
     }
     return closest;
 }
-
 /******************************************************************************************************************************/
 void MeshModel::copyPositions(MeshModel& m)
 {
@@ -271,18 +272,12 @@ void MeshModel::copyPositions(MeshModel& m)
 		vertices[i] = m.vertices[i];
 }
 /******************************************************************************************************************************/
-void MeshModel::setWireframeTrans(float m)
-{
-	wireframeTrans = m;
-}
-
-/******************************************************************************************************************************/
 void MeshModel::saveTextureUVs(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("obj"))
 	{
 		for (int i = 0; i < numVertices; i++)
-			outfile << "vt " << texCoords[i][0] << ' ' << texCoords[i][1] << endl;
+			outfile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << endl;
 	}
 }
 /******************************************************************************************************************************/

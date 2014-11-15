@@ -304,3 +304,26 @@ void CholmodSparseMatrix::copy(CholmodSparseMatrix& m)
 	curLocation = m.curLocation;
 	lastR = m.lastR;
 }
+/******************************************************************************************************************************/
+static cholmod_common common;
+static bool cholmod_common_initilaized = false;
+
+
+/******************************************************************************************************************************/
+static void cholmod_error_handler(int status, char *file, int line,  char *message)
+{
+    qWarning("CHOLMOD error status %d", status);
+    qWarning("File: %s", file);
+    qWarning("Line: %d", line);
+    qWarning("Message: %s", message);
+}
+
+cholmod_common* cholmod_get_common()
+{
+	if (!cholmod_common_initilaized) {
+		cholmod_start(&common);
+		common.error_handler = cholmod_error_handler;
+	}
+	return &common;
+}
+

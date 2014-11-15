@@ -135,8 +135,6 @@ private:
 	bool newton_iteration(int iteration);
 	void extract_solution(Point2 *vertexes_out);
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
-	cholmod_common *cm;
-
 };
 
 #endif

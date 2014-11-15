@@ -24,13 +24,17 @@ struct DisplacedVertex
 	DisplacedVertex(Vertex v, Vector2 displacement) : v(v), displacement(displacement) {}
 	Vertex v;
 	Vector2 displacement;
+
+	bool operator<(const DisplacedVertex& other) const {
+		return this->v < other.v;
+	}
 };
 
 struct LogItem
 {
 	double alpha;
 	std::set<Vertex> pinnedVertexes;
-	std::vector<DisplacedVertex> displacedVertexes;
+	std::set<DisplacedVertex> displacedVertexes;
 };
 
 class KVFModel : public MeshModel
@@ -47,7 +51,7 @@ public:
 	void clearPins();
 	const std::set<Vertex>& getPinnedVertexes() { return pinnedVertexes; }
 
-	void displaceMesh(std::vector<DisplacedVertex> displacements);
+	void displaceMesh(const std::set<DisplacedVertex> &displacements);
 	void reuseVF();
 
 	/* rendering */
@@ -62,9 +66,12 @@ public:
 	void historyLoadFromFile(std::ifstream& infile);
 	void historyReset();
 
+	void resetDeformations();
+
 private:
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
+	std::vector<Point2> initialVertexes;
 	double alpha1;
 	bool drawVFMode;
 
@@ -83,8 +90,7 @@ private:
     /* pre-factor*/
     cholmod_factor *L2;
 
-    /* temp data for */
-    std::vector< Point2> newPoints;
+    std::vector<Point2> newPoints;
     std::vector<double> counts;
 
 	void getP(CholmodSparseMatrix &prod);
@@ -101,7 +107,7 @@ private:
 
     vertexList undoBuffer[UNDOSIZE];
 
-    void historyAdd(std::vector<DisplacedVertex> &disps);
+    void historyAdd(const std::set<DisplacedVertex> &disps);
 };
 
 #endif
