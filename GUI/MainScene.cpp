@@ -68,6 +68,7 @@ void MainScene::loadModel()
 
 void MainScene::saveModel()
 {
+	if ( !keyframeModel) return;
     QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
 
     if ( filename == "" || (!(keyframeModel)) ) return;
@@ -119,12 +120,14 @@ void MainScene::resetTexture()
 /******************************************************************************************************************************/
 void  MainScene::resetPoints()
 {
+	if ( !keyframeModel) return;
 	keyframeModel->resetDeformations();
 	repaint();
 }
 /******************************************************************************************************************************/
 void MainScene::undoModel()
 {
+	if ( !keyframeModel) return;
 	keyframeModel->historyUndo();
 	repaint();
 }
@@ -140,6 +143,7 @@ void MainScene::redoModel()
 /******************************************************************************************************************************/
 void MainScene::saveLog()
 {
+	if ( !keyframeModel) return;
     QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
 
@@ -149,11 +153,13 @@ void MainScene::saveLog()
 /******************************************************************************************************************************/
 void MainScene::runLog()
 {
+	if ( !keyframeModel) return;
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose log"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
     std::ifstream infile(filename.toAscii());
 
     printf("STARTING log replay\n");
+    TimeMeasurment t;
 
     int numSteps;
     infile >> numSteps;
@@ -163,10 +169,9 @@ void MainScene::runLog()
     	keyframeModel->historyLoadFromFile(infile);
         update();
         repaint();
-        usleep(500);
     }
 
-    printf("DONE WITH RUN\n");
+    printf("DONE WITH log replay (took %d msec)\n", t.measure_msec());
 }
 
 /******************************************************************************************************************************/

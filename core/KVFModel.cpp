@@ -530,7 +530,7 @@ bool KVFModel::historyUndo()
 		return false;
 
 	vertices = undoVertices[undoVerticesPosition--];
-	if (undoVerticesPosition <0) undoVerticesPosition = UNDOSIZE;
+	if (undoVerticesPosition <0) undoVerticesPosition = UNDOSIZE-1;
 	undoVerticesCount--;
 	redoVerticesCount++;
 
@@ -567,23 +567,26 @@ bool KVFModel::historyRedo()
 /******************************************************************************************************************************/
 void KVFModel::historySaveToFile(std::ofstream& outfile)
 {
-    outfile << (int)undolog.size() << std::endl;
+    outfile << undolog.size() << std::endl;
 
     for (unsigned int i = 0; i < undolog.size(); i++)
     {
     	LogItem &item = undolog[i];
 
-        outfile << item.alpha << endl;
+    	if (item.pinnedVertexes.size() == 0)
+    		continue;
+
+        outfile << item.alpha << std::endl;
 
         /* store pinned vertexes */
-        outfile << item.pinnedVertexes.size() << endl;
+        outfile << (item.pinnedVertexes.size() + item.displacedVertexes.size()) << std::endl;
+
         for (auto iter = item.pinnedVertexes.begin() ; iter != item.pinnedVertexes.end() ; iter++)
-        	outfile << *iter  << endl;
+        	outfile << *iter << ' ' << 0.0 << ' ' << 0.0  << std::endl;
 
         /* store displacements */
-        outfile << item.displacedVertexes.size() << endl;
         for (auto iter = item.displacedVertexes.begin(); iter != item.displacedVertexes.end() ; iter++)
-        	outfile << iter->v << ' ' << iter->displacement[0] << ' ' << iter->displacement[1];
+        	outfile << iter->v << ' ' << iter->displacement[0] << ' ' << iter->displacement[1] << std::endl;
     }
 }
 /******************************************************************************************************************************/
@@ -594,24 +597,25 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
     infile >> alpha;
     setAlpha(alpha);
 
-    /* load pinned vertexes */
-	pinnedVertexes.clear();
-    int numPinned;
-    infile >> numPinned;
-    for (int i = 0 ; i < numPinned ; i++) {
-    	Vertex v;
-    	infile  >> v;
-    	pinnedVertexes.insert(v);
-    }
+    pinnedVertexes.clear();
 
-    /* load displacements */
+	/* load displacements */
     int numDisplacements;
     infile >> numDisplacements;
+
+    if (numDisplacements == 0)
+    	return;
+
     std::set<DisplacedVertex> displacements;
-    for (int j = 0; j < numDisplacements; j++) {
+    for (int j = 0; j < numDisplacements; j++)
+    {
     	DisplacedVertex v;
     	infile >> v.v >> v.displacement[0] >> v.displacement[1];
-    	displacements.insert(v);
+
+    	if (v.displacement[0] == 0 && v.displacement[1] == 0)
+    		pinnedVertexes.insert(v.v);
+    	else
+    		displacements.insert(v);
     }
 
     /* apply displacement */
@@ -624,17 +628,10 @@ void KVFModel::historyReset()
 {
 	undoVerticesPosition = 0;
 	redoVerticesCount = 0;
-
-	undoVertices[undoVerticesPosition] = vertices;
-	undoVerticesCount = 1;
+	undoVerticesCount = 0;
 
 	undolog.clear();
 	redolog.clear();
-
-	LogItem item;
-	item.alpha = alpha1;
-	item.pinnedVertexes = pinnedVertexes;
-	undolog.push_back(item);
 }
 
 
