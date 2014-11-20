@@ -59,27 +59,15 @@ MeshModel::MeshModel(const QString &filename) :
     minY = std::numeric_limits<double>::max();
     maxY = std::numeric_limits<double>::min();
 
-    double sumX = 0.0;
-    double sumY = 0.0;
-
-    for (int i = 0; i < numVertices; i++) {
+    for (int i = 0; i < numVertices; i++)
+    {
         minX = std::min(minX, vertices[i].x);
         minY = std::min(minY, vertices[i].y);
         maxX = std::max(maxX, vertices[i].x);
         maxY = std::max(maxY, vertices[i].y);
-		sumX = sumX + vertices[i].x;
-		sumY = sumY + vertices[i].y;
     }
 
 	printf("minX  = %f , minY = %f, maxX = %f , maxY = %f\n", minX,minY,maxX,maxY);
-
-	double avgX = sumX/numVertices;
-	double avgY = sumY/numVertices;
-
-	for (int i=0; i<numVertices; i++) {
-		vertices[i].x = vertices[i].x - avgX;
-		vertices[i].y = vertices[i].y - avgY;
-	}
 
 	std::map< int , std::map<int,int> > edgeCount;
     for (int i = 0; i < numFaces; i++)
@@ -204,26 +192,8 @@ void MeshModel::loadFromFile(const QString & filename)
 }
 
 /******************************************************************************************************************************/
-void MeshModel::render(double left,double bottom,  double meshWidth, double width, double height, double wireframeTrans)
+void MeshModel::render(double wireframeTrans)
 {
-    glLineWidth(LINE_WIDTH);
-    double right = left + meshWidth;
-    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
-    double top = bottom + meshHeight;
-
-    double wFrac = (right-left)/width;
-    double totWidth = (maxX - minX)/wFrac;
-    double lowX = minX - totWidth * left / width;
-
-    double hFrac = (top-bottom)/height;
-    double totHeight = (maxY - minY)/hFrac;
-    double lowY = minY - totHeight * bottom / height;
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(lowX, lowX+totWidth, lowY, lowY+totHeight, 0, 1);
-    glMatrixMode(GL_MODELVIEW);
-
 	glColor3f(1,1,1);
 	glEnable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // GL_LINE

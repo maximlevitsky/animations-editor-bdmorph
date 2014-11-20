@@ -30,6 +30,7 @@ public slots:
 	void saveModel();
 	void undoModel();
 	void redoModel();
+	void reuseVF();
     void resetPoints();
 
     void chooseTexture();
@@ -43,11 +44,14 @@ public slots:
     void moveUp() {move(QPointF(0,10));}
     void moveDown() {move(QPointF(0,-10 ));}
 
-	void changeAlpha(int i);
-	void drawModeChanged(bool m);
-	void changeWireframe(int i);
-	void clearPins();
+	void drawVFModeChanged(bool m);
+	void drawOrigVFModeChanged(bool m);
+	void pinModeChanged(bool m);
 
+	void changeAlpha(int i);
+	void changeWireframe(int i);
+
+	void clearPins();
     void saveLog();
     void runLog();
 
@@ -58,7 +62,7 @@ private:
 	int closestIndex(QPointF pos);
     void zoom(double factor) {modelWidth *= factor;}
     void move(QPointF direction) {modelLocation += direction;}
-	Vector2D<double> screenToModelVec(QPointF v);
+	Point2 screenToModel(QPointF v);
 
     /* Events */
     bool event(QEvent *);
@@ -70,12 +74,14 @@ private:
 	//void keyReleaseEvent ( QKeyEvent * event );
     bool touchEvent(QTouchEvent* te);
     void paintGL();
+    void resizeGL(int w, int h);
+    void initializeGL();
 
 private:
     /* Loaded model
      * TODO: Here we will store all keyframes, BDFFrames, etc later*/
     MeshModel *model;
-    KVFModel *keyframeModel;
+    KVFModel *currentKeyFrame;
 
     /* Model state */
     QPointF modelLocation;

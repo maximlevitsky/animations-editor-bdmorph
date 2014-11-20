@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>KVF deformation with BDMORPH animations</string>
+   <string>Almost KVF deformation with BDMORPH animations</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -39,28 +39,71 @@
     <addaction name="actionLoad_mesh"/>
     <addaction name="actionLoad_texture"/>
     <addaction name="actionReset_texture"/>
-   </widget>
-   <widget class="QMenu" name="menuMode">
-    <property name="title">
-     <string>Mode</string>
-    </property>
-    <addaction name="actionVector_field"/>
-    <addaction name="actionDeformation"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_screenshot"/>
+    <addaction name="actionSave_video"/>
+    <addaction name="actionSave_model"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
     </property>
+    <addaction name="actionSide_panel"/>
+    <addaction name="actionAnimation_panel"/>
+    <addaction name="separator"/>
     <addaction name="actionWireframe"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
+    <addaction name="separator"/>
+    <addaction name="actionPin_edit_mode"/>
+    <addaction name="actionDeformation_mode"/>
+    <addaction name="actionVF_mode"/>
+    <addaction name="separator"/>
+    <addaction name="actionReset_model"/>
+    <addaction name="actionReset_pins"/>
+   </widget>
+   <widget class="QMenu" name="menuAnimations">
+    <property name="title">
+     <string>Animations</string>
+    </property>
+    <addaction name="actionNew_keyframe"/>
+    <addaction name="actionDelete_keyframe"/>
+    <addaction name="separator"/>
+    <addaction name="actionPlay"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionLoop"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="actionSave_log"/>
+    <addaction name="actionReplay_log"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
    <addaction name="menuModel"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuView"/>
-   <addaction name="menuMode"/>
+   <addaction name="menuAnimations"/>
+   <addaction name="menuDebug"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad_mesh">
    <property name="text">
-    <string>Load mesh</string>
+    <string>Load model</string>
    </property>
   </action>
   <action name="actionLoad_texture">
@@ -86,6 +129,111 @@
   <action name="actionWireframe">
    <property name="text">
     <string>Wireframe</string>
+   </property>
+  </action>
+  <action name="actionReset_model">
+   <property name="text">
+    <string>Reset deformation</string>
+   </property>
+  </action>
+  <action name="actionReset_pins">
+   <property name="text">
+    <string>Reset pins</string>
+   </property>
+  </action>
+  <action name="actionPin_edit_mode">
+   <property name="text">
+    <string>Pin edit mode</string>
+   </property>
+  </action>
+  <action name="actionVF_mode">
+   <property name="text">
+    <string>VF mode</string>
+   </property>
+  </action>
+  <action name="actionDeformation_mode">
+   <property name="text">
+    <string>Deformation mode</string>
+   </property>
+  </action>
+  <action name="actionUndo">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+  </action>
+  <action name="actionRedo">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+  </action>
+  <action name="actionSave_model">
+   <property name="text">
+    <string>Save model</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionSide_panel">
+   <property name="text">
+    <string>Side panel</string>
+   </property>
+  </action>
+  <action name="actionAnimation_panel">
+   <property name="text">
+    <string>Animation panel</string>
+   </property>
+  </action>
+  <action name="actionNew_keyframe">
+   <property name="text">
+    <string>New keyframe</string>
+   </property>
+  </action>
+  <action name="actionPlay">
+   <property name="text">
+    <string>Play</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="actionSave_video">
+   <property name="text">
+    <string>Save video</string>
+   </property>
+  </action>
+  <action name="actionDelete_keyframe">
+   <property name="text">
+    <string>Delete keyframe</string>
+   </property>
+  </action>
+  <action name="actionSave_log">
+   <property name="text">
+    <string>Save log</string>
+   </property>
+  </action>
+  <action name="actionReplay_log">
+   <property name="text">
+    <string>Replay log</string>
+   </property>
+  </action>
+  <action name="actionLoop">
+   <property name="text">
+    <string>Loop</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionSave_screenshot">
+   <property name="text">
+    <string>Save screenshot</string>
    </property>
   </action>
  </widget>

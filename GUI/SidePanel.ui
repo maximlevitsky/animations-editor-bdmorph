@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>261</width>
-    <height>593</height>
+    <height>744</height>
    </rect>
   </property>
   <property name="features">
@@ -42,10 +42,7 @@
    </property>
   </widget>
   <widget class="QWidget" name="widget">
-   <layout class="QVBoxLayout" name="verticalLayout_4">
-    <property name="rightMargin">
-     <number>6</number>
-    </property>
+   <layout class="QVBoxLayout" name="verticalLayout_5">
     <item>
      <widget class="QFrame" name="frame_2">
       <property name="frameShape">
@@ -197,33 +194,45 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="QLabel" name="label_4">
+        <widget class="QCheckBox" name="chkPinMode">
          <property name="text">
-          <string>Mode:</string>
+          <string>Pin mode</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnModePinsEdit">
+        <widget class="QCheckBox" name="chkVFOrigMode">
          <property name="text">
-          <string>Edt pinned vertices</string>
+          <string>VF orig mode</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnModeShowVF">
+        <widget class="QCheckBox" name="chkVFMode">
          <property name="text">
-          <string>Compute vector field</string>
+          <string>VF mode</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnModeDeformation">
+        <widget class="QPushButton" name="btnApplyVF">
          <property name="text">
-          <string>Deformate mesh</string>
+          <string>Apply VF</string>
          </property>
         </widget>
        </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="frame_5">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QLabel" name="label_5">
          <property name="text">
@@ -265,6 +274,14 @@
         </widget>
        </item>
       </layout>
+      <zorder>sliderWireframeTransparency</zorder>
+      <zorder>sliderAlpha</zorder>
+      <zorder>label_6</zorder>
+      <zorder>label_5</zorder>
+      <zorder>sliderAlpha</zorder>
+      <zorder>label_6</zorder>
+      <zorder>sliderWireframeTransparency</zorder>
+      <zorder>label_5</zorder>
      </widget>
     </item>
    </layout>

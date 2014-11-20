@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QKeyEvent>
+#include <QLabel>
 
 class SidePanel;
 class AnimationPanel;
@@ -19,10 +20,20 @@ class MainWindow : public QMainWindow, public Ui_MainWindow
 public:
 	MainWindow();
 	virtual ~MainWindow();
+
+	void setStatusBarStatistics(int vertexCount, int facesCount);
+	void setRenderTimeStatistics(int timeMsec);
+
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;
 	MainScene *mainScene;
+
+	QLabel* lblVertexCount;
+	QLabel* lblFacesCount;
+	QLabel* lblFPS;
+
+
 };
 
 #endif

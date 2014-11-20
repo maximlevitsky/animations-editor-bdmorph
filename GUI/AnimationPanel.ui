@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1079</width>
-    <height>206</height>
+    <width>549</width>
+    <height>222</height>
    </rect>
   </property>
   <property name="features">
@@ -38,16 +38,9 @@
     </property>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QSlider" name="sliderAnimationTime">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="tickPosition">
-         <enum>QSlider::TicksBelow</enum>
-        </property>
-       </widget>
-      </item>
+      <property name="spacing">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QPushButton" name="btnAnimationPlay">
         <property name="sizePolicy">
@@ -62,30 +55,32 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnAnimationPause">
-        <property name="text">
-         <string>| |</string>
+       <widget class="QSlider" name="sliderAnimationTime">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="btnAnimationStop">
-        <property name="text">
-         <string>O</string>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
         </property>
        </widget>
       </item>
      </layout>
     </item>
     <item>
-     <widget class="QListView" name="listView">
-      <property name="horizontalScrollBarPolicy">
-       <enum>Qt::ScrollBarAsNeeded</enum>
+     <widget class="QListWidget" name="lstKeyFrames">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>160</height>
+       </size>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
       </property>
       <property name="iconSize">
        <size>
-        <width>512</width>
-        <height>512</height>
+        <width>128</width>
+        <height>128</height>
        </size>
       </property>
       <property name="verticalScrollMode">
@@ -94,11 +89,26 @@
       <property name="horizontalScrollMode">
        <enum>QAbstractItemView::ScrollPerPixel</enum>
       </property>
+      <property name="movement">
+       <enum>QListView::Snap</enum>
+      </property>
       <property name="flow">
        <enum>QListView::LeftToRight</enum>
       </property>
+      <property name="isWrapping" stdset="0">
+       <bool>false</bool>
+      </property>
+      <property name="resizeMode">
+       <enum>QListView::Adjust</enum>
+      </property>
       <property name="viewMode">
-       <enum>QListView::IconMode</enum>
+       <enum>QListView::ListMode</enum>
+      </property>
+      <property name="uniformItemSizes">
+       <bool>true</bool>
+      </property>
+      <property name="selectionRectVisible">
+       <bool>true</bool>
       </property>
      </widget>
     </item>

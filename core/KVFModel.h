@@ -55,9 +55,11 @@ public:
 	void reuseVF();
 
 	/* rendering */
-	void renderVertex(double left, double bottom, double meshWidth, double width, double height, int v);
+	void renderVertex(int v, double scale);
 	void renderVF();
+
 	void setDrawVFMode(bool enable) { drawVFMode = enable; }
+	void setDrawOrigVFMode(bool enable) { drawOrigVFMode = enable; }
 
 	/* undo and redo code*/
 	bool historyRedo();
@@ -74,6 +76,7 @@ private:
 	std::vector<Point2> initialVertexes;
 	double alpha1;
 	bool drawVFMode;
+	bool drawOrigVFMode;
 
     /* vector field of last transformation  */
     std::vector<Vector2> vf;

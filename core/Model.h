@@ -22,12 +22,16 @@ public:
     double getMaxY() { return maxY; }
     double getWidth() { return maxX - minX; }
     double getHeight() { return maxY - minY; }
+
+    double getCenterX() { return (minX + maxX) /2; }
+    double getCenterY() { return (minY + maxY) /2; }
+
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
     int getClosestVertex(Point2D<double> point);
 
 	/* rendering */
-    void render(double left, double bottom, double meshWidth, double width, double height, double wireframeTrans);
+    void render(double wireframeTrans);
 
 	/* save and load code */
     void replacePoints(const QString &filename);

@@ -4,7 +4,9 @@
 #include "SidePanel.h"
 #include "AnimationPanel.h"
 #include <QDockWidget>
+#include "Utils.h"
 
+/*****************************************************************************************************/
 MainWindow::MainWindow()
 {
 	setupUi(this);
@@ -14,22 +16,25 @@ MainWindow::MainWindow()
 
 	/* create side panel and connect it to us */
 	sidePanel = new SidePanel(this);
-	connect(sidePanel->btnLoadModel, SIGNAL(clicked()), mainScene, SLOT(loadModel()));
-	connect(sidePanel->btnLoadTexture, SIGNAL(clicked()), mainScene, SLOT(chooseTexture()));
-	connect(sidePanel->btnResetMesh, SIGNAL(clicked()), mainScene, SLOT(resetPoints()));
-	connect(sidePanel->btnResetTexture, SIGNAL(clicked()), mainScene, SLOT(resetTexture()));
+	connect_(sidePanel->btnLoadModel, clicked(),mainScene, loadModel());
+	connect_(sidePanel->btnLoadTexture, clicked(),mainScene, chooseTexture());
+	connect_(sidePanel->btnResetMesh, clicked(),mainScene, resetPoints());
+	connect_(sidePanel->btnResetTexture, clicked(),mainScene, resetTexture());
 
-	connect(sidePanel->btnResetPins, SIGNAL(clicked()), mainScene, SLOT(clearPins()));
-	connect(sidePanel->btnResetTransform, SIGNAL(clicked()), mainScene, SLOT(resetTransform()));
-	connect(sidePanel->btnSaveLog, SIGNAL(clicked()), mainScene, SLOT(saveLog()));
-	connect(sidePanel->btnReplayLog, SIGNAL(clicked()), mainScene, SLOT(runLog()));
-	connect(sidePanel->btnUndo, SIGNAL(clicked()), mainScene, SLOT(undoModel()));
-	connect(sidePanel->btnRedo, SIGNAL(clicked()), mainScene, SLOT(redoModel()));
+	connect_(sidePanel->btnResetPins, clicked(),mainScene, clearPins());
+	connect_(sidePanel->btnResetTransform, clicked(),mainScene, resetTransform());
+	connect_(sidePanel->btnSaveLog, clicked(),mainScene,saveLog());
+	connect_(sidePanel->btnReplayLog, clicked(),mainScene, runLog());
+	connect_(sidePanel->btnUndo, clicked(),mainScene, undoModel());
+	connect_(sidePanel->btnRedo, clicked(),mainScene, redoModel());
 
+	connect_(sidePanel->chkPinMode, clicked(bool), mainScene, pinModeChanged(bool));
+	connect_(sidePanel->chkVFMode, clicked(bool), mainScene, drawVFModeChanged(bool));
+	connect_(sidePanel->chkVFOrigMode, clicked(bool), mainScene, drawOrigVFModeChanged(bool));
+	connect_(sidePanel->btnApplyVF, clicked(), mainScene, reuseVF());
 
-
-	connect(sidePanel->sliderWireframeTransparency, SIGNAL(valueChanged(int)), mainScene, SLOT(changeWireframe(int)));
-	connect(sidePanel->sliderAlpha, SIGNAL(valueChanged(int)), mainScene, SLOT(changeAlpha(int)));
+	connect_(sidePanel->sliderWireframeTransparency, valueChanged(int), mainScene, changeWireframe(int));
+	connect_(sidePanel->sliderAlpha, valueChanged(int), mainScene, changeAlpha(int));
 	sidePanel->sliderAlpha->setValue(20);
 
 
@@ -38,8 +43,44 @@ MainWindow::MainWindow()
 	addDockWidget(Qt::BottomDockWidgetArea, animationPanel);
 	addDockWidget(Qt::RightDockWidgetArea, sidePanel);
 
+	statusBar()->showMessage(tr("Ready"));
+
+	lblVertexCount = new QLabel(this);
+
+	lblVertexCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+	statusBar()->addPermanentWidget(lblVertexCount);
+
+
+	lblFacesCount = new QLabel(this);
+	lblFacesCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+	statusBar()->addPermanentWidget(lblFacesCount);
+
+
+	lblFPS = new QLabel(this);
+	lblFPS->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+	statusBar()->addPermanentWidget(lblFPS);
+
 }
 
+/*****************************************************************************************************/
+void MainWindow::setStatusBarStatistics(int vertexCount, int facesCount)
+{
+	QString str;
+	str.sprintf("Vertexes: %d", vertexCount);
+	lblVertexCount->setText(str);
+
+	str.sprintf("Faces: %d", facesCount);
+	lblFacesCount->setText(str);
+}
+
+/*****************************************************************************************************/
+void MainWindow::setRenderTimeStatistics(int timeMsec)
+{
+	QString str;
+	str.sprintf("Render time: %d ms (%d FPS)", timeMsec, 1000/timeMsec);
+}
+
+/*****************************************************************************************************/
 MainWindow::~MainWindow()
 {
 }

@@ -121,4 +121,7 @@ public:
 
 typedef std::vector<Point2> vertexList;
 
+#define connect_(a,b,c,d) connect(a, SIGNAL(b), c, SLOT(d))
+
+
 #endif

@@ -36,6 +36,7 @@ struct LogSpiral
 /*****************************************************************************************************/
 KVFModel::KVFModel(MeshModel* model) :
 	drawVFMode(false),
+	drawOrigVFMode(false),
 	alpha1(0.5),
 	MeshModel(*model)
 {
@@ -199,77 +200,50 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
 {
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
+    std::set<DisplacedVertex> allDisplacements = disps;
 
 	vfOrig.clear();
 	vf.clear();
 
-	/*++++++++++++++++++++++++++++++++++++++++++++++*/
-    if (pinnedVertexes.empty() && disps.size() == 1)
-    {
-    	// when only one vertex is constrained, move parallel
-    	Vector2 disp = disps.begin()->displacement;
-        for (int i = 0; i < numVertices; i++)
-            vertices[i] += disp;
-
-        historyAdd(disps);
-        return;
-    }
-
-    /*++++++++++++++++++++++++++++++++++++++++++++++*/
-    std::vector<DisplacedVertex> allDisplacements;
     for (auto iter = pinnedVertexes.begin(); iter != pinnedVertexes.end() ; iter++)
-    {
-    	allDisplacements.push_back(DisplacedVertex(*iter, Vector2(0,0)));
-    }
-
-    bool addedDisplacements = false;
-    for (auto iter = disps.begin(); iter != disps.end() ; iter++)
-    {
-    	if (pinnedVertexes.count(iter->v) == 0) {
-    		allDisplacements.push_back(*iter);
-    		addedDisplacements = true;
-    	}
-    }
-
-    if (addedDisplacements == false)
+    	allDisplacements.insert(DisplacedVertex(*iter, Vector2(0,0)));
+    if (allDisplacements.size() <= 1)
     	return;
-
-    /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
     getP(P);
     Pcopy.copy(P);
     printf("Construct P time:      %i msec\n", t.measure_msec());
 
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
+
+    CholmodVector B = CholmodVector(P.numCols(),cm);
     std::vector<int> indices2;
-    for (unsigned int i = 0; i < allDisplacements.size(); i++)
-    {
-        indices2.push_back(allDisplacements[i].v);
-        indices2.push_back(allDisplacements[i].v + numVertices);
-    }
 
     double alpha = alpha1 / (2*allDisplacements.size()) * P.infinityNorm();
+
+    for (auto iter = allDisplacements.begin() ; iter != allDisplacements.end() ; iter++)
+    {
+        indices2.push_back(iter->v);
+        indices2.push_back(iter->v + numVertices);
+
+    	B[iter->v] 				= iter->displacement[0]*alpha*alpha;
+    	B[iter->v+numVertices]  = iter->displacement[1]*alpha*alpha;
+    }
+
     P.addConstraint(indices2, alpha);
     cholmod_sparse cSparse;
     P.getCholmodMatrix(cSparse);
-
-    CholmodVector B = CholmodVector(cSparse.nrow,cm);
-    for (unsigned int i = 0; i < allDisplacements.size(); i++)
-    {
-    	B[allDisplacements[i].v] = allDisplacements[i].displacement[0]*alpha*alpha;
-    	B[allDisplacements[i].v+numVertices]  = allDisplacements[i].displacement[1]*alpha*alpha;
-    }
 
     cholmod_factor *L = cholmod_analyze(&cSparse, cm);
     cholmod_factorize(&cSparse, L, cm);
     cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
     double* Xx = (double*)Xcholmod->x;
 
-    if (drawVFMode) {
-        vfOrig.resize(numVertices);
-        for (int i = 0; i < numVertices; i++)
-        	vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
-    }
+
+	vfOrig.resize(numVertices);
+	for (int i = 0; i < numVertices; i++)
+		vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+
 
     printf("Solve time:            %i msec\n", t.measure_msec());
 
@@ -359,19 +333,21 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
         }
     }
 
+    printf("Log spiral  time:      %i msec\n", t.measure_msec());
+
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
-    vf.resize(numVertices);
-    if (drawVFMode) {
-        for (int i = 0; i < numVertices; i++)
-        	vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
-    } else {
+	vf.resize(numVertices);
+	for (int i = 0; i < numVertices; i++)
+		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+
+    /*++++++++++++++++++++++++++++++++++++++++++++++*/
+    if (!drawVFMode && !drawOrigVFMode)
+    {
         for (int i = 0; i < numVertices; i++)
             vertices[i] = newPoints[i] / counts[i];
     }
 
-    printf("Log spiral  time:      %i msec\n", t.measure_msec());
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
-
     cholmod_free_factor(&L, cm);
     cholmod_free_dense(&Xcholmod, cm);
     cholmod_free_dense(&Xcholmod2, cm);
@@ -387,9 +363,12 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
 /*****************************************************************************************************/
 void KVFModel::reuseVF()
 {
-	for (int i = 0; i < numVertices; i++)
-		for (int j = 0; j < 2; j++)
-			vertices[i][j] += vf[i][j] * .5;
+	if (vf.size() == numVertices)
+	{
+		for (int i = 0; i < numVertices; i++)
+			for (int j = 0; j < 2; j++)
+				vertices[i][j] += vf[i][j] * .5;
+	}
 }
 
 void KVFModel::resetDeformations()
@@ -399,84 +378,34 @@ void KVFModel::resetDeformations()
 }
 
 /*****************************************************************************************************/
-void KVFModel::renderVertex(double left, double bottom, double meshWidth, double width, double height, int v)
+void KVFModel::renderVertex(int v, double scale)
 {
-	#define POINT_SIZE_SCALE 2
-	#define VF_SCALE 1
-	#define LINE_WIDTH 2
-
-    glLineWidth(LINE_WIDTH);
-    double right = left + meshWidth;
-    double meshHeight = (maxY - minY)*meshWidth/(maxX-minX);
-    double top = bottom + meshHeight;
-
-    double wFrac = (right-left)/width;
-    double totWidth = (maxX - minX)/wFrac;
-    double lowX = minX - totWidth * left / width;
-
-    double hFrac = (top-bottom)/height;
-    double totHeight = (maxY - minY)/hFrac;
-    double lowY = minY - totHeight * bottom / height;
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(lowX, lowX+totWidth, lowY, lowY+totHeight, 0, 1);
-    glMatrixMode(GL_MODELVIEW);
+	#define VERTEX_SIZE 3
+    glLineWidth(1);
 
     Point2D<double> p = vertices[v];
-    float s=totWidth / 500 * POINT_SIZE_SCALE;
+
+    float s = VERTEX_SIZE * scale;
     glBegin(GL_QUADS);
         glVertex2f(p[0]-s,p[1]-s);
         glVertex2f(p[0]-s,p[1]+s);
         glVertex2f(p[0]+s,p[1]+s);
         glVertex2f(p[0]+s,p[1]-s);
     glEnd(/*GL_QUADS*/);
-
-
-    if (drawVFMode && vf.size() == numVertices && vfOrig.size() == numVertices)
-    {
-        double totalNorm = 0;
-
-        for (int i = 0; i < numVertices; i++)
-            totalNorm += vfOrig[i].normSquared();
-
-        totalNorm = sqrt(totalNorm);
-
-        glColor3f(0,0,1);
-        glBegin(GL_LINES);
-        glVertex2f(vertices[v][0], vertices[v][1]);
-        glVertex2f(vertices[v][0]+vfOrig[v][0]/totalNorm*VF_SCALE, vertices[v][1]+vfOrig[v][1]/totalNorm*VF_SCALE);
-        glEnd();
-
-        totalNorm = 0;
-
-        for (int i = 0; i < numVertices; i++)
-            totalNorm += vf[i].normSquared();
-
-        totalNorm = sqrt(totalNorm);
-
-        glColor3f(0,.5,0);
-        glBegin(GL_LINES);
-        glVertex2f(vertices[v][0], vertices[v][1]);
-        glVertex2f(vertices[v][0]+vf[v][0]/totalNorm*VF_SCALE, vertices[v][1]+vf[v][1]/totalNorm*VF_SCALE);
-        glEnd();
-
-        glColor3f(1,0,0);
-    }
 }
 
 /*****************************************************************************************************/
 void KVFModel::renderVF()
 {
-    if (drawVFMode && vf.size() == numVertices && vfOrig.size() == numVertices)
+	#define VF_SCALE 1
+
+	if (drawOrigVFMode && vfOrig.size() == numVertices)
     {
         double totalNorm = 0;
 
         for (int i = 0; i < numVertices; i++)
             totalNorm += vfOrig[i].normSquared();
-
         totalNorm = sqrt(totalNorm);
-
         glColor3f(0,0,1);
         glBegin(GL_LINES);
         for (int i = 0; i < numVertices; i++) {
@@ -484,12 +413,13 @@ void KVFModel::renderVF()
             glVertex2f(vertices[i][0]+vfOrig[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vfOrig[i][1]/totalNorm*VF_SCALE);
         }
         glEnd();
+    }
 
-        totalNorm = 0;
-
+    if (drawVFMode && vf.size() == numVertices)
+    {
+        double totalNorm = 0;
         for (int i = 0; i < numVertices; i++)
             totalNorm += vf[i].normSquared();
-
         totalNorm = sqrt(totalNorm);
 
         glColor3f(0,.5,0);
