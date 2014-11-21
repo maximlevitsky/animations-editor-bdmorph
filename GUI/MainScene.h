@@ -49,9 +49,7 @@ public slots:
     /* these slots are connected to bottom animation panel + main window */
     void onFrameSwitched(MeshModel* model);
     void onVideoModelLoaded(VideoModel* model);
-
-    void setTexture(QPixmap& texture);
-    void resetTexture();
+    void setTexture(GLuint texture);
 
 signals:
 	void modelEdited(KVFModel* model);

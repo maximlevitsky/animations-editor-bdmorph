@@ -2,6 +2,7 @@
 #include "MainWindow.h"
 #include "MainScene.h"
 #include "SidePanel.h"
+#include "ThumbnailRenderer.h"
 #include "AnimationPanel.h"
 #include <QDockWidget>
 #include <QFileDialog>
@@ -57,16 +58,24 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	lblFPS->setFrameStyle(QFrame::Panel | QFrame::Sunken);
 	statusBar()->addPermanentWidget(lblFPS);
 
+	thumbnailRender = new ThumbnailRenderer(NULL, mainScene);
+	animationPanel->setThumbailRenderer(thumbnailRender);
 
 	/* main scene will listen on model loads and keyframes switches*/
 	connect_(this, videoModelLoaded(VideoModel*), mainScene, onVideoModelLoaded(VideoModel*));
 	connect_(this, frameSwitched(MeshModel*), mainScene, onFrameSwitched(MeshModel*));
 
+	/* Animation panel will listen to 88.0FM....*/
+	connect_(this, videoModelLoaded(VideoModel*), animationPanel, onVideoModelLoaded(VideoModel*));
+	connect_(this, frameSwitched(MeshModel*), animationPanel, onFrameSwitched(MeshModel*));
+	connect_(mainScene, modelEdited(KVFModel*), animationPanel, onFrameEdited(KVFModel*));
+
+
 	/* we listen to main scene for edit events */
 	connect_(mainScene, modelEdited(KVFModel*), this, onModelUpdate(KVFModel*));
-
 	/* we listen on keyframe switches */
 	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
+
 
 	clearStatusBar();
 }
@@ -75,6 +84,7 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 MainWindow::~MainWindow()
 {
 	delete model;
+	delete thumbnailRender;
 }
 
 /*****************************************************************************************************/
@@ -114,12 +124,14 @@ void MainWindow::loadModel()
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
     if (filename == "") return;
 
+    /* unload current model*/
     emit frameSwitched(NULL);
     emit videoModelLoaded(NULL);
-
     delete model;
-    model = new VideoModel(filename.toStdString());
+    resetTexture();
 
+    /* load new model */
+    model = new VideoModel(filename.toStdString());
     emit videoModelLoaded(model);
     emit frameSwitched(model->keyframe(0));
 
@@ -158,19 +170,26 @@ void MainWindow::chooseTexture()
 {
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
 
-    if (filename == NULL) {
-		mainScene->resetTexture();
+    if (filename == NULL)
+    {
+    	resetTexture();
 		return;
 	}
 
 	QPixmap pix(filename);
-	mainScene->setTexture(pix);
+	textureRef = mainScene->bindTexture(pix,GL_TEXTURE_2D);
+	thumbnailRender->setTexture(textureRef);
+	mainScene->setTexture(textureRef);
 }
 
 /*****************************************************************************************************/
 void MainWindow::resetTexture()
 {
-	mainScene->resetTexture();
+	QPixmap texture = QPixmap(16,16);
+	texture.fill(QColor(200,200,255));
+	textureRef = mainScene->bindTexture(texture);
+	thumbnailRender->setTexture(textureRef);
+	mainScene->setTexture(textureRef);
 }
 
 /*****************************************************************************************************/

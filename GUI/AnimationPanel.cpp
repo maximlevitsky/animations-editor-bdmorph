@@ -3,57 +3,80 @@
 #include <QDockWidget>
 #include <QListWidgetItem>
 #include <QPixmap>
-#include <QIcon>
+#include <QImage>
 #include <QPainter>
 #include <QAction>
+#include <QPixmap>
 
-AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent)
+#include "VideoModel.h"
+
+
+/******************************************************************************************************************************/
+AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), currentVideoModel(NULL), renderer(NULL)
 {
-		setupUi(this);
+	setupUi(this);
+	QAction *deleteFramesAction =new QAction("Delete frame", lstKeyFrames);
+	QAction *changeTimeAction =new QAction("Change time...", lstKeyFrames);
+	lstKeyFrames->addAction(deleteFramesAction);
+	lstKeyFrames->addAction(changeTimeAction);
+	lstKeyFrames->setContextMenuPolicy(Qt::ActionsContextMenu);
+}
 
-		QPixmap* p = new QPixmap("/home/maxim/1.png");
-		QPixmap p1(128,128);
+/******************************************************************************************************************************/
+void AnimationPanel::onFrameSwitched(MeshModel* model)
+{
+	/* we will emit this, the time slider will emit this, and on load we will switch to frame 0 because main window will emit this*/
+	if (!currentVideoModel)
+		return;
+}
 
-		QPainter* painter = new QPainter(&p1);
+/******************************************************************************************************************************/
+void AnimationPanel::onVideoModelLoaded(VideoModel* model)
+{
+	currentVideoModel = model;
+	lstKeyFrames->clear();
 
-		//     void drawPixmap(const QRectF &targetRect, const QPixmap &pixmap, const QRectF &sourceRect);
+	if (currentVideoModel) {
+		/* TODO: make generic */
+		VideoKeyFrame* firstFrame = currentVideoModel->keyframe(0);
 
-		painter->fillRect(p1.rect(), QColor(255,255,255));
+		/* This code is gross... yuck and I wrote it*/
+		QImage im = renderer->renderThumbnail(firstFrame);
+		QPixmap p = QPixmap::fromImage(im);
 
-		QPixmap pp = p->scaled(QSize(128,110), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-
-		painter->drawPixmap(QRectF(QPointF(0,0), QPointF(128,110)), pp, QRectF(pp.rect()));
-
-		painter->drawText(p1.rect(),
-						Qt::AlignBottom | Qt::AlignCenter,
-						QString("00:00:00"));
+		QPainter* painter = new QPainter(&p);
+		painter->drawText(im.rect(), Qt::AlignBottom | Qt::AlignCenter, QString("00:00:00"));
 
 		QListWidgetItem *listItem;
-		for (int i = 0 ; i < 2 ; i++)
-		{
+		listItem = new QListWidgetItem;
+		listItem->setIcon(QIcon(p));
+		listItem->setTextAlignment(Qt::AlignBottom|Qt::AlignVCenter);
+		lstKeyFrames->addItem(listItem);
+		delete painter;
 
-			listItem = new QListWidgetItem;
-			listItem->setIcon(QIcon(p1));
-			//listItem->setText("00:00:05");
-			listItem->setTextAlignment(Qt::AlignBottom|Qt::AlignVCenter);
-			lstKeyFrames->addItem(listItem);
-		}
-
-
+		/* TODO: use resources */
 		QPixmap* p2 = new QPixmap("/home/maxim/2.png");
 		listItem = new QListWidgetItem;
 		listItem->setIcon(QIcon(*p2));
-		//listItem->setText("00:00:05");
-		listItem->setTextAlignment(Qt::AlignBottom|Qt::AlignVCenter);
 		lstKeyFrames->insertItem(10,listItem);
 
-		QAction *deleteFramesAction =new QAction("Delete frame", lstKeyFrames);
-		QAction *changeTimeAction =new QAction("Change time...", lstKeyFrames);
-
-		lstKeyFrames->addAction(deleteFramesAction);
-		lstKeyFrames->addAction(changeTimeAction);
-		lstKeyFrames->setContextMenuPolicy(Qt::ActionsContextMenu);
-		delete painter;
+	}
 }
+/******************************************************************************************************************************/
+void AnimationPanel::onFrameEdited(KVFModel* model)
+{
+	if (!currentVideoModel) return;
 
+	VideoKeyFrame* firstFrame = currentVideoModel->keyframe(0);
+
+	/* This code is gross... yuck and I wrote it*/
+	QImage im = renderer->renderThumbnail(firstFrame);
+	QPixmap p = QPixmap::fromImage(im);
+
+	QPainter painter(&p);
+	painter.drawText(im.rect(), Qt::AlignBottom | Qt::AlignCenter, QString("00:00:00"));
+
+	QListWidgetItem *listItem = lstKeyFrames->item(0);
+	listItem->setIcon(QIcon(p));
+	lstKeyFrames->repaint();
+}

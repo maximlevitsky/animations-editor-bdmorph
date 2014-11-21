@@ -385,6 +385,11 @@ void KVFModel::render(double wireframeTrans)
 
 	MeshModel::render(wireframeTrans);
 
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+
+    glLineWidth(1.5);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	if (drawOrigVFMode && vfOrig.size() == numVertices)
     {
         double totalNorm = 0;
@@ -392,6 +397,7 @@ void KVFModel::render(double wireframeTrans)
         for (int i = 0; i < numVertices; i++)
             totalNorm += vfOrig[i].normSquared();
         totalNorm = sqrt(totalNorm);
+
         glColor3f(0,0,1);
         glBegin(GL_LINES);
         for (int i = 0; i < numVertices; i++) {
@@ -416,6 +422,8 @@ void KVFModel::render(double wireframeTrans)
         }
         glEnd();
     }
+
+    glPopAttrib();
 }
 
 /* TODO: test undo/redo/log = lot of bugs there now */

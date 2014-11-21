@@ -194,9 +194,13 @@ void MeshModel::loadFromFile(std::string & filename)
 /******************************************************************************************************************************/
 void MeshModel::render(double wireframeTrans)
 {
+
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+
 	glColor3f(1,1,1);
 	glEnable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // GL_LINE
+
 	glBegin(GL_TRIANGLES);
 	for (int i = 0; i < numFaces; i++)
 		for (int j = 0; j < 3; j++) {
@@ -204,25 +208,28 @@ void MeshModel::render(double wireframeTrans)
 			glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
 		}
 	glEnd(/*GL_TRIANGLES*/);
-	glDisable(GL_TEXTURE_2D);
 
-	//wireframe overlay
+
+	glDisable(GL_TEXTURE_2D);
 	glColor4f(0,0,0,wireframeTrans);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glBegin(GL_TRIANGLES);
+    glLineWidth(1.5);
+
+    glBegin(GL_TRIANGLES);
 	for (int i = 0; i < numFaces; i++)
 		for (int j = 0; j < 3; j++) {
 			glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
 		}
 	glEnd();
 
-    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	glPopAttrib();
 }
 
 /******************************************************************************************************************************/
 void MeshModel::renderVertex(int v, double scale)
 {
 	#define VERTEX_SIZE 3
+	glPushAttrib(GL_LINE_BIT);
     glLineWidth(1);
 
     Point2D<double> p = vertices[v];
@@ -234,6 +241,8 @@ void MeshModel::renderVertex(int v, double scale)
         glVertex2f(p[0]+s,p[1]+s);
         glVertex2f(p[0]+s,p[1]-s);
     glEnd(/*GL_QUADS*/);
+
+    glPopAttrib();
 }
 
 /******************************************************************************************************************************/

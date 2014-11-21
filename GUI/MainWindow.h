@@ -9,11 +9,13 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QtOpenGL>
 #include "VideoModel.h"
 
 class SidePanel;
 class AnimationPanel;
 class MainScene;
+class ThumbnailRenderer;
 
 class MainWindow : public QMainWindow, public Ui_MainWindow
 {
@@ -52,6 +54,9 @@ private:
 
 	VideoModel* model;
 	MeshModel* currentFrameModel;
+	GLuint textureRef;
+
+	ThumbnailRenderer* thumbnailRender;
 };
 
 #endif

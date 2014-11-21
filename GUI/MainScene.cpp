@@ -34,6 +34,7 @@ void  MainScene::resetPoints()
 {
 	if ( !editModel) return;
 	editModel->resetDeformations();
+	emit modelEdited(editModel);
 	repaint();
 }
 /******************************************************************************************************************************/
@@ -169,7 +170,6 @@ void MainScene::onVideoModelLoaded(VideoModel* model)
 	{
 		renderModel = NULL;
 		editModel = NULL;
-		resetTexture();
 	} else
 	{
 		renderModel = model;
@@ -179,36 +179,17 @@ void MainScene::onVideoModelLoaded(VideoModel* model)
 
 /******************************************************************************************************************************/
 
-void MainScene::setTexture(QPixmap& texture)
+void MainScene::setTexture(GLuint texture)
 {
-	if (!editModel)
-		return;
-
-	makeCurrent();
-	textureRef = bindTexture(texture,GL_TEXTURE_2D);
-	emit modelEdited(editModel);
-}
-
-/******************************************************************************************************************************/
-void MainScene::resetTexture()
-{
-	makeCurrent();
-	glEnable(GL_TEXTURE_2D);
-	QPixmap texture = QPixmap(16,16);
-	texture.fill(QColor(200,200,255));
-	textureRef = bindTexture(texture);
-
-	if (editModel)
-		emit modelEdited(editModel);
-
+	textureRef = texture;
 	repaint();
+	emit modelEdited(editModel);
 }
 
 /******************************************************************************************************************************/
 
 void MainScene::initializeGL()
 {
-    glEnable(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -216,6 +197,10 @@ void MainScene::initializeGL()
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
     glHint(GL_POLYGON_SMOOTH_HINT, GL_DONT_CARE);
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POLYGON_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 /******************************************************************************************************************************/
@@ -233,36 +218,33 @@ void MainScene::paintGL()
     if (!renderModel)
     	return;
 
-    glEnable(GL_LINE_SMOOTH);
-    glEnable(GL_POLYGON_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glLineWidth(1.5);
-
     double ratio = (renderModel->getWidth()) / modelWidth;
     double centerX = renderModel->getCenterX() - modelLocation.x() * ratio;
     double centerY = renderModel->getCenterY() - modelLocation.y() * ratio;
     double neededWidth = ratio * width();
     double neededHeight = ratio * height();
 
+    /* Setup projection */
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(centerX - neededWidth/2  , centerX + neededWidth/2, centerY - neededHeight/2 , centerY + neededHeight/2, 0, 1);
-    glMatrixMode(GL_MODELVIEW);
-	glEnable(GL_TEXTURE_2D);
+
+    /* Setup texture */
 	glBindTexture(GL_TEXTURE_2D, textureRef);
 
 	/* render the model*/
 	renderModel->render((double)wireframeTransparency/100);
 
 	/* render selected vertices */
-	glColor3f(1,0,0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	glColor4f(1,0,0,1);
 	for (int i = 0; i < selectedVertices.size(); i++)
 		renderModel->renderVertex(selectedVertices[i], ratio);
 
 	/* render pinned vertices */
-
-	if (editModel) {
+	if (editModel)
+	{
 		glColor3f(1,1,0);
 		for (auto it = editModel->getPinnedVertexes().begin(); it != editModel->getPinnedVertexes().end(); it++)
 			editModel->renderVertex(*it, ratio);
