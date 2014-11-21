@@ -49,7 +49,8 @@ public slots:
     /* these slots are connected to bottom animation panel + main window */
     void onFrameSwitched(MeshModel* model);
     void onVideoModelLoaded(VideoModel* model);
-    void setTexture(GLuint texture);
+
+    void onTextureChanged(GLuint textureRef);
 
 signals:
 	void modelEdited(KVFModel* model);
@@ -101,6 +102,9 @@ private:
     QPointF lastMousePos;
     std::map<int, QPointF> touchPointLocations;
     std::map<int, int> touchToVertex;
+
+    bool drawVF;
+    bool drawVFOrig;
 
 };
 

@@ -10,12 +10,14 @@
 
 class ThumbnailRenderer : public QGLWidget
 {
+	Q_OBJECT
 public:
 	ThumbnailRenderer(QWidget* parent, QGLWidget* shareWidget);
 	virtual ~ThumbnailRenderer() {}
 
+public slots:
+	void onTextureChanged(GLuint texture) {textureRef = texture; }
 public:
-	void setTexture(GLuint texture) {textureRef = texture; }
 	QImage renderThumbnail(MeshModel* model);
 
 private:

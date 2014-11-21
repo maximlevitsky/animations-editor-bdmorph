@@ -51,14 +51,15 @@ public:
 	void clearPins();
 	const std::set<Vertex>& getPinnedVertexes() { return pinnedVertexes; }
 
-	void displaceMesh(const std::set<DisplacedVertex> &displacements = std::set<DisplacedVertex>());
+	void calculateVF(const std::set<DisplacedVertex> &displacements);
+	void applyVFLogSpiral();
+	void applyVF();
 	void resetDeformations();
 
 	/* rendering */
-	void render(double wireframeTrans);
+	void renderVFOrig();
+	void renderVF();
 
-	void setDrawVFMode(bool enable) { drawVFMode = enable; }
-	void setDrawOrigVFMode(bool enable) { drawOrigVFMode = enable; }
 
 	/* undo and redo code*/
 	bool historyRedo();
@@ -72,12 +73,11 @@ private:
 	std::set<Vertex> pinnedVertexes;
 	std::vector<Point2> initialVertexes;
 	double alpha1;
-	bool drawVFMode;
-	bool drawOrigVFMode;
 
     /* vector field of last transformation  */
     std::vector<Vector2> vf;
     std::vector<Vector2> vfOrig;
+    std::set<DisplacedVertex> disps;
 
     /* P matrix and its temp data */
     CholmodSparseMatrix P;
@@ -109,7 +109,8 @@ private:
 
 public:
     /* statistics */
-    int lastEditTime;
+    int lastVFCalcTime;
+    int lastLogSpiralTime;
 };
 
 #endif

@@ -22,7 +22,7 @@ SET(kvf2d_SOURCES
 	utils/cholmod_matrix.cpp utils/vector2d.cpp 
 )
 
-SET(kvf2d_HEADERS GUI/MainScene.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h)
+SET(kvf2d_HEADERS GUI/MainScene.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h GUI/ThumbnailRenderer.h)
 SET(kvf2d_FORMS GUI/MainWindow.ui GUI/SidePanel.ui GUI/AnimationPanel.ui)
 
 QT4_WRAP_CPP(kvf2d_HEADERS_MOC ${kvf2d_HEADERS})

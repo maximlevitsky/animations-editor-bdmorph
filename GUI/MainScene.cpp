@@ -22,7 +22,9 @@ MainScene::MainScene(QWidget* parent) :
 			editModel(NULL), renderModel(NULL), wireframeTransparency(0),
 			QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
 			pinMode(false),
-			multitouchMode(false)
+			multitouchMode(false),
+			drawVF(false),
+			drawVFOrig(false)
 {
     setAttribute(Qt::WA_AcceptTouchEvents);
     setAttribute(Qt::WA_StaticContents);
@@ -99,26 +101,25 @@ void MainScene::changeAlpha(int i)
 /******************************************************************************************************************************/
 void MainScene::drawVFModeChanged(bool m)
 {
-	if (editModel)
-		editModel->setDrawVFMode(m);
+	drawVF = m;
 	repaint();
 }
 
 /******************************************************************************************************************************/
 void MainScene::drawOrigVFModeChanged(bool m)
 {
-	if (editModel)
-		editModel->setDrawOrigVFMode(m);
+	drawVFOrig = m;
 	repaint();
 }
 
 /******************************************************************************************************************************/
 void MainScene::reuseVF()
 {
-	if (editModel)
-		editModel->displaceMesh();
-	emit modelEdited(editModel);
-	repaint();
+	if (editModel) {
+		editModel->applyVF();
+		emit modelEdited(editModel);
+		repaint();
+	}
 }
 
 /******************************************************************************************************************************/
@@ -179,11 +180,10 @@ void MainScene::onVideoModelLoaded(VideoModel* model)
 
 /******************************************************************************************************************************/
 
-void MainScene::setTexture(GLuint texture)
+void MainScene::onTextureChanged(GLuint texture)
 {
 	textureRef = texture;
 	repaint();
-	emit modelEdited(editModel);
 }
 
 /******************************************************************************************************************************/
@@ -248,6 +248,11 @@ void MainScene::paintGL()
 		glColor3f(1,1,0);
 		for (auto it = editModel->getPinnedVertexes().begin(); it != editModel->getPinnedVertexes().end(); it++)
 			editModel->renderVertex(*it, ratio);
+
+		if (drawVF)
+			editModel->renderVF();
+		if (drawVFOrig)
+			editModel->renderVFOrig();
 	}
 
 }
@@ -347,7 +352,11 @@ bool MainScene::touchEvent(QTouchEvent* te)
 			touchPointLocations[touchPoints[i].id()] = touchPoints[i].pos();
 		}
 		if (disps.size() > 0) {
-			editModel->displaceMesh(disps);
+			editModel->calculateVF(disps);
+
+			if (!drawVF && !drawVFOrig)
+				editModel->applyVFLogSpiral();
+
 			emit modelEdited(editModel);
 		}
 	}
@@ -446,7 +455,11 @@ void MainScene::mouseMoveEvent(QMouseEvent *event)
 
 			std::set<DisplacedVertex> disps;
 			disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),-diff.y())));
-			editModel->displaceMesh(disps);
+			editModel->calculateVF(disps);
+
+			if (!drawVF && !drawVFOrig)
+				editModel->applyVFLogSpiral();
+
 			emit modelEdited(editModel);
     	}
         update();

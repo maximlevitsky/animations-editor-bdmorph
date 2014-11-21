@@ -35,10 +35,9 @@ struct LogSpiral
 
 /*****************************************************************************************************/
 KVFModel::KVFModel(MeshModel* model) :
-	drawVFMode(false),
-	drawOrigVFMode(false),
 	alpha1(0.5),
-	lastEditTime(0),
+	lastVFCalcTime(0),
+	lastLogSpiralTime(0),
 	MeshModel(*model)
 {
 
@@ -138,6 +137,13 @@ KVFModel::KVFModel(MeshModel* model) :
     FREE_MEMORY(Lnz, LDL_int);
     FREE_MEMORY(Pfw, LDL_int);
     FREE_MEMORY(Pinv, LDL_int);
+
+
+    KVFModel* otherModel = dynamic_cast<KVFModel*>(model);
+    if (otherModel) {
+    	pinnedVertexes = otherModel->pinnedVertexes;
+    	alpha1 = otherModel->alpha1;
+    }
 }
 /******************************************************************************************************************************/
 KVFModel::~KVFModel()
@@ -197,22 +203,13 @@ void KVFModel::getP(CholmodSparseMatrix &prod)
 }
 
 /*****************************************************************************************************/
-void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
+void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 {
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
-    std::set<DisplacedVertex> allDisplacements = disps;
 
-    if (disps.empty())
-    {
-    	if (vf.size() == numVertices)
-    	{
-    		for (int i = 0; i < numVertices; i++)
-    			for (int j = 0; j < 2; j++)
-    				vertices[i][j] += vf[i][j] * .5;
-    	}
-    	return;
-    }
+    this->disps = disps;
+    std::set<DisplacedVertex> allDisplacements = disps;
 
 	vfOrig.clear();
 	vf.clear();
@@ -250,7 +247,6 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
     cholmod_factorize(&cSparse, L, cm);
     cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
     double* Xx = (double*)Xcholmod->x;
-
 
 	vfOrig.resize(numVertices);
 	for (int i = 0; i < numVertices; i++)
@@ -295,24 +291,44 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
 
     printf("Dirichlet time:        %i msec\n", t.measure_msec());
 
-    /*+ LOG spiral +++++++++++++++++++++++++++++++++++++++++++++*/
+	vf.resize(numVertices);
+	for (int i = 0; i < numVertices; i++)
+		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+
+
     Xx = (double*)Xcholmod2->x;
     newPoints.resize(numVertices);
     counts.resize(numVertices);
 
-    for (int i = 0; i < numVertices; i++) {
+    lastVFCalcTime = total.measure_msec();
+	printf("\n");
+
+    cholmod_free_factor(&L, cm);
+    cholmod_free_dense(&Xcholmod, cm);
+    cholmod_free_dense(&Xcholmod2, cm);
+    free(rhsMove);
+}
+
+/*****************************************************************************************************/
+void KVFModel::applyVFLogSpiral()
+{
+	TimeMeasurment t;
+
+    for (int i = 0; i < numVertices; i++)
+    {
         counts[i] = 0;
         newPoints[i] = Point2(0,0);
     }
 
-    for (int i = 0; i < faces->size(); i++) {
+    for (int i = 0; i < faces->size(); i++)
+    {
         for (int j = 0; j < 3; j++) {
             int e1 = (*faces)[i][j];
             int e2 = (*faces)[i][(j+1)%3];
             int vtx = (*faces)[i][(j+2)%3];
 
-            std::complex<double> v1(Xx[e1], Xx[e1+numVertices]);
-            std::complex<double> v2(Xx[e2], Xx[e2+numVertices]);
+            std::complex<double> v1(vf[e1][0],vf[e1][1]);
+            std::complex<double> v2(vf[e2][0],vf[e2][1]);
             std::complex<double> p1(vertices[e1][0], vertices[e1][1]);
             std::complex<double> p2(vertices[e2][0], vertices[e2][1]);
             std::complex<double> z = (v1-v2)/(p1-p2);
@@ -345,33 +361,35 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
         }
     }
 
-    printf("Log spiral  time:      %i msec\n", t.measure_msec());
+    lastLogSpiralTime  = t.measure_msec();
+    printf("Log spiral  time:      %i msec\n", lastLogSpiralTime);
 
-    /*++++++++++++++++++++++++++++++++++++++++++++++*/
-	vf.resize(numVertices);
 	for (int i = 0; i < numVertices; i++)
-		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
+		vertices[i] = newPoints[i] / counts[i];
 
-    /*++++++++++++++++++++++++++++++++++++++++++++++*/
-    if (!drawVFMode && !drawOrigVFMode)
-    {
-        for (int i = 0; i < numVertices; i++)
-            vertices[i] = newPoints[i] / counts[i];
-    }
-
-    /*++++++++++++++++++++++++++++++++++++++++++++++*/
-    cholmod_free_factor(&L, cm);
-    cholmod_free_dense(&Xcholmod, cm);
-    cholmod_free_dense(&Xcholmod2, cm);
-    free(rhsMove);
-
-    lastEditTime = total.measure_msec();
-    int FPS = 1000 / lastEditTime;
-    printf("Total solve time:      %i msec (%i FPS)\n", lastEditTime, FPS);
+	int totalTime = lastVFCalcTime + lastLogSpiralTime;
+    int FPS = 1000 / (totalTime);
+    printf("Total solve time:      %i msec (%i FPS)\n", totalTime, FPS);
     printf("\n");
 
     historyAdd(disps);
 }
+
+/*****************************************************************************************************/
+void KVFModel::applyVF()
+{
+	if (vf.size() == numVertices)
+	{
+		for (int i = 0; i < numVertices; i++)
+			for (int j = 0; j < 2; j++)
+				vertices[i][j] += vf[i][j] * .5;
+	}
+
+
+	/* TODO: not completely correct*/
+    historyAdd(disps);
+}
+
 /*****************************************************************************************************/
 void KVFModel::resetDeformations()
 {
@@ -379,18 +397,16 @@ void KVFModel::resetDeformations()
 	vertices = initialVertexes;
 }
 /*****************************************************************************************************/
-void KVFModel::render(double wireframeTrans)
+void KVFModel::renderVFOrig()
 {
 	#define VF_SCALE 1
-
-	MeshModel::render(wireframeTrans);
 
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 
     glLineWidth(1.5);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	if (drawOrigVFMode && vfOrig.size() == numVertices)
+	if (vfOrig.size() == numVertices)
     {
         double totalNorm = 0;
 
@@ -406,8 +422,17 @@ void KVFModel::render(double wireframeTrans)
         }
         glEnd();
     }
+    glPopAttrib();
+}
 
-    if (drawVFMode && vf.size() == numVertices)
+/*****************************************************************************************************/
+void KVFModel::renderVF()
+{
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+    glLineWidth(1.5);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    if (vf.size() == numVertices)
     {
         double totalNorm = 0;
         for (int i = 0; i < numVertices; i++)
@@ -425,6 +450,7 @@ void KVFModel::render(double wireframeTrans)
 
     glPopAttrib();
 }
+
 
 /* TODO: test undo/redo/log = lot of bugs there now */
 
@@ -542,9 +568,8 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
     		displacements.insert(v);
     }
 
-    /* apply displacement */
-    setDrawVFMode(false);
-    displaceMesh(displacements);
+    calculateVF(displacements);
+    applyVFLogSpiral();
 }
 /******************************************************************************************************************************/
 

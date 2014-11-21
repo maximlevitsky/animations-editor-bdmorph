@@ -64,17 +64,20 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	/* main scene will listen on model loads and keyframes switches*/
 	connect_(this, videoModelLoaded(VideoModel*), mainScene, onVideoModelLoaded(VideoModel*));
 	connect_(this, frameSwitched(MeshModel*), mainScene, onFrameSwitched(MeshModel*));
+	connect_(this, textureChanged(GLuint), mainScene, onTextureChanged(GLuint));
 
 	/* Animation panel will listen to 88.0FM....*/
 	connect_(this, videoModelLoaded(VideoModel*), animationPanel, onVideoModelLoaded(VideoModel*));
 	connect_(this, frameSwitched(MeshModel*), animationPanel, onFrameSwitched(MeshModel*));
 	connect_(mainScene, modelEdited(KVFModel*), animationPanel, onFrameEdited(KVFModel*));
-
+	connect_(this, textureChanged(GLuint), thumbnailRender, onTextureChanged(GLuint));
+	connect_(this, textureChanged(GLuint), animationPanel, onTextureChanged(GLuint));
 
 	/* we listen to main scene for edit events */
 	connect_(mainScene, modelEdited(KVFModel*), this, onModelUpdate(KVFModel*));
 	/* we listen on keyframe switches */
 	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
+	connect_(animationPanel, frameSelectionChanged(MeshModel*), this, onEditBoxNewFrameSelected(MeshModel*));
 
 
 	clearStatusBar();
@@ -169,17 +172,12 @@ void MainWindow::saveModel()
 void MainWindow::chooseTexture()
 {
     QString filename = QFileDialog::getOpenFileName(0, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
-
     if (filename == NULL)
-    {
-    	resetTexture();
 		return;
-	}
 
 	QPixmap pix(filename);
 	textureRef = mainScene->bindTexture(pix,GL_TEXTURE_2D);
-	thumbnailRender->setTexture(textureRef);
-	mainScene->setTexture(textureRef);
+	emit textureChanged(textureRef);
 }
 
 /*****************************************************************************************************/
@@ -188,8 +186,7 @@ void MainWindow::resetTexture()
 	QPixmap texture = QPixmap(16,16);
 	texture.fill(QColor(200,200,255));
 	textureRef = mainScene->bindTexture(texture);
-	thumbnailRender->setTexture(textureRef);
-	mainScene->setTexture(textureRef);
+	emit textureChanged(textureRef);
 }
 
 /*****************************************************************************************************/
@@ -198,8 +195,8 @@ void MainWindow::onModelUpdate(KVFModel* model)
 	if (!model) return;
 
 	/* called each time user edits model in the editor */
-	if (model->lastEditTime)
-		setStatusBarFPS(model->lastEditTime);
+	if (model->lastVFCalcTime)
+		setStatusBarFPS(model->lastVFCalcTime);
 }
 
 /*****************************************************************************************************/

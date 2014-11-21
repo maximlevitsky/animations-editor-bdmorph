@@ -36,12 +36,12 @@ public slots:
 
 	void onFrameSwitched(MeshModel* model);
 	void onModelUpdate(KVFModel* model);
-
 	void onEditBoxNewFrameSelected(MeshModel* model);
 
 signals:
-	void frameSwitched(MeshModel* model);
 	void videoModelLoaded(VideoModel* model);
+	void frameSwitched(MeshModel* model);
+	void textureChanged(GLuint textureRef);
 
 private:
 	SidePanel* sidePanel;
