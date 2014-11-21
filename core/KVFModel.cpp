@@ -38,6 +38,7 @@ KVFModel::KVFModel(MeshModel* model) :
 	drawVFMode(false),
 	drawOrigVFMode(false),
 	alpha1(0.5),
+	lastEditTime(0),
 	MeshModel(*model)
 {
 
@@ -202,6 +203,17 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
     cholmod_common* cm = cholmod_get_common();
     std::set<DisplacedVertex> allDisplacements = disps;
 
+    if (disps.empty())
+    {
+    	if (vf.size() == numVertices)
+    	{
+    		for (int i = 0; i < numVertices; i++)
+    			for (int j = 0; j < 2; j++)
+    				vertices[i][j] += vf[i][j] * .5;
+    	}
+    	return;
+    }
+
 	vfOrig.clear();
 	vf.clear();
 
@@ -353,51 +365,25 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &disps)
     cholmod_free_dense(&Xcholmod2, cm);
     free(rhsMove);
 
-    int fullTime = total.measure_msec();
-    int FPS = 1000 / fullTime;
-    printf("Total solve time:      %i msec (%i FPS)\n", fullTime, FPS);
+    lastEditTime = total.measure_msec();
+    int FPS = 1000 / lastEditTime;
+    printf("Total solve time:      %i msec (%i FPS)\n", lastEditTime, FPS);
     printf("\n");
 
     historyAdd(disps);
 }
 /*****************************************************************************************************/
-void KVFModel::reuseVF()
-{
-	if (vf.size() == numVertices)
-	{
-		for (int i = 0; i < numVertices; i++)
-			for (int j = 0; j < 2; j++)
-				vertices[i][j] += vf[i][j] * .5;
-	}
-}
-
 void KVFModel::resetDeformations()
 {
 	historyReset();
 	vertices = initialVertexes;
 }
-
 /*****************************************************************************************************/
-void KVFModel::renderVertex(int v, double scale)
-{
-	#define VERTEX_SIZE 3
-    glLineWidth(1);
-
-    Point2D<double> p = vertices[v];
-
-    float s = VERTEX_SIZE * scale;
-    glBegin(GL_QUADS);
-        glVertex2f(p[0]-s,p[1]-s);
-        glVertex2f(p[0]-s,p[1]+s);
-        glVertex2f(p[0]+s,p[1]+s);
-        glVertex2f(p[0]+s,p[1]-s);
-    glEnd(/*GL_QUADS*/);
-}
-
-/*****************************************************************************************************/
-void KVFModel::renderVF()
+void KVFModel::render(double wireframeTrans)
 {
 	#define VF_SCALE 1
+
+	MeshModel::render(wireframeTrans);
 
 	if (drawOrigVFMode && vfOrig.size() == numVertices)
     {

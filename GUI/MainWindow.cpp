@@ -4,23 +4,25 @@
 #include "SidePanel.h"
 #include "AnimationPanel.h"
 #include <QDockWidget>
+#include <QFileDialog>
 #include "Utils.h"
 
 /*****************************************************************************************************/
-MainWindow::MainWindow()
+MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 {
 	setupUi(this);
+
+	/* setup GL view */
 	mainScene = new MainScene(this);
 	setCentralWidget(mainScene);
 
-
-	/* create side panel and connect it to us */
+	/* setup side panel */
 	sidePanel = new SidePanel(this);
-	connect_(sidePanel->btnLoadModel, clicked(),mainScene, loadModel());
-	connect_(sidePanel->btnLoadTexture, clicked(),mainScene, chooseTexture());
-	connect_(sidePanel->btnResetMesh, clicked(),mainScene, resetPoints());
-	connect_(sidePanel->btnResetTexture, clicked(),mainScene, resetTexture());
+	connect_(sidePanel->btnLoadModel, clicked(),this, loadModel());
+	connect_(sidePanel->btnResetTexture, clicked(),this, resetTexture());
+	connect_(sidePanel->btnLoadTexture, clicked(),this, chooseTexture());
 
+	connect_(sidePanel->btnResetMesh, clicked(), mainScene, resetPoints());
 	connect_(sidePanel->btnResetPins, clicked(),mainScene, clearPins());
 	connect_(sidePanel->btnResetTransform, clicked(),mainScene, resetTransform());
 	connect_(sidePanel->btnSaveLog, clicked(),mainScene,saveLog());
@@ -36,30 +38,43 @@ MainWindow::MainWindow()
 	connect_(sidePanel->sliderWireframeTransparency, valueChanged(int), mainScene, changeWireframe(int));
 	connect_(sidePanel->sliderAlpha, valueChanged(int), mainScene, changeAlpha(int));
 	sidePanel->sliderAlpha->setValue(20);
+	addDockWidget(Qt::RightDockWidgetArea, sidePanel);
 
-
+	/* setup animation panel */
 	animationPanel = new AnimationPanel(this);
 	animationPanel->setTitleBarWidget(new QWidget(this));
 	addDockWidget(Qt::BottomDockWidgetArea, animationPanel);
-	addDockWidget(Qt::RightDockWidgetArea, sidePanel);
 
+	/* setup statusbar*/
 	statusBar()->showMessage(tr("Ready"));
-
 	lblVertexCount = new QLabel(this);
-
 	lblVertexCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
 	statusBar()->addPermanentWidget(lblVertexCount);
-
-
 	lblFacesCount = new QLabel(this);
 	lblFacesCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
 	statusBar()->addPermanentWidget(lblFacesCount);
-
-
 	lblFPS = new QLabel(this);
 	lblFPS->setFrameStyle(QFrame::Panel | QFrame::Sunken);
 	statusBar()->addPermanentWidget(lblFPS);
 
+
+	/* main scene will listen on model loads and keyframes switches*/
+	connect_(this, videoModelLoaded(VideoModel*), mainScene, onVideoModelLoaded(VideoModel*));
+	connect_(this, frameSwitched(MeshModel*), mainScene, onFrameSwitched(MeshModel*));
+
+	/* we listen to main scene for edit events */
+	connect_(mainScene, modelEdited(KVFModel*), this, onModelUpdate(KVFModel*));
+
+	/* we listen on keyframe switches */
+	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
+
+	clearStatusBar();
+}
+
+/*****************************************************************************************************/
+MainWindow::~MainWindow()
+{
+	delete model;
 }
 
 /*****************************************************************************************************/
@@ -71,16 +86,111 @@ void MainWindow::setStatusBarStatistics(int vertexCount, int facesCount)
 
 	str.sprintf("Faces: %d", facesCount);
 	lblFacesCount->setText(str);
+
+	lblVertexCount->show();
+	lblFacesCount->show();
 }
 
 /*****************************************************************************************************/
-void MainWindow::setRenderTimeStatistics(int timeMsec)
+void MainWindow::setStatusBarFPS(int msec)
 {
 	QString str;
-	str.sprintf("Render time: %d ms (%d FPS)", timeMsec, 1000/timeMsec);
+	str.sprintf("%d FPS", 1000/msec);
+	lblFPS->setText(str);
+	lblFPS->show();
 }
 
 /*****************************************************************************************************/
-MainWindow::~MainWindow()
+void MainWindow::clearStatusBar()
 {
+	lblFPS->hide();
+	lblFacesCount->hide();
+	lblVertexCount->hide();
+}
+
+/*****************************************************************************************************/
+void MainWindow::loadModel()
+{
+    QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
+    if (filename == "") return;
+
+    emit frameSwitched(NULL);
+    emit videoModelLoaded(NULL);
+
+    delete model;
+    model = new VideoModel(filename.toStdString());
+
+    emit videoModelLoaded(model);
+    emit frameSwitched(model->keyframe(0));
+
+    /* set these statistics - will only change when loading new model */
+    setStatusBarStatistics(model->getNumVertices(), model->getNumFaces());
+}
+
+/*****************************************************************************************************/
+void MainWindow::saveModel()
+{
+	if ( !currentFrameModel) return;
+
+    QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
+    if ( filename == "")
+    	return;
+
+    std::ofstream outfile(filename.toAscii());
+	if (filename.endsWith("off"))
+	{
+		outfile << "OFF\n";
+		outfile << currentFrameModel->getNumVertices() << ' ' << currentFrameModel->getNumFaces() << " 0\n"; // don't bother counting edges
+		currentFrameModel->saveVertices(outfile,filename);
+		currentFrameModel->saveFaces(outfile,filename);
+	}
+
+	if (filename.endsWith("obj"))
+	{
+		currentFrameModel->saveVertices(outfile,filename);
+		currentFrameModel->saveTextureUVs(outfile,filename);
+		currentFrameModel->saveFaces(outfile,filename);
+	}
+}
+
+/*****************************************************************************************************/
+void MainWindow::chooseTexture()
+{
+    QString filename = QFileDialog::getOpenFileName(0, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
+
+    if (filename == NULL) {
+		mainScene->resetTexture();
+		return;
+	}
+
+	QPixmap pix(filename);
+	mainScene->setTexture(pix);
+}
+
+/*****************************************************************************************************/
+void MainWindow::resetTexture()
+{
+	mainScene->resetTexture();
+}
+
+/*****************************************************************************************************/
+void MainWindow::onModelUpdate(KVFModel* model)
+{
+	if (!model) return;
+
+	/* called each time user edits model in the editor */
+	if (model->lastEditTime)
+		setStatusBarFPS(model->lastEditTime);
+}
+
+/*****************************************************************************************************/
+void MainWindow::onEditBoxNewFrameSelected(MeshModel* model)
+{
+	emit frameSwitched(model);
+}
+
+/*****************************************************************************************************/
+void MainWindow::onFrameSwitched(MeshModel* model)
+{
+	currentFrameModel = model;
 }

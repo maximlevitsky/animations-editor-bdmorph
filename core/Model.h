@@ -3,7 +3,7 @@
 
 #include "vector2d.h"
 #include "Utils.h"
-#include <QString>
+#include <string>
 #include <set>
 #include <vector>
 
@@ -11,9 +11,9 @@
 class MeshModel
 {
 public:
-    MeshModel(const QString &filename);
+    MeshModel(std::string &filename);
     MeshModel(const MeshModel& other);
-    ~MeshModel();
+    virtual ~MeshModel();
 	void copyPositions(MeshModel& m);
 
     double getMinX() { return minX; }
@@ -31,14 +31,15 @@ public:
     int getClosestVertex(Point2D<double> point);
 
 	/* rendering */
-    void render(double wireframeTrans);
+    virtual void render(double wireframeTrans);
+	void renderVertex(int v, double scale);
 
 	/* save and load code */
     void replacePoints(const QString &filename);
     void saveVertices(std::ofstream& outfile, const QString &filename);
 	void saveTextureUVs(std::ofstream& outfile, const QString &filename);
 	void saveFaces(std::ofstream& outfile, const QString &filename);
-	void loadFromFile(const QString &filename);
+	void loadFromFile(std::string &filename);
 
 	/* common shared model information */
 	std::vector<Face> *faces;

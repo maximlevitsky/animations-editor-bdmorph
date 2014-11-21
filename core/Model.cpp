@@ -46,7 +46,7 @@ MeshModel::MeshModel(const MeshModel& other):
 }
 /******************************************************************************************************************************/
 
-MeshModel::MeshModel(const QString &filename) :
+MeshModel::MeshModel(std::string &filename) :
 		faces(new std::vector<Face>),
 		boundaryVertices(new std::set<Vertex>),
 		texCoords(new std::vector<Point2>),
@@ -102,13 +102,13 @@ MeshModel::MeshModel(const QString &filename) :
 }
 
 /******************************************************************************************************************************/
-void MeshModel::loadFromFile(const QString & filename)
+void MeshModel::loadFromFile(std::string & filename)
 {
-	if (filename.endsWith("obj")) //handle obj file
+	if (ends_with(filename, "obj")) //handle obj file
 	{
 		numVertices = 0;
 		numFaces = 0;
-		std::ifstream infile(filename.toAscii());
+		std::ifstream infile(filename);
 		bool is_vt = false;
 		double x,y,z;
 		std::string a,b,c;
@@ -165,9 +165,9 @@ void MeshModel::loadFromFile(const QString & filename)
 		}
 	}
 
-    if (filename.endsWith("off")) //handle off file
+    if (ends_with(filename, "off")) //handle off file
 	{
-    	std::ifstream infile(filename.toAscii());
+    	std::ifstream infile(filename);
     	std::string temp;
 		infile >> temp;
 
@@ -218,6 +218,24 @@ void MeshModel::render(double wireframeTrans)
 
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
+
+/******************************************************************************************************************************/
+void MeshModel::renderVertex(int v, double scale)
+{
+	#define VERTEX_SIZE 3
+    glLineWidth(1);
+
+    Point2D<double> p = vertices[v];
+
+    float s = VERTEX_SIZE * scale;
+    glBegin(GL_QUADS);
+        glVertex2f(p[0]-s,p[1]-s);
+        glVertex2f(p[0]-s,p[1]+s);
+        glVertex2f(p[0]+s,p[1]+s);
+        glVertex2f(p[0]+s,p[1]-s);
+    glEnd(/*GL_QUADS*/);
+}
+
 /******************************************************************************************************************************/
 int MeshModel::getClosestVertex(Point2D<double> point)
 {

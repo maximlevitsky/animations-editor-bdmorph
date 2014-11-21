@@ -17,32 +17,21 @@
 
 #include "Model.h"
 #include "KVFModel.h"
+#include "VideoModel.h"
 
 class MainScene : public QGLWidget
 {
     Q_OBJECT
 public:
     MainScene(QWidget* parent);
-    ~MainScene() { if (model) delete model; }
-
+    ~MainScene() {}
+        
 public slots:
-	void loadModel();
-	void saveModel();
+	/* these slots are connected to side panel to manipulate the view*/
 	void undoModel();
 	void redoModel();
 	void reuseVF();
     void resetPoints();
-
-    void chooseTexture();
-	void resetTexture();
-
-	void zoomIn()  {zoom(ZOOM_FACTOR);}
-    void zoomOut() {zoom(1./ZOOM_FACTOR);}
-
-    void moveLeft() {move(QPointF(-10,0));}
-    void moveRight() {move(QPointF(10,0));}
-    void moveUp() {move(QPointF(0,10));}
-    void moveDown() {move(QPointF(0,-10 ));}
 
 	void drawVFModeChanged(bool m);
 	void drawOrigVFModeChanged(bool m);
@@ -56,12 +45,28 @@ public slots:
     void runLog();
 
     void resetTransform();
+    
+    /* these slots are connected to bottom animation panel + main window */
+    void onFrameSwitched(MeshModel* model);
+    void onVideoModelLoaded(VideoModel* model);
+
+    void setTexture(QPixmap& texture);
+    void resetTexture();
+
+signals:
+	void modelEdited(KVFModel* model);
 
 private:
     /* transformations*/
 	int closestIndex(QPointF pos);
     void zoom(double factor) {modelWidth *= factor;}
     void move(QPointF direction) {modelLocation += direction;}
+    void moveLeft() {move(QPointF(-10,0));}
+    void moveRight() {move(QPointF(10,0));}
+    void moveUp() {move(QPointF(0,10));}
+    void moveDown() {move(QPointF(0,-10 ));}
+	void zoomIn()  {zoom(ZOOM_FACTOR);}
+    void zoomOut() {zoom(1./ZOOM_FACTOR);}
 	Point2 screenToModel(QPointF v);
 
     /* Events */
@@ -78,10 +83,9 @@ private:
     void initializeGL();
 
 private:
-    /* Loaded model
-     * TODO: Here we will store all keyframes, BDFFrames, etc later*/
-    MeshModel *model;
-    KVFModel *currentKeyFrame;
+
+    KVFModel *editModel;
+    MeshModel* renderModel;
 
     /* Model state */
     QPointF modelLocation;

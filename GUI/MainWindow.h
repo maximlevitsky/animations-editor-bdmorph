@@ -9,6 +9,7 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QLabel>
+#include "VideoModel.h"
 
 class SidePanel;
 class AnimationPanel;
@@ -22,7 +23,23 @@ public:
 	virtual ~MainWindow();
 
 	void setStatusBarStatistics(int vertexCount, int facesCount);
-	void setRenderTimeStatistics(int timeMsec);
+	void setStatusBarFPS(int msec);
+	void clearStatusBar();
+
+public slots:
+	void loadModel();
+	void saveModel();
+    void chooseTexture();
+	void resetTexture();
+
+	void onFrameSwitched(MeshModel* model);
+	void onModelUpdate(KVFModel* model);
+
+	void onEditBoxNewFrameSelected(MeshModel* model);
+
+signals:
+	void frameSwitched(MeshModel* model);
+	void videoModelLoaded(VideoModel* model);
 
 private:
 	SidePanel* sidePanel;
@@ -33,7 +50,8 @@ private:
 	QLabel* lblFacesCount;
 	QLabel* lblFPS;
 
-
+	VideoModel* model;
+	MeshModel* currentFrameModel;
 };
 
 #endif

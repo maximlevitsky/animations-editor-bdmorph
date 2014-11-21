@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "MainWindow.h"
+#include <assert.h>
 
 using std::max;
 using std::min;
@@ -18,7 +19,7 @@ using std::min;
 
 /******************************************************************************************************************************/
 MainScene::MainScene(QWidget* parent) :
-			model(NULL), currentKeyFrame(NULL), wireframeTransparency(0),
+			editModel(NULL), renderModel(NULL), wireframeTransparency(0),
 			QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
 			pinMode(false),
 			multitouchMode(false)
@@ -29,118 +30,44 @@ MainScene::MainScene(QWidget* parent) :
 }
 
 /******************************************************************************************************************************/
-void MainScene::loadModel()
-{
-    QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
-    if (filename == "") return;
-
-    qWarning("Deleting");
-    if (currentKeyFrame) delete currentKeyFrame;
-    if (model) delete model;
-
-    qWarning("Making a new model");
-
-    model = new MeshModel(filename);
-	currentKeyFrame = new KVFModel(model);
-
-	resetTexture();
-    resetTransform();
-
-    MainWindow* mainWindow = (MainWindow*)parentWidget();
-	mainWindow->setStatusBarStatistics(currentKeyFrame->getNumVertices(), currentKeyFrame->getNumFaces());
-    repaint();
-}
-/******************************************************************************************************************************/
-
-void MainScene::saveModel()
-{
-	if ( !currentKeyFrame) return;
-    QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
-
-    if ( filename == "" || (!(currentKeyFrame)) ) return;
-    std::ofstream outfile(filename.toAscii());
-
-	if (filename.endsWith("off"))
-	{
-		outfile << "OFF\n";
-		outfile << currentKeyFrame->getNumVertices() << ' ' << currentKeyFrame->getNumFaces() << " 0\n"; // don't bother counting edges
-		currentKeyFrame->saveVertices(outfile,filename);
-		currentKeyFrame->saveFaces(outfile,filename);
-	}
-    
-	if (filename.endsWith("obj"))
-	{
-		currentKeyFrame->saveVertices(outfile,filename);
-		currentKeyFrame->saveTextureUVs(outfile,filename);
-		currentKeyFrame->saveFaces(outfile,filename);
-	}
-}
-
-/******************************************************************************************************************************/
-void MainScene::chooseTexture()
-{
-    QString filename = QFileDialog::getOpenFileName(0, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
-
-    glEnable(GL_TEXTURE_2D);
-    if (filename == NULL)
-    {
-		resetTexture();
-	}
-    else {
-    	makeCurrent();
-		textureRef = bindTexture(QPixmap(filename),GL_TEXTURE_2D);
-	}
-    repaint();
-}
-
-/******************************************************************************************************************************/
-void MainScene::resetTexture()
-{
-    makeCurrent();
-	glEnable(GL_TEXTURE_2D);
-	QPixmap texture = QPixmap(16,16);
-    texture.fill(QColor(200,200,255));
-    textureRef = bindTexture(texture);
-    repaint();
-}
-
-/******************************************************************************************************************************/
 void  MainScene::resetPoints()
 {
-	if ( !currentKeyFrame) return;
-	currentKeyFrame->resetDeformations();
+	if ( !editModel) return;
+	editModel->resetDeformations();
 	repaint();
 }
 /******************************************************************************************************************************/
 void MainScene::undoModel()
 {
-	if ( !currentKeyFrame) return;
-	currentKeyFrame->historyUndo();
+	if ( !editModel) return;
+	editModel->historyUndo();
+	emit modelEdited(editModel);
 	repaint();
 }
 
 /******************************************************************************************************************************/
 void MainScene::redoModel()
 {
-	if ( !currentKeyFrame) return;
-	currentKeyFrame->historyRedo();
+	if ( !editModel) return;
+	editModel->historyRedo();
+	emit modelEdited(editModel);
 	repaint();
 }
 
 /******************************************************************************************************************************/
 void MainScene::saveLog()
 {
-	if ( !currentKeyFrame) return;
+	if ( !editModel) return;
     QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
 
     std::ofstream outfile(filename.toAscii());
-    currentKeyFrame->historySaveToFile(outfile);
+    editModel->historySaveToFile(outfile);
 }
 /******************************************************************************************************************************/
 void MainScene::runLog()
 {
-	if ( !currentKeyFrame) return;
+	if ( !editModel) return;
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose log"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
     std::ifstream infile(filename.toAscii());
@@ -153,41 +80,43 @@ void MainScene::runLog()
 
     for (int step = 0; step < numSteps; step++)
     {
-    	currentKeyFrame->historyLoadFromFile(infile);
+    	editModel->historyLoadFromFile(infile);
         repaint();
     }
 
     printf("DONE WITH log replay (took %d msec)\n", t.measure_msec());
+	emit modelEdited(editModel);
 }
 
 /******************************************************************************************************************************/
 void MainScene::changeAlpha(int i)
 {
-	if (currentKeyFrame)
-		currentKeyFrame->setAlpha((double) (i) / 100 * 2);
+	if (editModel)
+		editModel->setAlpha((double) (i) / 100 * 2);
 }
 
 /******************************************************************************************************************************/
 void MainScene::drawVFModeChanged(bool m)
 {
-	if (currentKeyFrame)
-		currentKeyFrame->setDrawVFMode(m);
+	if (editModel)
+		editModel->setDrawVFMode(m);
 	repaint();
 }
 
 /******************************************************************************************************************************/
 void MainScene::drawOrigVFModeChanged(bool m)
 {
-	if (currentKeyFrame)
-		currentKeyFrame->setDrawOrigVFMode(m);
+	if (editModel)
+		editModel->setDrawOrigVFMode(m);
 	repaint();
 }
 
 /******************************************************************************************************************************/
 void MainScene::reuseVF()
 {
-	if (currentKeyFrame)
-		currentKeyFrame->reuseVF();
+	if (editModel)
+		editModel->displaceMesh();
+	emit modelEdited(editModel);
 	repaint();
 }
 
@@ -206,20 +135,72 @@ void MainScene::changeWireframe(int i)
 /******************************************************************************************************************************/
 void MainScene::clearPins()
 {
-	if (currentKeyFrame)
-		currentKeyFrame->clearPins();
+	if (editModel)
+		editModel->clearPins();
 	repaint();
 }
 /******************************************************************************************************************************/
 
 void MainScene::resetTransform()
 {
-	double maxZoomX = width() / currentKeyFrame->getWidth();
-	double maxZoomY = height() / currentKeyFrame->getHeight();
+	if (!renderModel) return;
+	double maxZoomX = width() / renderModel->getWidth();
+	double maxZoomY = height() / renderModel->getHeight();
 
 	double maxZoom = std::min(maxZoomX,maxZoomY) * 0.9;
-	modelWidth = currentKeyFrame->getWidth() * maxZoom;
+	modelWidth = renderModel->getWidth() * maxZoom;
 	modelLocation = QPointF(0, 0);
+	repaint();
+}
+
+/******************************************************************************************************************************/
+void MainScene::onFrameSwitched(MeshModel* model)
+{
+	renderModel = model;
+	editModel = dynamic_cast<KVFModel*>(model);
+	repaint();
+}
+
+/******************************************************************************************************************************/
+
+void MainScene::onVideoModelLoaded(VideoModel* model)
+{
+	if (!model)
+	{
+		renderModel = NULL;
+		editModel = NULL;
+		resetTexture();
+	} else
+	{
+		renderModel = model;
+		resetTransform();
+	}
+}
+
+/******************************************************************************************************************************/
+
+void MainScene::setTexture(QPixmap& texture)
+{
+	if (!editModel)
+		return;
+
+	makeCurrent();
+	textureRef = bindTexture(texture,GL_TEXTURE_2D);
+	emit modelEdited(editModel);
+}
+
+/******************************************************************************************************************************/
+void MainScene::resetTexture()
+{
+	makeCurrent();
+	glEnable(GL_TEXTURE_2D);
+	QPixmap texture = QPixmap(16,16);
+	texture.fill(QColor(200,200,255));
+	textureRef = bindTexture(texture);
+
+	if (editModel)
+		emit modelEdited(editModel);
+
 	repaint();
 }
 
@@ -235,7 +216,6 @@ void MainScene::initializeGL()
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
     glHint(GL_POLYGON_SMOOTH_HINT, GL_DONT_CARE);
-
 }
 
 /******************************************************************************************************************************/
@@ -250,7 +230,7 @@ void MainScene::paintGL()
     glClearColor(1.,1.,1., 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!currentKeyFrame)
+    if (!renderModel)
     	return;
 
     glEnable(GL_LINE_SMOOTH);
@@ -259,9 +239,9 @@ void MainScene::paintGL()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glLineWidth(1.5);
 
-    double ratio = (currentKeyFrame->getWidth()) / modelWidth;
-    double centerX = currentKeyFrame->getCenterX() - modelLocation.x() * ratio;
-    double centerY = currentKeyFrame->getCenterY() - modelLocation.y() * ratio;
+    double ratio = (renderModel->getWidth()) / modelWidth;
+    double centerX = renderModel->getCenterX() - modelLocation.x() * ratio;
+    double centerY = renderModel->getCenterY() - modelLocation.y() * ratio;
     double neededWidth = ratio * width();
     double neededHeight = ratio * height();
 
@@ -273,20 +253,21 @@ void MainScene::paintGL()
 	glBindTexture(GL_TEXTURE_2D, textureRef);
 
 	/* render the model*/
-	currentKeyFrame->render((double)wireframeTransparency/100);
-
-	/* render the VF*/
-	currentKeyFrame->renderVF();
+	renderModel->render((double)wireframeTransparency/100);
 
 	/* render selected vertices */
 	glColor3f(1,0,0);
 	for (int i = 0; i < selectedVertices.size(); i++)
-		currentKeyFrame->renderVertex(selectedVertices[i], ratio);
+		renderModel->renderVertex(selectedVertices[i], ratio);
 
 	/* render pinned vertices */
-	glColor3f(1,1,0);
-	for (auto it = currentKeyFrame->getPinnedVertexes().begin(); it != currentKeyFrame->getPinnedVertexes().end(); it++)
-		currentKeyFrame->renderVertex(*it, ratio);
+
+	if (editModel) {
+		glColor3f(1,1,0);
+		for (auto it = editModel->getPinnedVertexes().begin(); it != editModel->getPinnedVertexes().end(); it++)
+			editModel->renderVertex(*it, ratio);
+	}
+
 }
 
 /******************************************************************************************************************************/
@@ -307,6 +288,9 @@ bool MainScene::touchEvent(QTouchEvent* te)
 {
 	if (pinMode)
 		return false; //if pin mode is checked, directed to mousepress event.
+
+	if (!editModel)
+		return false;
 
 	QList<QTouchEvent::TouchPoint> touchPoints = te->touchPoints();
 
@@ -380,8 +364,10 @@ bool MainScene::touchEvent(QTouchEvent* te)
 			disps.insert(DisplacedVertex(touchToVertex[touchPoints[i].id()], displacement));
 			touchPointLocations[touchPoints[i].id()] = touchPoints[i].pos();
 		}
-		if (disps.size() > 0)
-			currentKeyFrame->displaceMesh(disps);
+		if (disps.size() > 0) {
+			editModel->displaceMesh(disps);
+			emit modelEdited(editModel);
+		}
 	}
 
 	selectedVertices.clear();
@@ -429,14 +415,14 @@ void MainScene::mousePressEvent(QMouseEvent *event)
 
     QPointF origPos = pos;
     lastMousePos = event->pos();
-    if (!currentKeyFrame) return;
+    if (!editModel) return;
 
     Vertex v = closestIndex(pos);
     if (v == -1) return;
 
 	if ((QApplication::keyboardModifiers() & Qt::ShiftModifier) || pinMode)
 	{
-		currentKeyFrame->togglePinVertex(v);
+		editModel->togglePinVertex(v);
 
 	} else
 	{
@@ -448,7 +434,6 @@ void MainScene::mousePressEvent(QMouseEvent *event)
 /******************************************************************************************************************************/
 void MainScene::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!currentKeyFrame) return;
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
 	QPointF oldPos = lastMousePos;
@@ -466,19 +451,22 @@ void MainScene::mouseMoveEvent(QMouseEvent *event)
 
     if ((event->buttons() & Qt::LeftButton) && (!(mods & Qt::ShiftModifier)) && !pinMode && selectedVertices.size())
     {
-        QPointF diff = curPos - oldPos;
 
-        Vertex selectedVertex = selectedVertices[0];
-        diff *= currentKeyFrame->getWidth() / modelWidth;
+    	if (editModel) {
+			QPointF diff = curPos - oldPos;
+			Vertex selectedVertex = selectedVertices[0];
+			diff *= editModel->getWidth() / modelWidth;
 
-        std::cout << "Mouse move delta:" << diff.rx() << "-" << diff.ry() << std::endl;
+			std::cout << "Mouse move delta:" << diff.rx() << "-" << diff.ry() << std::endl;
 
-        if (diff.rx() == 0 && diff.ry() == 0)
-        	return;
+			if (diff.rx() == 0 && diff.ry() == 0)
+				return;
 
-        std::set<DisplacedVertex> disps;
-        disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),-diff.y())));
-		currentKeyFrame->displaceMesh(disps);
+			std::set<DisplacedVertex> disps;
+			disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),-diff.y())));
+			editModel->displaceMesh(disps);
+			emit modelEdited(editModel);
+    	}
         update();
     }
     repaint();
@@ -502,9 +490,9 @@ void MainScene::wheelEvent(QWheelEvent *event)
 /******************************************************************************************************************************/
 int MainScene::closestIndex(QPointF pos)
 {
-	if (!currentKeyFrame)
+	if (!renderModel)
 		return -1;
-	return currentKeyFrame->getClosestVertex(screenToModel(pos));
+	return renderModel->getClosestVertex(screenToModel(pos));
 }
 
 /******************************************************************************************************************************/
@@ -512,8 +500,8 @@ Point2 MainScene::screenToModel(QPointF pos)
 {
 	pos -= modelLocation;
 	pos -= QPointF((double)width()/2,(double)height()/2);
-	pos *= currentKeyFrame->getWidth() / modelWidth;
-	pos += QPointF(currentKeyFrame->getCenterX(), currentKeyFrame->getCenterY());
+	pos *= renderModel->getWidth() / modelWidth;
+	pos += QPointF(renderModel->getCenterX(), renderModel->getCenterY());
 
 	return Point2(pos.x(), pos.y());
 }

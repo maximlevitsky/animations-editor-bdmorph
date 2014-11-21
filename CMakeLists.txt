@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 SET(kvf2d_SOURCES
 	GUI/MainScene.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp
-	core/Model.cpp core/KVFModel.cpp
+	core/Model.cpp core/KVFModel.cpp core/VideoModel.cpp
 	utils/cholmod_matrix.cpp utils/vector2d.cpp 
 )
 

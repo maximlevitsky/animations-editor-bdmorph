@@ -51,12 +51,11 @@ public:
 	void clearPins();
 	const std::set<Vertex>& getPinnedVertexes() { return pinnedVertexes; }
 
-	void displaceMesh(const std::set<DisplacedVertex> &displacements);
-	void reuseVF();
+	void displaceMesh(const std::set<DisplacedVertex> &displacements = std::set<DisplacedVertex>());
+	void resetDeformations();
 
 	/* rendering */
-	void renderVertex(int v, double scale);
-	void renderVF();
+	void render(double wireframeTrans);
 
 	void setDrawVFMode(bool enable) { drawVFMode = enable; }
 	void setDrawOrigVFMode(bool enable) { drawOrigVFMode = enable; }
@@ -67,8 +66,6 @@ public:
 	void historySaveToFile(std::ofstream& outfile);
 	void historyLoadFromFile(std::ifstream& infile);
 	void historyReset();
-
-	void resetDeformations();
 
 private:
 	/* model information */
@@ -107,10 +104,12 @@ private:
     std::deque<LogItem> undolog; /* stores log of all changes to mesh since creation of the model */
     std::deque<LogItem> redolog; /* stores log of all changes to mesh since creation of the model */
 
-
     vertexList undoBuffer[UNDOSIZE];
-
     void historyAdd(const std::set<DisplacedVertex> &disps);
+
+public:
+    /* statistics */
+    int lastEditTime;
 };
 
 #endif
