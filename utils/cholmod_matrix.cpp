@@ -2,7 +2,8 @@
 #include <map>
 #include <ctime>
 #include <limits>
-#include <QString>
+#include <assert.h>
+
 #define ABS(x) (((x)<0)?-(x):(x))
 
 class ParallelMatrixMultiplier : public QThread
@@ -318,16 +319,25 @@ static void cholmod_error_handler(int status, char *file, int line,  char *messa
     qWarning("Message: %s", message);
 }
 
+/******************************************************************************************************************************/
 cholmod_common* cholmod_get_common()
 {
-	if (!cholmod_common_initilaized) {
-		cholmod_common_initilaized = true;
-		cholmod_start(&common);
-		common.error_handler = cholmod_error_handler;
-	}
+	assert(cholmod_common_initilaized);
 	return &common;
 }
 
+
+/******************************************************************************************************************************/
+void cholmod_initialize()
+{
+	if (!cholmod_common_initilaized) {
+			cholmod_common_initilaized = true;
+			cholmod_start(&common);
+			common.error_handler = cholmod_error_handler;
+	}
+}
+
+/******************************************************************************************************************************/
 void cholmod_finalize() {
 	if (cholmod_common_initilaized)
 		cholmod_finish(&common);

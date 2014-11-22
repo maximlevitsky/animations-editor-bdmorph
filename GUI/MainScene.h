@@ -1,23 +1,18 @@
 #ifndef DEFORMATIONSCENE_H
 #define DEFORMATIONSCENE_H
 
-#include <QLabel>
-#include <QTime>
-#include <QKeyEvent>
-#include <QSpinBox>
-#include <QSlider>
-#include <QImage>
-#include <qgl.h>
+#include <vector>
+#include <map>
 #include <QGLWidget>
-#include <set>
-#include <QCheckBox>
-#include <qwidget.h>
+#include <QPointF>
+#include <QTouchEvent>
+#include "vector2d.h"
 
 #define ZOOM_FACTOR 1.2
 
-#include "Model.h"
-#include "KVFModel.h"
-#include "VideoModel.h"
+class MeshModel;
+class KVFModel;
+class VideoModel;
 
 class MainScene : public QGLWidget
 {

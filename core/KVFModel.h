@@ -1,20 +1,17 @@
 #ifndef KVF_H
 #define KVF_H
 
-
 #include <set>
 #include <vector>
 #include <deque>
 #include <limits>
-#include <iostream>
-#include <fstream>
 #include <string>
-#include "vector2d.h"
-#include "Utils.h"
 #include <cholmod.h>
-#include "cholmod_matrix.h"
 
-#include "Model.h"
+#include "vector2d.h"
+#include "cholmod_matrix.h"
+#include "Utils.h"
+#include "MeshModel.h"
 
 #define UNDOSIZE 20
 

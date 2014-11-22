@@ -1,12 +1,12 @@
 #ifndef THUMBNAILRENDERER_H_
 #define THUMBNAILRENDERER_H_
 
-#include <QtOpenGL>
 #include <QGLWidget>
 #include <QWidget>
 #include <QGLFramebufferObject>
 #include <QImage>
-#include "Model.h"
+
+class MeshModel;
 
 class ThumbnailRenderer : public QGLWidget
 {
@@ -24,7 +24,5 @@ private:
 	GLuint textureRef;
 	QGLFramebufferObject *fbo;
 };
-
-
 
 #endif /* THUMBNAILRENDERER_H_ */

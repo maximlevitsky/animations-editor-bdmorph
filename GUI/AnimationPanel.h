@@ -1,12 +1,14 @@
 
 #include <qdialog.h>
 #include <QDockWidget>
+#include <QtOpenGL>
 #include "ui_AnimationPanel.h"
-#include "ThumbnailRenderer.h"
 
 class VideoModel;
 class KVFModel;
 class VideoKeyFrame;
+class ThumbnailRenderer;
+class MeshModel;
 
 class AnimationPanel : public QDockWidget, public Ui_AnimationPanel
 {
@@ -30,8 +32,8 @@ public slots:
 	void onLstitemDoubleClicked ();
 
 signals:
-		/* we emit this when user clicks on a different frame */
-		void frameSelectionChanged(MeshModel* model);
+	/* we emit this when user clicks on a different frame */
+	void frameSelectionChanged(MeshModel* model);
 
 private:
 	VideoModel* currentVideoModel;

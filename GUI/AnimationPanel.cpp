@@ -1,5 +1,4 @@
 
-#include "AnimationPanel.h"
 #include <QDockWidget>
 #include <QListWidgetItem>
 #include <QPixmap>
@@ -8,7 +7,10 @@
 #include <QAction>
 #include <QPixmap>
 
+#include "AnimationPanel.h"
 #include "VideoModel.h"
+#include "MeshModel.h"
+#include "ThumbnailRenderer.h"
 #include "Utils.h"
 
 

@@ -1,19 +1,21 @@
 
-extern "C" {
-	#include <amd.h>
-	#include <ldl.h>
-	#include <camd.h>
-	#include <cholmod.h>
-}
-
-#include "Utils.h"
 #include <stdio.h>
+#include <iostream>
+#include <fstream>
 #include <complex>
 #include <cmath>
+#include <cholmod.h>
 #include <QtOpenGL>
+
+extern "C" {
+#include <amd.h>
+#include <ldl.h>
+#include <camd.h>
+}
 
 #define SQRT_2 1.41421356
 
+#include "Utils.h"
 #include "KVFModel.h"
 /*****************************************************************************************************/
 struct LogSpiral

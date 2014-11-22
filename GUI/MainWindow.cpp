@@ -1,12 +1,19 @@
 
+
+
+#include <QDockWidget>
+#include <QFileDialog>
+#include <QtOpenGL>
+#include <QString>
+#include <fstream>
+
 #include "MainWindow.h"
 #include "MainScene.h"
 #include "SidePanel.h"
 #include "ThumbnailRenderer.h"
 #include "AnimationPanel.h"
-#include <QDockWidget>
-#include <QFileDialog>
 #include "Utils.h"
+#include "VideoModel.h"
 
 /*****************************************************************************************************/
 MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)

@@ -1,11 +1,12 @@
 #ifndef MODEL2D_H
 #define MODEL2D_H
 
-#include "vector2d.h"
-#include "Utils.h"
 #include <string>
 #include <set>
 #include <vector>
+
+#include "vector2d.h"
+#include "Utils.h"
 
 /******************************************************************************************************************************/
 class MeshModel

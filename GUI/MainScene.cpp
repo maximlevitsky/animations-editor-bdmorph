@@ -1,16 +1,17 @@
-#include "MainScene.h"
 
-#define TANGENT_WIDTH 20
-#include <QtGui>
-#include <QtOpenGL>
-#include <QPalette>
 #include <iostream>
 #include <fstream>
-#include <QGesture>
 #include <ctime>
 #include <stdio.h>
 #include <unistd.h>
+#include <QtGui>
+#include <QtOpenGL>
+
+#include "MainScene.h"
 #include "MainWindow.h"
+#include "MeshModel.h"
+#include "KVFModel.h"
+#include "VideoModel.h"
 #include <assert.h>
 
 using std::max;
@@ -149,7 +150,7 @@ void MainScene::resetTransform()
 	double maxZoomX = width() / renderModel->getWidth();
 	double maxZoomY = height() / renderModel->getHeight();
 
-	double maxZoom = std::min(maxZoomX,maxZoomY) * 0.9;
+	double maxZoom = std::min(maxZoomX,maxZoomY) * 0.5;
 	modelWidth = renderModel->getWidth() * maxZoom;
 	modelLocation = QPointF(0, 0);
 	repaint();

@@ -1,6 +1,6 @@
 
-#include "SidePanel.h"
 #include <QDockWidget>
+#include "SidePanel.h"
 
 SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent)
 {

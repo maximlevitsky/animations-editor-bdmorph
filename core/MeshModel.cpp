@@ -1,5 +1,4 @@
-#include "Model.h"
-#include "Utils.h"
+
 #include <ctime>
 #include <cmath>
 #include <fstream>
@@ -7,6 +6,9 @@
 #include <algorithm>
 #include <limits>
 #include <QtOpenGL>
+
+#include "MeshModel.h"
+#include "Utils.h"
 
 #define LINE_WIDTH 2
 
@@ -209,18 +211,20 @@ void MeshModel::render(double wireframeTrans)
 		}
 	glEnd(/*GL_TRIANGLES*/);
 
+	if (wireframeTrans) {
 
-	glDisable(GL_TEXTURE_2D);
-	glColor4f(0,0,0,wireframeTrans);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(1.5);
+		glDisable(GL_TEXTURE_2D);
+		glColor4f(0,0,0,wireframeTrans);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glLineWidth(1.5);
 
-    glBegin(GL_TRIANGLES);
-	for (int i = 0; i < numFaces; i++)
-		for (int j = 0; j < 3; j++) {
-			glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
-		}
-	glEnd();
+		glBegin(GL_TRIANGLES);
+		for (int i = 0; i < numFaces; i++)
+			for (int j = 0; j < 3; j++) {
+				glVertex2f(vertices[ (*faces)[i][j] ][0], vertices[ (*faces)[i][j] ][1]);
+			}
+		glEnd();
+	}
 
 	glPopAttrib();
 }

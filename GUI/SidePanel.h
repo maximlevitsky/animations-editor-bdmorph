@@ -1,5 +1,4 @@
 
-#include <qdialog.h>
 #include <QDockWidget>
 #include "ui_SidePanel.h"
 

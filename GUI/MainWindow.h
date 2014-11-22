@@ -3,19 +3,17 @@
 
 
 #include <QMainWindow>
-#include "ui_MainWindow.h"
-
-#include <QMouseEvent>
-#include <QWheelEvent>
-#include <QKeyEvent>
-#include <QLabel>
 #include <QtOpenGL>
-#include "VideoModel.h"
+#include "ui_MainWindow.h"
 
 class SidePanel;
 class AnimationPanel;
 class MainScene;
 class ThumbnailRenderer;
+class VideoModel;
+class MeshModel;
+class KVFModel;
+class QLabel;
 
 class MainWindow : public QMainWindow, public Ui_MainWindow
 {

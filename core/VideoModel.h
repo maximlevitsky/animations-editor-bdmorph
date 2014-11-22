@@ -2,9 +2,9 @@
 #ifndef VIDEOMODEL_H_
 #define VIDEOMODEL_H_
 
-#include "KVFModel.h"
 #include <vector>
 #include <string>
+#include "KVFModel.h"
 
 /****************************************************************************/
 class VideoKeyFrame : public KVFModel

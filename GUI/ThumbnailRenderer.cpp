@@ -1,7 +1,9 @@
-#include "ThumbnailRenderer.h"
+
 #include <stdio.h>
 #include <assert.h>
-
+#include <QtOpenGL>
+#include "ThumbnailRenderer.h"
+#include "MeshModel.h"
 
 ThumbnailRenderer::ThumbnailRenderer(QWidget* parent,
 		QGLWidget* shareWidget) :
@@ -16,7 +18,6 @@ ThumbnailRenderer::ThumbnailRenderer(QWidget* parent,
 	if (result == false)
 		printf("Failed to bind thumbnail FBO");
 
-    glEnable(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -24,8 +25,6 @@ ThumbnailRenderer::ThumbnailRenderer(QWidget* parent,
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glHint(GL_POLYGON_SMOOTH_HINT, GL_DONT_CARE);
     glEnable(GL_POLYGON_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 QImage ThumbnailRenderer::renderThumbnail(MeshModel* model)
