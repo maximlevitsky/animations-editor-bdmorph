@@ -151,7 +151,7 @@ void EditorWindow::resetTransform()
 	double maxZoomY = height() / renderModel->getHeight();
 
 	double maxZoom = std::min(maxZoomX,maxZoomY);
-	modelWidth = renderModel->getWidth() * maxZoom;
+	modelWidth = renderModel->getWidth() * maxZoom * 0.5;
 	modelLocation = QPointF(0, 0);
 	repaint();
 }

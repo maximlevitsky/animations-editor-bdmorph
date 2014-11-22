@@ -18,11 +18,27 @@ VideoModel::~VideoModel()
 }
 
 /******************************************************************************************************************************/
-int VideoModel::getKeyFrameCount()
+int VideoModel::count()
 {
 	return keyframes.size();
 }
 /******************************************************************************************************************************/
+
+VideoKeyFrame* VideoModel::getKeyframeByIndex(int index)
+{
+	if (index >= 0 && index < keyframes.size())
+		return keyframes[index];
+	return NULL;
+}
+
+/******************************************************************************************************************************/
+MeshModel* VideoModel::getKeyframeByTime(int msecs)
+{
+	/* BIG TODO*/
+}
+
+/******************************************************************************************************************************/
+
 int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
 {
 	int i = 0;
@@ -34,8 +50,21 @@ int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
 
 	return -1;
 }
-/******************************************************************************************************************************/
 
+/******************************************************************************************************************************/
+int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)
+{
+	int time = 0;
+
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++) {
+		time += (*iter)->duration;
+		if (*iter == frame)
+			break;
+	}
+
+	return time;
+}
+/******************************************************************************************************************************/
 VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
 {
 	/* inserts new keyframe after this one */
@@ -53,19 +82,5 @@ void VideoModel::deleteFrame(VideoKeyFrame* frame)
 	assert (iter != keyframes.end());
 	delete *iter;
 	keyframes.erase(iter);
-}
-
-/******************************************************************************************************************************/
-VideoKeyFrame* VideoModel::keyframe(int index)
-{
-	if (index >= 0 && index < keyframes.size())
-		return keyframes[index];
-	return NULL;
-}
-
-/******************************************************************************************************************************/
-MeshModel* VideoModel::getFrame(int msecs)
-{
-	/* BIG TODO*/
 }
 /******************************************************************************************************************************/

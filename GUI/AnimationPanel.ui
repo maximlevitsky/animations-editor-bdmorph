@@ -59,6 +59,23 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnRepeat">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="resources/resources.rc">
+          <normaloff>:/icons/repeat.png</normaloff>:/icons/repeat.png</iconset>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QSlider" name="sliderAnimationTime">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

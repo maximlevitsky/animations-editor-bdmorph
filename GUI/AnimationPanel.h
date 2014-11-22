@@ -2,6 +2,7 @@
 #include <qdialog.h>
 #include <QDockWidget>
 #include <QtOpenGL>
+#include <QLineEdit>
 #include "ui_AnimationPanel.h"
 
 class VideoModel;
@@ -31,6 +32,8 @@ public slots:
 	void onKeyframeChangeTime();
 	void onLstitemDoubleClicked ();
 
+	void onTimeTextFinished();
+
 signals:
 	/* we emit this when user clicks on a different frame */
 	void frameSelectionChanged(MeshModel* model);
@@ -45,4 +48,6 @@ private:
 	void updateItems(int startItem);
 
 	QIcon plusIcon;
+	QLineEdit *timeEdit;
+	int timeEditItem;
 };

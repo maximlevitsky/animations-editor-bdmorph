@@ -146,7 +146,7 @@ void MainWindow::loadModel()
     /* load new model */
     model = new VideoModel(filename.toStdString());
     emit videoModelLoaded(model);
-    emit frameSwitched(model->keyframe(0));
+    emit frameSwitched(model->getKeyframeByIndex(0));
 
     /* set these statistics - will only change when loading new model */
     setStatusBarStatistics(model->getNumVertices(), model->getNumFaces());

@@ -29,13 +29,14 @@ public:
 	void deleteFrame(VideoKeyFrame* frame);
 
 	/* gets an frame at specified index. Index may change over time */
-	VideoKeyFrame* keyframe(int index);
+	VideoKeyFrame* getKeyframeByIndex(int index);
 
 	/* Gets either an keyframe or interpolated immediate frame (using BDMORPH) for given time in msecs */
-	MeshModel* getFrame(int msecs);
+	MeshModel* getKeyframeByTime(int msecs);
 
-	int getKeyFrameCount();
+	int count();
 	int getKeyFrameIndex(VideoKeyFrame* frame);
+	int getKeyFrameTimeMsec(VideoKeyFrame* frame);
 
 private:
 	std::vector<VideoKeyFrame*> keyframes;

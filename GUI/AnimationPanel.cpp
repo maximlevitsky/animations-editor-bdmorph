@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <QDockWidget>
 #include <QListWidgetItem>
 #include <QPixmap>
@@ -6,6 +7,7 @@
 #include <QPainter>
 #include <QAction>
 #include <QPixmap>
+#include <stdio.h>
 
 #include "AnimationPanel.h"
 #include "VideoModel.h"
@@ -13,9 +15,22 @@
 #include "ThumbnailRenderer.h"
 #include "Utils.h"
 
+QString printTime(int time)
+{
+	int fraction = (time % 1000);
+	time /= 1000;
+	int seconds = time % 60;
+	time /= 60;
+	int minutes = time;
+
+	QString retval;
+	retval.sprintf("%02d:%02d.%03d", minutes, seconds,fraction);
+	return retval;
+}
+
 
 /******************************************************************************************************************************/
-AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), currentVideoModel(NULL), renderer(NULL)
+AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), currentVideoModel(NULL), renderer(NULL), timeEditItem(-1)
 {
 	setupUi(this);
 
@@ -36,8 +51,14 @@ AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), currentVi
 
 	connect_(lstKeyFrames, itemDoubleClicked(QListWidgetItem *), this, onLstitemDoubleClicked ());
 
-	/* TODO */
 	plusIcon = QIcon(":/AnimationPanel/add.png");
+
+	timeEdit = new QLineEdit(lstKeyFrames);
+	timeEdit->setInputMask("00:00.000");
+	timeEdit->setAlignment(Qt::AlignCenter);
+	timeEdit->hide();
+
+	connect_(timeEdit, editingFinished (), this, onTimeTextFinished());
 }
 
 /******************************************************************************************************************************/
@@ -47,10 +68,7 @@ void AnimationPanel::onVideoModelLoaded(VideoModel* model)
 	lstKeyFrames->clear();
 
 	if (currentVideoModel)
-	{
-		updateListItem(0);
-		insertPlus(1);
-	}
+		updateItems(0);
 }
 
 /******************************************************************************************************************************/
@@ -121,7 +139,7 @@ void AnimationPanel::onDeleteKeyframe()
 	if (currentKeyFrame == NULL)
 		return;
 
-	if (currentVideoModel->getKeyFrameCount() == 1)
+	if (currentVideoModel->count() == 1)
 		return;
 
 	emit frameSelectionChanged(NULL);
@@ -131,7 +149,7 @@ void AnimationPanel::onDeleteKeyframe()
 
 	updateItems(currentIndex);
 
-	if (currentIndex == currentVideoModel->getKeyFrameCount())
+	if (currentIndex == currentVideoModel->count())
 		currentIndex--;
 	lstKeyFrames->setCurrentRow(currentIndex);
 	emit frameSelectionChanged(getSelectedKeyframe());
@@ -147,9 +165,19 @@ void AnimationPanel::onKeyframeChangeTime()
 	int currentIndex = lstKeyFrames->currentRow();
 
 	/* TODO */
+	QListWidgetItem* item = lstKeyFrames->item(currentIndex);
+	QRect r = lstKeyFrames->visualItemRect(item);
 
-	updateItems(currentIndex);
+	r.setLeft(r.left()+10);
+	r.setRight(r.right()-10);
 
+	timeEdit->move(r.left(),r.bottom() - timeEdit->height()-5);
+	timeEdit->resize(r.width(),timeEdit->height());
+	timeEdit->setText(printTime(currentVideoModel->getKeyFrameTimeMsec(currentKeyFrame)));
+	timeEdit->show();
+	timeEdit->setFocus();
+	timeEdit->setCursorPosition(0);
+	timeEditItem = currentIndex;
 }
 /******************************************************************************************************************************/
 
@@ -159,8 +187,8 @@ void AnimationPanel::onLstitemDoubleClicked ()
 
 	if (currentKeyFrame == NULL)
 	{
-		if (currentVideoModel->getKeyFrameCount())
-			currentKeyFrame = currentVideoModel->keyframe(currentVideoModel->getKeyFrameCount()-1);
+		if (currentVideoModel->count())
+			currentKeyFrame = currentVideoModel->getKeyframeByIndex(currentVideoModel->count()-1);
 		else
 			return;
 	}
@@ -177,7 +205,7 @@ void AnimationPanel::updateItems(int startItem)
 	if (!currentVideoModel)
 			return;
 
-	int frameCount = currentVideoModel->getKeyFrameCount();
+	int frameCount = currentVideoModel->count();
 	for (int frame = startItem ; frame < frameCount ; frame++)
 		updateListItem(frame);
 
@@ -200,7 +228,7 @@ void AnimationPanel::updateListItem(int id)
 	if (!currentVideoModel)
 		return;
 
-	VideoKeyFrame* frame = currentVideoModel->keyframe(id);
+	VideoKeyFrame* frame = currentVideoModel->getKeyframeByIndex(id);
 	if (!frame)
 		return;
 
@@ -216,7 +244,7 @@ void AnimationPanel::updateListItem(int id)
 	QPixmap p = QPixmap::fromImage(im);
 
 	QPainter painter(&p);
-	painter.drawText(im.rect(), Qt::AlignBottom | Qt::AlignCenter, QString("00:00:00")); /*TODO*/
+	painter.drawText(im.rect(), Qt::AlignBottom | Qt::AlignCenter, printTime(currentVideoModel->getKeyFrameTimeMsec(frame)));
 
 	item->setIcon(QIcon(p));
 }
@@ -236,14 +264,44 @@ void AnimationPanel::insertPlus(int id)
 }
 
 /******************************************************************************************************************************/
-
 VideoKeyFrame* AnimationPanel::getSelectedKeyframe()
 {
 	if (!currentVideoModel)
 			return NULL;
 
 	int currentRow = lstKeyFrames->currentRow();
-	VideoKeyFrame* newKeyFrame = currentVideoModel->keyframe(currentRow);
+	VideoKeyFrame* newKeyFrame = currentVideoModel->getKeyframeByIndex(currentRow);
 	return newKeyFrame;
 }
 
+/******************************************************************************************************************************/
+void AnimationPanel::onTimeTextFinished()
+{
+	timeEdit->hide();
+
+	VideoKeyFrame* frame = currentVideoModel->getKeyframeByIndex(timeEditItem);
+	if (!frame)
+		return;
+
+	QString time = timeEdit->text();
+
+	QStringList tmp = time.split('.');
+	QString fraction = tmp[1];
+
+	tmp = tmp[0].split(':');
+	QString minutes = tmp[0];
+	QString seconds = tmp[1];
+
+	int result = minutes.toInt() * 60;
+	result += seconds.toInt();
+	result *= 1000;
+	result += fraction.toInt();
+
+	int currentFrameTime = currentVideoModel->getKeyFrameTimeMsec(frame);
+	int diff = result - currentFrameTime;
+	int newDuration = frame->duration + diff;
+
+	frame->duration = std::max(1, newDuration);
+	updateItems(timeEditItem);
+	timeEditItem = -1;
+}
