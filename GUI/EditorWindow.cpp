@@ -85,10 +85,11 @@ void EditorWindow::runLog()
     {
     	editModel->historyLoadFromFile(infile);
         repaint();
+        emit modelEdited(editModel);
     }
 
     printf("DONE WITH log replay (took %d msec)\n", t.measure_msec());
-	emit modelEdited(editModel);
+
 }
 
 /******************************************************************************************************************************/
@@ -149,7 +150,7 @@ void EditorWindow::resetTransform()
 	double maxZoomX = width() / renderModel->getWidth();
 	double maxZoomY = height() / renderModel->getHeight();
 
-	double maxZoom = std::min(maxZoomX,maxZoomY) * 0.5;
+	double maxZoom = std::min(maxZoomX,maxZoomY);
 	modelWidth = renderModel->getWidth() * maxZoom;
 	modelLocation = QPointF(0, 0);
 	repaint();
@@ -221,9 +222,10 @@ void EditorWindow::paintGL()
     	return;
 
     double ratio = (renderModel->getWidth()) / modelWidth;
-    double centerX = renderModel->getCenterX() - modelLocation.x() * ratio;
-    double centerY = renderModel->getCenterY() - modelLocation.y() * ratio;
-    double neededWidth = ratio * width();
+
+    double centerX      = -ratio * modelLocation.x();
+    double centerY      = -ratio * modelLocation.y();
+    double neededWidth  = ratio * width();
     double neededHeight = ratio * height();
 
     /* Setup projection */
@@ -496,8 +498,6 @@ Point2 EditorWindow::screenToModel(QPointF pos)
 	pos -= modelLocation;
 	pos -= QPointF((double)width()/2,(double)height()/2);
 	pos *= renderModel->getWidth() / modelWidth;
-	pos += QPointF(renderModel->getCenterX(), renderModel->getCenterY());
-
 	return Point2(pos.x(), pos.y());
 }
 /******************************************************************************************************************************/

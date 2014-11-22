@@ -17,19 +17,13 @@ public:
     virtual ~MeshModel();
 	void copyPositions(MeshModel& m);
 
-    double getMinX() { return minX; }
-    double getMaxX() { return maxX; }
-    double getMinY() { return minY; }
-    double getMaxY() { return maxY; }
-    double getWidth() { return maxX - minX; }
-    double getHeight() { return maxY - minY; }
-
-    double getCenterX() { return (minX + maxX) /2; }
-    double getCenterY() { return (minY + maxY) /2; }
+    double getWidth() { return maxPoint.x - minPoint.x; }
+    double getHeight() { return maxPoint.y - minPoint.y; }
+    void getActualBBox(Vector2 &minP, Vector2 &maxP);
 
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
-    int getClosestVertex(Point2D<double> point);
+    int getClosestVertex(Point2 point);
 
 	/* rendering */
     virtual void render(double wireframeTrans);
@@ -46,8 +40,10 @@ public:
 	std::vector<Face> *faces;
 	std::set<int> *boundaryVertices;
 	std::vector<Point2> *texCoords;
-    double minX, maxX, minY, maxY;
     int numVertices, numFaces;
+
+    Vector2 minPoint;
+    Vector2 maxPoint;
 
 	/* vertices - one per each model */
 	std::vector<Point2> vertices;

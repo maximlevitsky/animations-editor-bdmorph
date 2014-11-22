@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <complex>
+#include <algorithm>
 #include <QPoint>
 // adapted from http://www.terathon.com/code/vector2d.html
 
@@ -131,6 +132,19 @@ class Vector2D {
         Vector2D<T>& rotate(T angle);
 
         std::complex<T> toComplex() { return std::complex<T>(x,y); }
+
+        Vector2D<T> min(Vector2D<T> &other) {
+        	T minX = std::min(x,other.x);
+        	T minY = std::min(y,other.y);
+        	return Vector2D<T>(minX,minY);
+        }
+
+        Vector2D<T> max(Vector2D<T> &other) {
+        	T minX = std::max(x,other.x);
+        	T minY = std::max(y,other.y);
+        	return Vector2D<T>(minX,minY);
+        }
+
 };
 
 template<class T>

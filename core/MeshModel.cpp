@@ -36,10 +36,8 @@ MeshModel::MeshModel(const MeshModel& other):
 		faces(other.faces),
 		boundaryVertices(other.boundaryVertices),
 		texCoords(other.texCoords),
-		minX(other.minX),
-		minY(other.minY),
-		maxX(other.maxX),
-		maxY(other.maxY),
+		minPoint(other.minPoint),
+		maxPoint(other.maxPoint),
 		numVertices(other.numVertices),
 		numFaces(other.numFaces),
 		vertices(other.vertices),
@@ -52,24 +50,23 @@ MeshModel::MeshModel(std::string &filename) :
 		faces(new std::vector<Face>),
 		boundaryVertices(new std::set<Vertex>),
 		texCoords(new std::vector<Point2>),
-		loadedFromFile(true)
+		loadedFromFile(true),
+		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
+		maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min())
 {
 	loadFromFile(filename);
 
-    minX = std::numeric_limits<double>::max();
-    maxX = std::numeric_limits<double>::min();
-    minY = std::numeric_limits<double>::max();
-    maxY = std::numeric_limits<double>::min();
-
     for (int i = 0; i < numVertices; i++)
     {
-        minX = std::min(minX, vertices[i].x);
-        minY = std::min(minY, vertices[i].y);
-        maxX = std::max(maxX, vertices[i].x);
-        maxY = std::max(maxY, vertices[i].y);
+    	minPoint = minPoint.min(vertices[i]);
+    	maxPoint = maxPoint.max(vertices[i]);
     }
 
-	printf("minX  = %f , minY = %f, maxX = %f , maxY = %f\n", minX,minY,maxX,maxY);
+    Vector2 center = (minPoint+maxPoint)/2;
+    maxPoint -= center;
+    minPoint -= center;
+    for (int i = 0; i < numVertices; i++)
+    	vertices[i] -= center;
 
 	std::map< int , std::map<int,int> > edgeCount;
     for (int i = 0; i < numFaces; i++)
@@ -265,6 +262,19 @@ int MeshModel::getClosestVertex(Point2D<double> point)
         }
     }
     return closest;
+}
+
+/******************************************************************************************************************************/
+void MeshModel::getActualBBox(Vector2 &minP, Vector2 &maxP)
+{
+	minP = Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
+	maxP = Vector2(std::numeric_limits<double>::min(), std::numeric_limits<double>::min());
+
+	for (int i = 0; i < numVertices; i++)
+	{
+		minP = minP.min(vertices[i]);
+		maxP = maxP.max(vertices[i]);
+	}
 }
 /******************************************************************************************************************************/
 void MeshModel::copyPositions(MeshModel& m)

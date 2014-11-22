@@ -39,17 +39,23 @@ QImage ThumbnailRenderer::renderThumbnail(MeshModel* model)
     glClearColor(1.,1.,1., 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    Vector2 minP,maxP;
+    model->getActualBBox(minP, maxP);
 
-    double ratio = std::max(model->getWidth() / width, model->getHeight() / height) * 1.1;
-    double centerX = model->getCenterX();
-    double centerY = model->getCenterY();
+    Vector2 center = (minP + maxP)/2;
+    double modelWidth = maxP.x - minP.x;
+    double modelHeight = maxP.y - minP.y;
+
+    double ratio = std::max(modelWidth / width, modelHeight / height) * 1.1;
+
+
     double neededWidth = ratio * width;
     double neededHeight = ratio * height;
 
     /* Setup projection */
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(centerX - neededWidth/2  , centerX + neededWidth/2, centerY - neededHeight/2 , centerY + neededHeight/2, 0, 1);
+    glOrtho(center.x - neededWidth/2  , center.x + neededWidth/2, center.y - neededHeight/2 , center.y + neededHeight/2, 0, 1);
 
     /* Setup texture */
     glEnable(GL_TEXTURE_2D);
