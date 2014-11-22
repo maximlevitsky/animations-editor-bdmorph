@@ -74,8 +74,17 @@
         <height>160</height>
        </size>
       </property>
-      <property name="defaultDropAction">
-       <enum>Qt::MoveAction</enum>
+      <property name="tabKeyNavigation">
+       <bool>true</bool>
+      </property>
+      <property name="dragEnabled">
+       <bool>false</bool>
+      </property>
+      <property name="dragDropOverwriteMode">
+       <bool>false</bool>
+      </property>
+      <property name="dragDropMode">
+       <enum>QAbstractItemView::DropOnly</enum>
       </property>
       <property name="selectionMode">
        <enum>QAbstractItemView::SingleSelection</enum>
@@ -93,7 +102,7 @@
        <enum>QAbstractItemView::ScrollPerPixel</enum>
       </property>
       <property name="movement">
-       <enum>QListView::Snap</enum>
+       <enum>QListView::Static</enum>
       </property>
       <property name="flow">
        <enum>QListView::LeftToRight</enum>

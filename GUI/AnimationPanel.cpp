@@ -70,6 +70,7 @@ void AnimationPanel::onFrameEdited(KVFModel* model)
 	if (id == -1)
 		return;
 	updateListItem(id);
+	lstKeyFrames->repaint();
 }
 
 /******************************************************************************************************************************/
@@ -167,6 +168,8 @@ void AnimationPanel::updateItems(int startItem)
 		QListWidgetItem* item = lstKeyFrames->takeItem(firstItemToRemove);
 		delete item;
 	}
+
+	lstKeyFrames->repaint();
 }
 /******************************************************************************************************************************/
 
@@ -216,6 +219,8 @@ void AnimationPanel::onKeyframeChangeTime()
 
 	/* TODO */
 
+	updateItems(currentIndex);
+
 }
 
 void AnimationPanel::onLstitemDoubleClicked ()
@@ -232,4 +237,5 @@ void AnimationPanel::onLstitemDoubleClicked ()
 
 	VideoKeyFrame* newFrame = currentVideoModel->forkFrame(currentKeyFrame);
 	updateItems(currentVideoModel->getKeyFrameIndex(newFrame));
+	emit frameSelectionChanged(getSelectedKeyframe());
 }
