@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>549</width>
-    <height>222</height>
+    <height>223</height>
    </rect>
   </property>
   <property name="features">
@@ -50,7 +50,11 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>&gt;</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="resources/resources.rc">
+          <normaloff>:/icons/play.png</normaloff>:/icons/play.png</iconset>
         </property>
        </widget>
       </item>
@@ -116,9 +120,6 @@
       <property name="viewMode">
        <enum>QListView::ListMode</enum>
       </property>
-      <property name="uniformItemSizes">
-       <bool>true</bool>
-      </property>
       <property name="selectionRectVisible">
        <bool>true</bool>
       </property>
@@ -127,6 +128,8 @@
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources/resources.rc"/>
+ </resources>
  <connections/>
 </ui>

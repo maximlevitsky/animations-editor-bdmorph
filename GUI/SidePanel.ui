@@ -274,10 +274,6 @@
         </widget>
        </item>
       </layout>
-      <zorder>sliderWireframeTransparency</zorder>
-      <zorder>sliderAlpha</zorder>
-      <zorder>label_6</zorder>
-      <zorder>label_5</zorder>
       <zorder>sliderAlpha</zorder>
       <zorder>label_6</zorder>
       <zorder>sliderWireframeTransparency</zorder>
@@ -287,6 +283,8 @@
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources/resources.rc"/>
+ </resources>
  <connections/>
 </ui>
