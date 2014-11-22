@@ -287,6 +287,7 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     Pcopy.getCholmodMatrix(cSparse);
     cholmod_factorize(&cSparse, L2, cm);
     cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
+    Xx = (double*)Xcholmod2->x;
 
     printf("Dirichlet time:        %i msec\n", t.measure_msec());
 
@@ -305,6 +306,10 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 void KVFModel::applyVFLogSpiral()
 {
 	TimeMeasurment t;
+
+	/* TODO: hack*/
+	if(!pinnedVertexes.size())
+		return;
 
     for (int i = 0; i < numVertices; i++)
     {

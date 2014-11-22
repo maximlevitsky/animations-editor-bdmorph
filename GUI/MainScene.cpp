@@ -250,10 +250,10 @@ void MainScene::paintGL()
 		for (auto it = editModel->getPinnedVertexes().begin(); it != editModel->getPinnedVertexes().end(); it++)
 			editModel->renderVertex(*it, ratio);
 
-		if (drawVF)
-			editModel->renderVF();
 		if (drawVFOrig)
 			editModel->renderVFOrig();
+		if (drawVF)
+			editModel->renderVF();
 	}
 
 }
