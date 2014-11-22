@@ -41,7 +41,7 @@ class KVFModel : public MeshModel
 {
 public:
 	KVFModel(MeshModel* model);
-    ~KVFModel();
+    virtual ~KVFModel();
 
 	/* deformation entry points*/
 	void setAlpha(double alpha);

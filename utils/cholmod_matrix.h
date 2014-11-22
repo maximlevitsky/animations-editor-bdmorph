@@ -172,5 +172,6 @@ private:
 
 /******************************************************************************************************************************/
 cholmod_common* cholmod_get_common();
+void cholmod_finalize();
 
 #endif // SIMPLESPARSEMATRIX_H

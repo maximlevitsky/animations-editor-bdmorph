@@ -30,6 +30,8 @@ private slots:
 	void onKeyframeChangeTime();
 	void onTextureChanged(GLuint texture);
 
+	void onLstitemDoubleClicked ();
+
 private:
 	VideoModel* currentVideoModel;
 	ThumbnailRenderer* renderer;

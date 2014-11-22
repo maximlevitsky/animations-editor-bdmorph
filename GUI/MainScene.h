@@ -24,7 +24,7 @@ class MainScene : public QGLWidget
     Q_OBJECT
 public:
     MainScene(QWidget* parent);
-    ~MainScene() {}
+    virtual ~MainScene() {}
         
 public slots:
 	/* these slots are connected to side panel to manipulate the view*/

@@ -54,9 +54,16 @@ QImage ThumbnailRenderer::renderThumbnail(MeshModel* model)
 
     /* Setup texture */
     glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, textureRef);
+
 
 	model->render(0);
 
 	return fbo->toImage();
+}
+
+void ThumbnailRenderer::onTextureChanged(GLuint texture)
+{
+	textureRef = texture;
+	makeCurrent();
+	glBindTexture(GL_TEXTURE_2D, textureRef);
 }

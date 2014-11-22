@@ -183,6 +183,8 @@ void MainScene::onVideoModelLoaded(VideoModel* model)
 void MainScene::onTextureChanged(GLuint texture)
 {
 	textureRef = texture;
+	makeCurrent();
+	glBindTexture(GL_TEXTURE_2D, textureRef);
 	repaint();
 }
 
@@ -229,8 +231,7 @@ void MainScene::paintGL()
     glLoadIdentity();
     glOrtho(centerX - neededWidth/2  , centerX + neededWidth/2, centerY - neededHeight/2 , centerY + neededHeight/2, 0, 1);
 
-    /* Setup texture */
-	glBindTexture(GL_TEXTURE_2D, textureRef);
+    //glBindTexture(GL_TEXTURE_2D, textureRef);
 
 	/* render the model*/
 	renderModel->render((double)wireframeTransparency/100);

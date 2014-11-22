@@ -1,7 +1,6 @@
 #include "VideoModel.h"
 #include <assert.h>
 
-
 /******************************************************************************************************************************/
 VideoModel::VideoModel(std::string filename) : MeshModel(filename)
 {
@@ -19,6 +18,24 @@ VideoModel::~VideoModel()
 }
 
 /******************************************************************************************************************************/
+int VideoModel::getKeyFrameCount()
+{
+	return keyframes.size();
+}
+/******************************************************************************************************************************/
+int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
+{
+	int i = 0;
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++, i++)
+	{
+		if (*iter == frame)
+			return i;
+	}
+
+	return -1;
+}
+/******************************************************************************************************************************/
+
 VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
 {
 	/* inserts new keyframe after this one */
@@ -34,6 +51,7 @@ void VideoModel::deleteFrame(VideoKeyFrame* frame)
 {
 	auto iter = std::find(keyframes.begin(), keyframes.end(),frame);
 	assert (iter != keyframes.end());
+	delete *iter;
 	keyframes.erase(iter);
 }
 
@@ -50,22 +68,4 @@ MeshModel* VideoModel::getFrame(int msecs)
 {
 	/* BIG TODO*/
 }
-
 /******************************************************************************************************************************/
-int VideoModel::getKeyFrameCount()
-{
-	return keyframes.size();
-}
-/******************************************************************************************************************************/
-
-int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
-{
-	int i = 0;
-	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++, i++)
-	{
-		if (*iter == frame)
-			return i;
-	}
-
-	return -1;
-}

@@ -88,6 +88,9 @@ MainWindow::~MainWindow()
 {
 	delete model;
 	delete thumbnailRender;
+	delete mainScene;
+	delete animationPanel;
+	delete sidePanel;
 }
 
 /*****************************************************************************************************/

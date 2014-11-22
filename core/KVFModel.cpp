@@ -40,11 +40,15 @@ KVFModel::KVFModel(MeshModel* model) :
 	lastLogSpiralTime(0),
 	MeshModel(*model)
 {
-
 	faces = model->faces;
 	boundaryVertices = model->boundaryVertices;
 	vertices = model->vertices;
 	initialVertexes = model->vertices;
+
+	vf.resize(numVertices);
+	vfOrig.resize(numVertices);
+    newPoints.resize(numVertices);
+    counts.resize(numVertices);
 
 	historyReset();
 
@@ -138,7 +142,6 @@ KVFModel::KVFModel(MeshModel* model) :
     FREE_MEMORY(Pfw, LDL_int);
     FREE_MEMORY(Pinv, LDL_int);
 
-
     KVFModel* otherModel = dynamic_cast<KVFModel*>(model);
     if (otherModel) {
     	pinnedVertexes = otherModel->pinnedVertexes;
@@ -188,15 +191,14 @@ void KVFModel::getP(CholmodSparseMatrix &prod)
         dy2.addElement(f,j, c1[1]);
         dy2.addElement(f,k, c2[1]);
 
-        P2.addElement(3*f,   f, 2);
-        P2.addElement(3*f+1, f+numFaces, SQRT_2);
+        P2.addElement(3*f+0, f,            2);
+        P2.addElement(3*f+1, f+1*numFaces, SQRT_2);
         P2.addElement(3*f+1, f+2*numFaces, SQRT_2);
         P2.addElement(3*f+2, f+3*numFaces, 2);
     }
 
-    int colShift[4] = {0, 0, numVertices, numVertices};
-
-    CholmodSparseMatrix *list[4] = {&dx2, &dy2, &dx2, &dy2};
+    int colShift[4] = 				{0,       0,     numVertices, numVertices };
+    CholmodSparseMatrix *list[4] =  {&dx2,    &dy2,  &dx2,        &dy2        };
 
     stacked.stack(list, 4, colShift);
     P2.multiply(stacked, prod);
@@ -211,11 +213,9 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     this->disps = disps;
     std::set<DisplacedVertex> allDisplacements = disps;
 
-	vfOrig.clear();
-	vf.clear();
-
     for (auto iter = pinnedVertexes.begin(); iter != pinnedVertexes.end() ; iter++)
     	allDisplacements.insert(DisplacedVertex(*iter, Vector2(0,0)));
+
     if (allDisplacements.size() <= 1)
     	return;
 
@@ -248,14 +248,13 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
     double* Xx = (double*)Xcholmod->x;
 
-	vfOrig.resize(numVertices);
 	for (int i = 0; i < numVertices; i++)
 		vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
-
 
     printf("Solve time:            %i msec\n", t.measure_msec());
 
     /*+++++DIRICHLET SOLVE +++++++++++++++++++++++++++++++++++++++++*/
+
     CholmodVector boundaryRHS = CholmodVector(2*numVertices,cm);
     for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it)
     {
@@ -291,17 +290,10 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 
     printf("Dirichlet time:        %i msec\n", t.measure_msec());
 
-	vf.resize(numVertices);
 	for (int i = 0; i < numVertices; i++)
 		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
 
-
-    Xx = (double*)Xcholmod2->x;
-    newPoints.resize(numVertices);
-    counts.resize(numVertices);
-
     lastVFCalcTime = total.measure_msec();
-	printf("\n");
 
     cholmod_free_factor(&L, cm);
     cholmod_free_dense(&Xcholmod, cm);
@@ -378,13 +370,9 @@ void KVFModel::applyVFLogSpiral()
 /*****************************************************************************************************/
 void KVFModel::applyVF()
 {
-	if (vf.size() == numVertices)
-	{
-		for (int i = 0; i < numVertices; i++)
-			for (int j = 0; j < 2; j++)
-				vertices[i][j] += vf[i][j] * .5;
-	}
-
+	for (int i = 0; i < numVertices; i++)
+		for (int j = 0; j < 2; j++)
+			vertices[i][j] += vf[i][j] * .5;
 
 	/* TODO: not completely correct*/
     historyAdd(disps);
@@ -406,22 +394,19 @@ void KVFModel::renderVFOrig()
     glLineWidth(1.5);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	if (vfOrig.size() == numVertices)
-    {
-        double totalNorm = 0;
+	double totalNorm = 0;
+	for (int i = 0; i < numVertices; i++)
+		totalNorm += vfOrig[i].normSquared();
+	totalNorm = sqrt(totalNorm);
 
-        for (int i = 0; i < numVertices; i++)
-            totalNorm += vfOrig[i].normSquared();
-        totalNorm = sqrt(totalNorm);
+	glColor3f(0,0,1);
+	glBegin(GL_LINES);
+	for (int i = 0; i < numVertices; i++) {
+		glVertex2f(vertices[i][0], vertices[i][1]);
+		glVertex2f(vertices[i][0]+vfOrig[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vfOrig[i][1]/totalNorm*VF_SCALE);
+	}
+	glEnd();
 
-        glColor3f(0,0,1);
-        glBegin(GL_LINES);
-        for (int i = 0; i < numVertices; i++) {
-            glVertex2f(vertices[i][0], vertices[i][1]);
-            glVertex2f(vertices[i][0]+vfOrig[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vfOrig[i][1]/totalNorm*VF_SCALE);
-        }
-        glEnd();
-    }
     glPopAttrib();
 }
 
@@ -432,21 +417,19 @@ void KVFModel::renderVF()
     glLineWidth(1.5);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    if (vf.size() == numVertices)
-    {
-        double totalNorm = 0;
-        for (int i = 0; i < numVertices; i++)
-            totalNorm += vf[i].normSquared();
-        totalNorm = sqrt(totalNorm);
 
-        glColor3f(0,.5,0);
-        glBegin(GL_LINES);
-        for (int i = 0; i < numVertices; i++) {
-            glVertex2f(vertices[i][0], vertices[i][1]);
-            glVertex2f(vertices[i][0]+vf[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vf[i][1]/totalNorm*VF_SCALE);
-        }
-        glEnd();
-    }
+	double totalNorm = 0;
+	for (int i = 0; i < numVertices; i++)
+		totalNorm += vf[i].normSquared();
+	totalNorm = sqrt(totalNorm);
+
+	glColor3f(0,.5,0);
+	glBegin(GL_LINES);
+	for (int i = 0; i < numVertices; i++) {
+		glVertex2f(vertices[i][0], vertices[i][1]);
+		glVertex2f(vertices[i][0]+vf[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vf[i][1]/totalNorm*VF_SCALE);
+	}
+	glEnd();
 
     glPopAttrib();
 }
@@ -457,6 +440,8 @@ void KVFModel::renderVF()
 /******************************************************************************************************************************/
 void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
 {
+	return;
+
 	/* advance in undo vertex buffer one circular step and forget about redo*/
 	undoVerticesCount = std::min(UNDOSIZE, undoVerticesCount+1);
 	undoVerticesPosition = (undoVerticesPosition + 1) % UNDOSIZE;

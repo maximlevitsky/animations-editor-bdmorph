@@ -321,9 +321,15 @@ static void cholmod_error_handler(int status, char *file, int line,  char *messa
 cholmod_common* cholmod_get_common()
 {
 	if (!cholmod_common_initilaized) {
+		cholmod_common_initilaized = true;
 		cholmod_start(&common);
 		common.error_handler = cholmod_error_handler;
 	}
 	return &common;
+}
+
+void cholmod_finalize() {
+	if (cholmod_common_initilaized)
+		cholmod_finish(&common);
 }
 

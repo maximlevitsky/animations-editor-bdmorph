@@ -16,7 +16,7 @@ public:
 	virtual ~ThumbnailRenderer() {}
 
 public slots:
-	void onTextureChanged(GLuint texture) {textureRef = texture; }
+	void onTextureChanged(GLuint texture);
 public:
 	QImage renderThumbnail(MeshModel* model);
 
@@ -24,6 +24,7 @@ private:
 	GLuint textureRef;
 	QGLFramebufferObject *fbo;
 };
+
 
 
 #endif /* THUMBNAILRENDERER_H_ */

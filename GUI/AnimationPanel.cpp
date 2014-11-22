@@ -16,9 +16,10 @@
 AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), currentVideoModel(NULL), renderer(NULL)
 {
 	setupUi(this);
-	QAction *cloneAction =new QAction("Clone frame...", lstKeyFrames);
-	QAction *deleteFramesAction =new QAction("Delete frame", lstKeyFrames);
-	QAction *changeTimeAction =new QAction("Change time...", lstKeyFrames);
+
+	QAction *cloneAction        = new QAction("Clone frame...", lstKeyFrames);
+	QAction *deleteFramesAction = new QAction("Delete frame",   lstKeyFrames);
+	QAction *changeTimeAction   = new QAction("Change time...", lstKeyFrames);
 
 	lstKeyFrames->addAction(cloneAction);
 	lstKeyFrames->addAction(deleteFramesAction);
@@ -31,6 +32,8 @@ AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), currentVi
 	connect_(changeTimeAction, triggered(), this, onKeyframeChangeTime());
 	connect_(deleteFramesAction, triggered(), this, onDeleteKeyframe());
 
+	connect_(lstKeyFrames, itemDoubleClicked(QListWidgetItem *), this, onLstitemDoubleClicked ());
+
 	/* TODO */
 	plusIcon = QIcon("/home/maxim/2.png");
 }
@@ -41,8 +44,7 @@ void AnimationPanel::onVideoModelLoaded(VideoModel* model)
 	currentVideoModel = model;
 	lstKeyFrames->clear();
 
-	if (currentVideoModel)
-	{
+	if (currentVideoModel) {
 		updateListItem(0);
 		insertPlus(1);
 	}
@@ -67,14 +69,12 @@ void AnimationPanel::onFrameEdited(KVFModel* model)
 	int id = currentVideoModel->getKeyFrameIndex(frame);
 	if (id == -1)
 		return;
-
 	updateListItem(id);
 }
 
 /******************************************************************************************************************************/
 void AnimationPanel::onFrameSwitched(MeshModel* model)
 {
-	/* we will emit this, the time slider will emit this, and on load we will switch to frame 0 because main window will emit this*/
 	if (!currentVideoModel)
 		return;
 
@@ -93,9 +93,8 @@ void AnimationPanel::onFrameSwitched(MeshModel* model)
 void AnimationPanel::onCurrentListItemChanged(int currentRow )
 {
 	VideoKeyFrame* newKeyFrame = getSelectedKeyframe();
-	if (newKeyFrame == NULL)
-		return;
-	emit frameSelectionChanged(newKeyFrame);
+	if (newKeyFrame)
+		emit frameSelectionChanged(newKeyFrame);
 }
 
 /******************************************************************************************************************************/
@@ -193,9 +192,17 @@ void AnimationPanel::onDeleteKeyframe()
 	if (currentVideoModel->getKeyFrameCount() == 1)
 		return;
 
+	emit frameSelectionChanged(NULL);
+
 	int currentIndex = lstKeyFrames->currentRow();
 	currentVideoModel->deleteFrame(currentKeyFrame);
+
 	updateItems(currentIndex);
+
+	if (currentIndex == currentVideoModel->getKeyFrameCount())
+		currentIndex--;
+	lstKeyFrames->setCurrentRow(currentIndex);
+	emit frameSelectionChanged(getSelectedKeyframe());
 
 }
 /******************************************************************************************************************************/
@@ -211,3 +218,18 @@ void AnimationPanel::onKeyframeChangeTime()
 
 }
 
+void AnimationPanel::onLstitemDoubleClicked ()
+{
+	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
+
+	if (currentKeyFrame == NULL)
+	{
+		if (currentVideoModel->getKeyFrameCount())
+			currentKeyFrame = currentVideoModel->keyframe(currentVideoModel->getKeyFrameCount()-1);
+		else
+			return;
+	}
+
+	VideoKeyFrame* newFrame = currentVideoModel->forkFrame(currentKeyFrame);
+	updateItems(currentVideoModel->getKeyFrameIndex(newFrame));
+}
