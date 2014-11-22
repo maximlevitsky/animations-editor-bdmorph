@@ -1,6 +1,5 @@
 #include <QtGui>
 
-#include "MainScene.h"
 #include "MainWindow.h"
 #include "cholmod_matrix.h"
 

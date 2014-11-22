@@ -8,7 +8,7 @@
 
 class SidePanel;
 class AnimationPanel;
-class MainScene;
+class EditorWindow;
 class ThumbnailRenderer;
 class VideoModel;
 class MeshModel;
@@ -44,7 +44,7 @@ signals:
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;
-	MainScene *mainScene;
+	EditorWindow *mainScene;
 
 	QLabel* lblVertexCount;
 	QLabel* lblFacesCount;

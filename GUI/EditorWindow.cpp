@@ -7,8 +7,7 @@
 #include <QtGui>
 #include <QtOpenGL>
 
-#include "MainScene.h"
-#include "MainWindow.h"
+#include "EditorWindow.h"
 #include "MeshModel.h"
 #include "KVFModel.h"
 #include "VideoModel.h"
@@ -19,7 +18,7 @@ using std::min;
 
 
 /******************************************************************************************************************************/
-MainScene::MainScene(QWidget* parent) :
+EditorWindow::EditorWindow(QWidget* parent) :
 			editModel(NULL), renderModel(NULL), wireframeTransparency(0),
 			QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
 			pinMode(false),
@@ -33,7 +32,7 @@ MainScene::MainScene(QWidget* parent) :
 }
 
 /******************************************************************************************************************************/
-void  MainScene::resetPoints()
+void  EditorWindow::resetPoints()
 {
 	if ( !editModel) return;
 	editModel->resetDeformations();
@@ -41,7 +40,7 @@ void  MainScene::resetPoints()
 	repaint();
 }
 /******************************************************************************************************************************/
-void MainScene::undoModel()
+void EditorWindow::undoModel()
 {
 	if ( !editModel) return;
 	editModel->historyUndo();
@@ -50,7 +49,7 @@ void MainScene::undoModel()
 }
 
 /******************************************************************************************************************************/
-void MainScene::redoModel()
+void EditorWindow::redoModel()
 {
 	if ( !editModel) return;
 	editModel->historyRedo();
@@ -59,7 +58,7 @@ void MainScene::redoModel()
 }
 
 /******************************************************************************************************************************/
-void MainScene::saveLog()
+void EditorWindow::saveLog()
 {
 	if ( !editModel) return;
     QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.txt"));
@@ -69,7 +68,7 @@ void MainScene::saveLog()
     editModel->historySaveToFile(outfile);
 }
 /******************************************************************************************************************************/
-void MainScene::runLog()
+void EditorWindow::runLog()
 {
 	if ( !editModel) return;
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose log"), QString(), QLatin1String("*.txt"));
@@ -93,28 +92,28 @@ void MainScene::runLog()
 }
 
 /******************************************************************************************************************************/
-void MainScene::changeAlpha(int i)
+void EditorWindow::changeAlpha(int i)
 {
 	if (editModel)
 		editModel->setAlpha((double) (i) / 100 * 2);
 }
 
 /******************************************************************************************************************************/
-void MainScene::drawVFModeChanged(bool m)
+void EditorWindow::drawVFModeChanged(bool m)
 {
 	drawVF = m;
 	repaint();
 }
 
 /******************************************************************************************************************************/
-void MainScene::drawOrigVFModeChanged(bool m)
+void EditorWindow::drawOrigVFModeChanged(bool m)
 {
 	drawVFOrig = m;
 	repaint();
 }
 
 /******************************************************************************************************************************/
-void MainScene::reuseVF()
+void EditorWindow::reuseVF()
 {
 	if (editModel) {
 		editModel->applyVF();
@@ -124,19 +123,19 @@ void MainScene::reuseVF()
 }
 
 /******************************************************************************************************************************/
-void MainScene::pinModeChanged(bool m)
+void EditorWindow::pinModeChanged(bool m)
 {
 	pinMode = m;
 }
 /******************************************************************************************************************************/
-void MainScene::changeWireframe(int i)
+void EditorWindow::changeWireframe(int i)
 {
 	wireframeTransparency = i;
 	repaint();
 }
 
 /******************************************************************************************************************************/
-void MainScene::clearPins()
+void EditorWindow::clearPins()
 {
 	if (editModel)
 		editModel->clearPins();
@@ -144,7 +143,7 @@ void MainScene::clearPins()
 }
 /******************************************************************************************************************************/
 
-void MainScene::resetTransform()
+void EditorWindow::resetTransform()
 {
 	if (!renderModel) return;
 	double maxZoomX = width() / renderModel->getWidth();
@@ -157,7 +156,7 @@ void MainScene::resetTransform()
 }
 
 /******************************************************************************************************************************/
-void MainScene::onFrameSwitched(MeshModel* model)
+void EditorWindow::onFrameSwitched(MeshModel* model)
 {
 	renderModel = model;
 	editModel = dynamic_cast<KVFModel*>(model);
@@ -166,7 +165,7 @@ void MainScene::onFrameSwitched(MeshModel* model)
 
 /******************************************************************************************************************************/
 
-void MainScene::onVideoModelLoaded(VideoModel* model)
+void EditorWindow::onVideoModelLoaded(VideoModel* model)
 {
 	if (!model)
 	{
@@ -181,7 +180,7 @@ void MainScene::onVideoModelLoaded(VideoModel* model)
 
 /******************************************************************************************************************************/
 
-void MainScene::onTextureChanged(GLuint texture)
+void EditorWindow::onTextureChanged(GLuint texture)
 {
 	textureRef = texture;
 	makeCurrent();
@@ -191,7 +190,7 @@ void MainScene::onTextureChanged(GLuint texture)
 
 /******************************************************************************************************************************/
 
-void MainScene::initializeGL()
+void EditorWindow::initializeGL()
 {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -207,12 +206,12 @@ void MainScene::initializeGL()
 }
 
 /******************************************************************************************************************************/
-void MainScene::resizeGL(int w, int h)
+void EditorWindow::resizeGL(int w, int h)
 {
 	repaint();
 }
 /******************************************************************************************************************************/
-void MainScene::paintGL()
+void EditorWindow::paintGL()
 {
     glViewport(0,0,(GLint)width(), (GLint)height());
     glClearColor(1.,1.,1., 1.0f);
@@ -259,7 +258,7 @@ void MainScene::paintGL()
 }
 
 /******************************************************************************************************************************/
-bool MainScene::event(QEvent *event)
+bool EditorWindow::event(QEvent *event)
 {
 	switch (event->type()) {
 	case QEvent::TouchBegin:
@@ -272,7 +271,7 @@ bool MainScene::event(QEvent *event)
 }
 
 /******************************************************************************************************************************/
-bool MainScene::touchEvent(QTouchEvent* te)
+bool EditorWindow::touchEvent(QTouchEvent* te)
 {
 	if (pinMode)
 		return false; //if pin mode is checked, directed to mousepress event.
@@ -369,7 +368,7 @@ bool MainScene::touchEvent(QTouchEvent* te)
 	return true;
 }
 /******************************************************************************************************************************/
-void MainScene::keyPressEvent(QKeyEvent *e)
+void EditorWindow::keyPressEvent(QKeyEvent *e)
 {
     switch(e->key()) {
     case Qt::Key_Up:
@@ -399,7 +398,7 @@ void MainScene::keyPressEvent(QKeyEvent *e)
     update();
 }
 /******************************************************************************************************************************/
-void MainScene::mousePressEvent(QMouseEvent *event)
+void EditorWindow::mousePressEvent(QMouseEvent *event)
 {
     setCursor(Qt::BlankCursor);
     QPointF pos = event->pos(); // (0,0) is upper left
@@ -424,7 +423,7 @@ void MainScene::mousePressEvent(QMouseEvent *event)
 	}
 }
 /******************************************************************************************************************************/
-void MainScene::mouseMoveEvent(QMouseEvent *event)
+void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 {
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
@@ -469,7 +468,7 @@ void MainScene::mouseMoveEvent(QMouseEvent *event)
 }
 
 /******************************************************************************************************************************/
-void MainScene::mouseReleaseEvent(QMouseEvent *event)
+void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
 {
     setCursor(Qt::ArrowCursor);
     selectedVertices.clear();
@@ -477,14 +476,14 @@ void MainScene::mouseReleaseEvent(QMouseEvent *event)
 }
 
 /******************************************************************************************************************************/
-void MainScene::wheelEvent(QWheelEvent *event)
+void EditorWindow::wheelEvent(QWheelEvent *event)
 {
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
 	update();
 }
 
 /******************************************************************************************************************************/
-int MainScene::closestIndex(QPointF pos)
+int EditorWindow::closestIndex(QPointF pos)
 {
 	if (!renderModel)
 		return -1;
@@ -492,7 +491,7 @@ int MainScene::closestIndex(QPointF pos)
 }
 
 /******************************************************************************************************************************/
-Point2 MainScene::screenToModel(QPointF pos)
+Point2 EditorWindow::screenToModel(QPointF pos)
 {
 	pos -= modelLocation;
 	pos -= QPointF((double)width()/2,(double)height()/2);

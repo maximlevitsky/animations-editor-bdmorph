@@ -14,12 +14,12 @@ class MeshModel;
 class KVFModel;
 class VideoModel;
 
-class MainScene : public QGLWidget
+class EditorWindow : public QGLWidget
 {
     Q_OBJECT
 public:
-    MainScene(QWidget* parent);
-    virtual ~MainScene() {}
+    EditorWindow(QWidget* parent);
+    virtual ~EditorWindow() {}
         
 public slots:
 	/* these slots are connected to side panel to manipulate the view*/

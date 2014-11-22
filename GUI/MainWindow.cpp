@@ -8,7 +8,7 @@
 #include <fstream>
 
 #include "MainWindow.h"
-#include "MainScene.h"
+#include "EditorWindow.h"
 #include "SidePanel.h"
 #include "ThumbnailRenderer.h"
 #include "AnimationPanel.h"
@@ -21,7 +21,7 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	setupUi(this);
 
 	/* setup GL view */
-	mainScene = new MainScene(this);
+	mainScene = new EditorWindow(this);
 	setCentralWidget(mainScene);
 
 	/* setup side panel */
