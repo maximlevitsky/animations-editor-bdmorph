@@ -24,7 +24,8 @@ EditorWindow::EditorWindow(QWidget* parent) :
 			pinMode(false),
 			multitouchMode(false),
 			drawVF(false),
-			drawVFOrig(false)
+			drawVFOrig(false),
+			disableEdit(false)
 {
     setAttribute(Qt::WA_AcceptTouchEvents);
     setAttribute(Qt::WA_StaticContents);
@@ -34,7 +35,7 @@ EditorWindow::EditorWindow(QWidget* parent) :
 /******************************************************************************************************************************/
 void  EditorWindow::resetPoints()
 {
-	if ( !editModel) return;
+	if ( !editModel || disableEdit) return;
 	editModel->resetDeformations();
 	emit modelEdited(editModel);
 	repaint();
@@ -42,7 +43,7 @@ void  EditorWindow::resetPoints()
 /******************************************************************************************************************************/
 void EditorWindow::undoModel()
 {
-	if ( !editModel) return;
+	if ( !editModel || disableEdit) return;
 	editModel->historyUndo();
 	emit modelEdited(editModel);
 	repaint();
@@ -51,7 +52,7 @@ void EditorWindow::undoModel()
 /******************************************************************************************************************************/
 void EditorWindow::redoModel()
 {
-	if ( !editModel) return;
+	if ( !editModel || disableEdit) return;
 	editModel->historyRedo();
 	emit modelEdited(editModel);
 	repaint();
@@ -60,7 +61,7 @@ void EditorWindow::redoModel()
 /******************************************************************************************************************************/
 void EditorWindow::saveLog()
 {
-	if ( !editModel) return;
+	if ( !editModel || disableEdit) return;
     QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
 
@@ -70,7 +71,7 @@ void EditorWindow::saveLog()
 /******************************************************************************************************************************/
 void EditorWindow::runLog()
 {
-	if ( !editModel) return;
+	if ( !editModel || disableEdit) return;
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose log"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
     std::ifstream infile(filename.toAscii());
@@ -95,8 +96,8 @@ void EditorWindow::runLog()
 /******************************************************************************************************************************/
 void EditorWindow::changeAlpha(int i)
 {
-	if (editModel)
-		editModel->setAlpha((double) (i) / 100 * 2);
+	if ( !editModel || disableEdit) return;
+	editModel->setAlpha((double) (i) / 100 * 2);
 }
 
 /******************************************************************************************************************************/
@@ -116,11 +117,10 @@ void EditorWindow::drawOrigVFModeChanged(bool m)
 /******************************************************************************************************************************/
 void EditorWindow::reuseVF()
 {
-	if (editModel) {
-		editModel->applyVF();
-		emit modelEdited(editModel);
-		repaint();
-	}
+	if ( !editModel || disableEdit) return;
+	editModel->applyVF();
+	emit modelEdited(editModel);
+	repaint();
 }
 
 /******************************************************************************************************************************/
@@ -146,6 +146,7 @@ void EditorWindow::clearPins()
 
 void EditorWindow::resetTransform()
 {
+	if (disableEdit) return;
 	if (!renderModel) return;
 	double maxZoomX = width() / renderModel->getWidth();
 	double maxZoomY = height() / renderModel->getHeight();
@@ -242,7 +243,7 @@ void EditorWindow::paintGL()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glColor4f(1,0,0,1);
-	for (int i = 0; i < selectedVertices.size(); i++)
+	for (unsigned int i = 0; i < selectedVertices.size(); i++)
 		renderModel->renderVertex(selectedVertices[i], ratio);
 
 	/* render pinned vertices */
@@ -278,7 +279,7 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 	if (pinMode)
 		return false; //if pin mode is checked, directed to mousepress event.
 
-	if (!editModel)
+	if (!editModel || disableEdit)
 		return false;
 
 	QList<QTouchEvent::TouchPoint> touchPoints = te->touchPoints();
@@ -372,6 +373,9 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 /******************************************************************************************************************************/
 void EditorWindow::keyPressEvent(QKeyEvent *e)
 {
+	if (disableEdit)
+		return;
+
     switch(e->key()) {
     case Qt::Key_Up:
     	moveUp();
@@ -402,11 +406,13 @@ void EditorWindow::keyPressEvent(QKeyEvent *e)
 /******************************************************************************************************************************/
 void EditorWindow::mousePressEvent(QMouseEvent *event)
 {
+	if (disableEdit)
+		return;
+
     setCursor(Qt::BlankCursor);
     QPointF pos = event->pos(); // (0,0) is upper left
     pos.setY(height()-pos.y()-1);
 
-    QPointF origPos = pos;
     lastMousePos = event->pos();
     if (!editModel) return;
 
@@ -428,6 +434,9 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
 void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 {
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
+
+	if (disableEdit)
+		return;
 
 	QPointF oldPos = lastMousePos;
     QPointF curPos = event->pos();
@@ -480,6 +489,9 @@ void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
 /******************************************************************************************************************************/
 void EditorWindow::wheelEvent(QWheelEvent *event)
 {
+	if (disableEdit)
+		return;
+
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
 	update();
 }
@@ -501,3 +513,14 @@ Point2 EditorWindow::screenToModel(QPointF pos)
 	return Point2(pos.x(), pos.y());
 }
 /******************************************************************************************************************************/
+
+
+void EditorWindow::onAnimationStarted()
+{
+	disableEdit = true;
+}
+
+void EditorWindow::onAnimationStopped()
+{
+	disableEdit = false;
+}

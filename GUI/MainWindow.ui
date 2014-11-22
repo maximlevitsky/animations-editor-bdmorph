@@ -51,8 +51,6 @@
     </property>
     <addaction name="actionSide_panel"/>
     <addaction name="actionAnimation_panel"/>
-    <addaction name="separator"/>
-    <addaction name="actionWireframe"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -62,7 +60,7 @@
     <addaction name="actionRedo"/>
     <addaction name="separator"/>
     <addaction name="actionPin_edit_mode"/>
-    <addaction name="actionDeformation_mode"/>
+    <addaction name="actionVF_orig_mode"/>
     <addaction name="actionVF_mode"/>
     <addaction name="separator"/>
     <addaction name="actionReset_model"/>
@@ -76,9 +74,9 @@
     <addaction name="actionDelete_keyframe"/>
     <addaction name="separator"/>
     <addaction name="actionPlay"/>
-    <addaction name="actionPause"/>
-    <addaction name="actionLoop"/>
+    <addaction name="actionRewind"/>
     <addaction name="separator"/>
+    <addaction name="actionLoop"/>
    </widget>
    <widget class="QMenu" name="menuDebug">
     <property name="title">
@@ -142,11 +140,17 @@
    </property>
   </action>
   <action name="actionPin_edit_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Pin edit mode</string>
    </property>
   </action>
   <action name="actionVF_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>VF mode</string>
    </property>
@@ -177,11 +181,17 @@
    </property>
   </action>
   <action name="actionSide_panel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Side panel</string>
    </property>
   </action>
   <action name="actionAnimation_panel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Animation panel</string>
    </property>
@@ -193,7 +203,7 @@
   </action>
   <action name="actionPlay">
    <property name="text">
-    <string>Play</string>
+    <string>Play / Pause</string>
    </property>
   </action>
   <action name="actionPause">
@@ -222,6 +232,9 @@
    </property>
   </action>
   <action name="actionLoop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Loop</string>
    </property>
@@ -234,6 +247,19 @@
   <action name="actionSave_screenshot">
    <property name="text">
     <string>Save screenshot</string>
+   </property>
+  </action>
+  <action name="actionVF_orig_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>VF orig mode</string>
+   </property>
+  </action>
+  <action name="actionRewind">
+   <property name="text">
+    <string>Rewind</string>
    </property>
   </action>
  </widget>

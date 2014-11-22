@@ -31,12 +31,12 @@ public:
 	/* gets an frame at specified index. Index may change over time */
 	VideoKeyFrame* getKeyframeByIndex(int index);
 
-	/* Gets either an keyframe or interpolated immediate frame (using BDMORPH) for given time in msecs */
-	MeshModel* getKeyframeByTime(int msecs);
+	VideoKeyFrame* getLastKeyframeBeforeTime(int msecs);
 
 	int count();
 	int getKeyFrameIndex(VideoKeyFrame* frame);
 	int getKeyFrameTimeMsec(VideoKeyFrame* frame);
+	int getTotalTime();
 
 private:
 	std::vector<VideoKeyFrame*> keyframes;

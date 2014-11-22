@@ -12,17 +12,18 @@ INCLUDE(${QT_USE_FILE})
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
-INCLUDE_DIRECTORIES(. ./GUI ./core ./utils)
+INCLUDE_DIRECTORIES(. ./GUI ./core ./utils ./GUI/widgets)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")
 
 SET(kvf2d_SOURCES
 	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/ThumbnailRenderer.cpp
+	GUI/widgets/ActionButton.cpp
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
 	utils/cholmod_matrix.cpp utils/vector2d.cpp 
 )
 
-SET(kvf2d_HEADERS GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h GUI/ThumbnailRenderer.h)
+SET(kvf2d_HEADERS GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h GUI/ThumbnailRenderer.h GUI/widgets/ActionButton.h)
 SET(kvf2d_FORMS GUI/MainWindow.ui GUI/SidePanel.ui GUI/AnimationPanel.ui)
 SET(kvf2d_RESOURCES GUI/resources/resources.rc)
 

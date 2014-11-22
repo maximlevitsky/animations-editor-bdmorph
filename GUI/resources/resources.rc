@@ -3,6 +3,7 @@
     <file>add.png</file>
   </qresource>
   <qresource prefix="icons">
+    <file>backward.png</file>
     <file>repeat.png</file>
     <file>pause.png</file>
     <file>play.png</file>

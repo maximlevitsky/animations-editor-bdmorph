@@ -288,7 +288,7 @@ void MeshModel::saveTextureUVs(std::ofstream& outfile, const QString &filename)
 	if (filename.endsWith("obj"))
 	{
 		for (int i = 0; i < numVertices; i++)
-			outfile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << endl;
+			outfile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
 	}
 }
 /******************************************************************************************************************************/
@@ -297,14 +297,14 @@ void MeshModel::saveFaces(std::ofstream& outfile, const QString &filename)
 	if (filename.endsWith("off"))
 	{
 		for (int i = 0; i < numFaces; i++)
-			outfile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << endl;
+			outfile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
 	}
 
 	if (filename.endsWith("obj"))
 	{
 		for (int i = 0; i < numFaces; i++)
 			outfile << "f " << (*faces)[i][0]+1 << '/' << (*faces)[i][0]+1 << ' ' <<
-			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' << (*faces)[i][2]+1 << '/' << (*faces)[i][2]+1 << endl;
+			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' << (*faces)[i][2]+1 << '/' << (*faces)[i][2]+1 << std::endl;
 	}
 
 }

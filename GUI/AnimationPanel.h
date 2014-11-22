@@ -2,6 +2,7 @@
 #include <qdialog.h>
 #include <QDockWidget>
 #include <QtOpenGL>
+#include <QTimer>
 #include <QLineEdit>
 #include "ui_AnimationPanel.h"
 
@@ -33,21 +34,34 @@ public slots:
 	void onLstitemDoubleClicked ();
 
 	void onTimeTextFinished();
+	void onTimeSliderMoved(int newValue);
+
+	void onPlayPauseButtonPressed();
+	void onBackwardButton();
+	void onAnimationTimer();
 
 signals:
 	/* we emit this when user clicks on a different frame */
 	void frameSelectionChanged(MeshModel* model);
+	void animationStarted();
+	void animationStopped();
 
 private:
-	VideoModel* currentVideoModel;
+	VideoModel* videoModel;
 	ThumbnailRenderer* renderer;
 
+	void updateItems(int startItem);
+	void updateTimeSlider();
+
+private:
 	VideoKeyFrame* getSelectedKeyframe();
 	void updateListItem(int id);
 	void insertPlus(int id);
-	void updateItems(int startItem);
 
 	QIcon plusIcon;
 	QLineEdit *timeEdit;
 	int timeEditItem;
+	bool animationRunning;
+
+	QTimer *animationTimer;
 };

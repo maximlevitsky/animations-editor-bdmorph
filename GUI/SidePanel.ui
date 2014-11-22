@@ -168,19 +168,6 @@
          </item>
         </layout>
        </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>30</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
       </layout>
      </widget>
     </item>
@@ -194,21 +181,21 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="QCheckBox" name="chkPinMode">
+        <widget class="ActionCheckBox" name="chkPinMode">
          <property name="text">
           <string>Pin mode</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="chkVFOrigMode">
+        <widget class="ActionCheckBox" name="chkVFOrigMode">
          <property name="text">
           <string>VF orig mode</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="chkVFMode">
+        <widget class="ActionCheckBox" name="chkVFMode">
          <property name="text">
           <string>VF mode</string>
          </property>
@@ -218,6 +205,9 @@
         <widget class="QPushButton" name="btnApplyVF">
          <property name="text">
           <string>Apply VF</string>
+         </property>
+         <property name="default">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -273,16 +263,32 @@
          </property>
         </widget>
        </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>30</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
-      <zorder>sliderAlpha</zorder>
-      <zorder>label_6</zorder>
-      <zorder>sliderWireframeTransparency</zorder>
-      <zorder>label_5</zorder>
      </widget>
     </item>
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ActionCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>ActionButton.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resources/resources.rc"/>
  </resources>

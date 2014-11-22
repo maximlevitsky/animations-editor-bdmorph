@@ -36,6 +36,14 @@ public slots:
 	void onModelUpdate(KVFModel* model);
 	void onEditBoxNewFrameSelected(MeshModel* model);
 
+	void onSidePanelMenuShowHide(bool checked);
+	void onAnimationPanelMenuShowHide(bool checked);
+
+	void onSaveScreenShot();
+	void onSaveVideo();
+
+	void onAbout();
+
 signals:
 	void videoModelLoaded(VideoModel* model);
 	void frameSwitched(MeshModel* model);

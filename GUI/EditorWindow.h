@@ -47,6 +47,9 @@ public slots:
 
     void onTextureChanged(GLuint textureRef);
 
+	void onAnimationStarted();
+	void onAnimationStopped();
+
 signals:
 	void modelEdited(KVFModel* model);
 
@@ -100,6 +103,7 @@ private:
 
     bool drawVF;
     bool drawVFOrig;
+    bool disableEdit;
 
 };
 

@@ -22,19 +22,40 @@ int VideoModel::count()
 {
 	return keyframes.size();
 }
+
+/******************************************************************************************************************************/
+
+int VideoModel::getTotalTime()
+{
+	int retval = 0;
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+		retval += (*iter)->duration;
+	return retval;
+}
+
 /******************************************************************************************************************************/
 
 VideoKeyFrame* VideoModel::getKeyframeByIndex(int index)
 {
-	if (index >= 0 && index < keyframes.size())
+	if (index >= 0 && index < (int)keyframes.size())
 		return keyframes[index];
 	return NULL;
 }
 
 /******************************************************************************************************************************/
-MeshModel* VideoModel::getKeyframeByTime(int msecs)
+VideoKeyFrame* VideoModel::getLastKeyframeBeforeTime(int msecs)
 {
-	/* BIG TODO*/
+	int time = 0;
+
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+	{
+		time += (*iter)->duration;
+
+		if (time > msecs)
+			return *iter;
+	}
+
+	return keyframes.back();
 }
 
 /******************************************************************************************************************************/
@@ -57,9 +78,9 @@ int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)
 	int time = 0;
 
 	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++) {
-		time += (*iter)->duration;
 		if (*iter == frame)
 			break;
+		time += (*iter)->duration;
 	}
 
 	return time;
@@ -73,6 +94,7 @@ VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
 
 	VideoKeyFrame *frame = new VideoKeyFrame(reference);
 	keyframes.insert(iter + 1, frame);
+	return frame;
 }
 
 /******************************************************************************************************************************/

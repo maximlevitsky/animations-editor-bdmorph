@@ -86,6 +86,48 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
 	connect_(animationPanel, frameSelectionChanged(MeshModel*), this, onEditBoxNewFrameSelected(MeshModel*));
 
+	connect_(animationPanel, animationStarted(), sidePanel, onAnimationStarted());
+	connect_(animationPanel, animationStopped(), sidePanel, onAnimationStopped());
+	connect_(animationPanel, animationStarted(), mainScene, onAnimationStarted());
+	connect_(animationPanel, animationStopped(), mainScene, onAnimationStopped());
+
+
+	/* --------------------------------------------------------------------------------*/
+	/* setup menu bar*/
+	connect_(actionLoad_mesh, triggered(), this, loadModel());
+	connect_(actionLoad_texture, triggered(), this, chooseTexture());
+	connect_(actionReset_texture, triggered(), this, resetTexture());
+	connect_(actionSave_screenshot, triggered(), this, onSaveScreenShot());
+	connect_(actionSave_model, triggered(), this, saveModel());
+	connect_(actionExit, triggered(), this, close());
+
+	connect_(actionUndo, triggered(), mainScene, undoModel());
+	connect_(actionRedo, triggered(), mainScene, redoModel());
+
+	sidePanel->chkPinMode->setAction(actionPin_edit_mode);
+	sidePanel->chkVFMode->setAction(actionVF_mode);
+	sidePanel->chkVFOrigMode->setAction(actionVF_orig_mode);
+
+	connect_(actionReset_model, triggered(), mainScene,resetPoints());
+	connect_(actionReset_pins, triggered(), mainScene,clearPins());
+
+	connect_(actionSide_panel, toggled(bool), this,onSidePanelMenuShowHide(bool));
+	connect_(actionAnimation_panel, toggled(bool), this,onAnimationPanelMenuShowHide(bool));
+
+	connect_(actionNew_keyframe, triggered(), animationPanel,onCloneKeyFrame());
+	connect_(actionDelete_keyframe, triggered(), animationPanel,onDeleteKeyframe());
+
+	connect_(actionPlay, triggered(), animationPanel,onPlayPauseButtonPressed());
+	animationPanel->btnRepeat->setAction(actionLoop);
+	connect_(actionRewind, triggered(), animationPanel,onBackwardButton());
+
+	connect_(actionReplay_log, triggered(), mainScene,runLog());
+	connect_(actionSave_log, triggered(), mainScene,saveLog());
+
+	connect_(actionAbout, triggered(),this,onAbout());
+
+	actionSide_panel->setChecked(true);
+	actionAnimation_panel->setChecked(true);
 
 	clearStatusBar();
 }
@@ -134,7 +176,7 @@ void MainWindow::clearStatusBar()
 /*****************************************************************************************************/
 void MainWindow::loadModel()
 {
-    QString filename = QFileDialog::getOpenFileName(0, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
     if (filename == "") return;
 
     /* unload current model*/
@@ -157,7 +199,7 @@ void MainWindow::saveModel()
 {
 	if ( !currentFrameModel) return;
 
-    QString filename = QFileDialog::getSaveFileName(0, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
     if ( filename == "")
     	return;
 
@@ -181,7 +223,7 @@ void MainWindow::saveModel()
 /*****************************************************************************************************/
 void MainWindow::chooseTexture()
 {
-    QString filename = QFileDialog::getOpenFileName(0, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
     if (filename == NULL)
 		return;
 
@@ -219,4 +261,38 @@ void MainWindow::onEditBoxNewFrameSelected(MeshModel* model)
 void MainWindow::onFrameSwitched(MeshModel* model)
 {
 	currentFrameModel = model;
+}
+
+/*****************************************************************************************************/
+void MainWindow::onSidePanelMenuShowHide(bool checked)
+{
+	if (checked)
+	{
+		sidePanel->show();
+	} else
+		sidePanel->hide();
+}
+
+/*****************************************************************************************************/
+void MainWindow::onAnimationPanelMenuShowHide(bool checked)
+{
+	if (checked)
+		animationPanel->show();
+	else
+		animationPanel->hide();
+}
+/*****************************************************************************************************/
+void MainWindow::onSaveScreenShot()
+{
+	/*TODO */
+}
+void MainWindow::onSaveVideo()
+{
+	/*TODO */
+}
+
+
+void MainWindow::onAbout()
+{
+	/* TODO*/
 }

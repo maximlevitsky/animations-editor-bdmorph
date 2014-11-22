@@ -70,7 +70,6 @@ KVFModel::KVFModel(MeshModel* model) :
     /**********************************************************************/
     printf("Computing permutation...\n");
 
-    int nz = covariance.getNumNonzero();
     int n = 2*numVertices;
     LDL_int  *Parent, *Flag,  *Lp, *Lnz, *Pfw, *Pinv;
     ALLOC_MEMORY(Parent, LDL_int, n);
@@ -212,6 +211,8 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
 
+    printf("\n");
+
     this->disps = disps;
     std::set<DisplacedVertex> allDisplacements = disps;
 
@@ -319,12 +320,11 @@ void KVFModel::applyVFLogSpiral()
         newPoints[i] = Point2(0,0);
     }
 
-    for (int i = 0; i < faces->size(); i++)
+    for (unsigned int i = 0; i < faces->size(); i++)
     {
         for (int j = 0; j < 3; j++) {
             int e1 = (*faces)[i][j];
             int e2 = (*faces)[i][(j+1)%3];
-            int vtx = (*faces)[i][(j+2)%3];
 
             std::complex<double> v1(vf[e1][0],vf[e1][1]);
             std::complex<double> v2(vf[e2][0],vf[e2][1]);
@@ -348,9 +348,6 @@ void KVFModel::applyVFLogSpiral()
             Point2 result2 = spiral.evaluate(l2,1);
 
             // compute cotangent weights
-            Vector2 d1 = vertices[e1] - vertices[vtx];
-            Vector2 d2 = vertices[e2] - vertices[vtx];
-            double angle = fabs(rotationAngle(d1,d2));
             double cotangent = 1;// / tan(angle);
 
             counts[e1] += cotangent;
@@ -447,8 +444,6 @@ void KVFModel::renderVF()
 /******************************************************************************************************************************/
 void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
 {
-	return;
-
 	/* advance in undo vertex buffer one circular step and forget about redo*/
 	undoVerticesCount = std::min(UNDOSIZE, undoVerticesCount+1);
 	undoVerticesPosition = (undoVerticesPosition + 1) % UNDOSIZE;
