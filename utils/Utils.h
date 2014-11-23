@@ -79,6 +79,9 @@ struct Angle
 class CmdStream
 {
 public:
+
+	CmdStream() : stream(NULL),end(NULL) {}
+
 	uint8_t* stream;
 	uint8_t* end;
 
