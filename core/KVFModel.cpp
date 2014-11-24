@@ -54,7 +54,24 @@ KVFModel::KVFModel(MeshModel* model) :
 
 	historyReset();
 
+    KVFModel* otherModel = dynamic_cast<KVFModel*>(model);
+    if (otherModel) {
+    	shared = true;
+    	pinnedVertexes = otherModel->pinnedVertexes;
+    	alpha1 = otherModel->alpha1;
+    	L2 = otherModel->L2;
+    } else
+    {
+    	shared = false;
+    	initialize();
+    }
+}
+
+/******************************************************************************************************************************/
+void KVFModel::initialize()
+{
     getP(P);
+    Pcopy.copy(P);
     CholmodSparseMatrix covariance;
     CholmodSparseMatrix trans;
 
@@ -96,7 +113,6 @@ KVFModel::KVFModel(MeshModel* model) :
 
     /**********************************************************************/
     // Prefactor
-
     CholmodVector boundaryRHS(2*numVertices,cholmod_get_common());
 
     // for fun constrain boundary to (1,1)
@@ -104,8 +120,6 @@ KVFModel::KVFModel(MeshModel* model) :
     	boundaryRHS[*it] = 1;
     	boundaryRHS[*it + numVertices] = 1;
     }
-
-    getP(Pcopy);
 
     double *rhsMove = (double*)malloc(Pcopy.numRows()*sizeof(double));
     Pcopy.multiply(boundaryRHS.getValues(), rhsMove);
@@ -142,17 +156,13 @@ KVFModel::KVFModel(MeshModel* model) :
     FREE_MEMORY(Lnz, LDL_int);
     FREE_MEMORY(Pfw, LDL_int);
     FREE_MEMORY(Pinv, LDL_int);
-
-    KVFModel* otherModel = dynamic_cast<KVFModel*>(model);
-    if (otherModel) {
-    	pinnedVertexes = otherModel->pinnedVertexes;
-    	alpha1 = otherModel->alpha1;
-    }
 }
+
 /******************************************************************************************************************************/
 KVFModel::~KVFModel()
 {
-	cholmod_free_factor(&L2, cholmod_get_common());
+	if (!shared)
+		cholmod_free_factor(&L2, cholmod_get_common());
 }
 
 /******************************************************************************************************************************/
@@ -169,7 +179,9 @@ void KVFModel::getP(CholmodSparseMatrix &prod)
 
     for (int f = 0; f < numFaces; f++)
     {
-        int i = (*faces)[f][0], j = (*faces)[f][1], k = (*faces)[f][2];
+        int i = (*faces)[f][0];
+        int j = (*faces)[f][1];
+        int k = (*faces)[f][2];
 
         int temp;
         if (i > j) { temp = i; i = j; j = temp; }
@@ -322,20 +334,25 @@ void KVFModel::applyVFLogSpiral()
 
     for (unsigned int i = 0; i < faces->size(); i++)
     {
-        for (int j = 0; j < 3; j++) {
+        for (int j = 0; j < 3; j++)
+        {
             int e1 = (*faces)[i][j];
             int e2 = (*faces)[i][(j+1)%3];
 
             std::complex<double> v1(vf[e1][0],vf[e1][1]);
             std::complex<double> v2(vf[e2][0],vf[e2][1]);
+
             std::complex<double> p1(vertices[e1][0], vertices[e1][1]);
             std::complex<double> p2(vertices[e2][0], vertices[e2][1]);
+
             std::complex<double> z = (v1-v2)/(p1-p2);
             std::complex<double> p0 = (p2*v1-p1*v2)/(v1-v2);
 
             double c = z.real();
             double alpha = z.imag();
+
             Point2 p(p0.real(),p0.imag());
+
             Point2 l1(vertices[e1][0], vertices[e1][1]);
             Point2 l2(vertices[e2][0], vertices[e2][1]);
 

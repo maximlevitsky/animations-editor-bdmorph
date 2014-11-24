@@ -69,11 +69,14 @@ MeshModel::MeshModel(std::string &filename) :
     	vertices[i] -= center;
 
 	std::map< int , std::map<int,int> > edgeCount;
-    for (int i = 0; i < numFaces; i++)
+	for (auto iter = faces->begin() ; iter != faces->end() ; iter++)
     {
-        int a = (*faces)[i][0];
-        int b = (*faces)[i][1];
-        int c = (*faces)[i][2];
+		iter->makeClockWise(vertices);
+
+        int a = iter->a();
+        int b = iter->b();
+        int c = iter->c();
+
         edgeCount[a][b]++;
         edgeCount[b][a]++;
         edgeCount[a][c]++;
@@ -82,9 +85,12 @@ MeshModel::MeshModel(std::string &filename) :
         edgeCount[b][c]++;
     }
 
-    for (int i = 0; i < numFaces; i++)
+    for (auto iter = faces->begin() ; iter != faces->end() ; iter++)
     {
-        int a = (*faces)[i][0], b = (*faces)[i][1], c = (*faces)[i][2];
+    	int a = iter->a();
+    	int b = iter->b();
+    	int c = iter->c();
+
         if (edgeCount[a][b] == 1) {
             boundaryVertices->insert(a);
             boundaryVertices->insert(b);
@@ -127,7 +133,7 @@ void MeshModel::loadFromFile(std::string & filename)
 			{
 				numVertices++;
 				issLine >> x >> y >> z;
-				Point2D<double> p(x,y);
+				Point2 p(x,y);
 				vertices.push_back(p);
 				continue;
 			}
@@ -135,7 +141,7 @@ void MeshModel::loadFromFile(std::string & filename)
 			{
 				is_vt = true;
 				issLine >> x >> y;
-				Point2D<double> p(x,y);
+				Point2 p(x,y);
 				texCoords->push_back(p);
 				continue;
 			}

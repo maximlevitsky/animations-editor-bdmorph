@@ -38,6 +38,7 @@ class KVFModel : public MeshModel
 {
 public:
 	KVFModel(MeshModel* model);
+	void initialize();
     virtual ~KVFModel();
 
 	/* deformation entry points*/
@@ -57,7 +58,6 @@ public:
 	void renderVFOrig();
 	void renderVF();
 
-
 	/* undo and redo code*/
 	bool historyRedo();
 	bool historyUndo();
@@ -66,6 +66,8 @@ public:
 	void historyReset();
 
 private:
+	bool shared;
+
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
 	std::vector<Point2> initialVertexes;
