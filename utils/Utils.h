@@ -80,16 +80,50 @@ struct Face
 /* edge of two vertexes */
 struct Edge
 {
-	Edge(Vertex v0,Vertex v1) : v0(v0), v1(v1) {}
+	/* Edged are unordered, so sort endpoints*/
+	Edge(Vertex v0,Vertex v1) : v0(v0), v1(v1)
+	{
+		if (v1 > v0) std::swap(v0,v1);
+	}
+
+	bool operator<(const Edge& other) const
+	{
+		if (v0 != other.v0)
+			return v0 < other.v0;
+		return v1 < other.v1;
+	}
+
+	bool operator==(const Edge& other)  const
+	{
+		return (v0 == other.v0 && v1 == other.v1);
+	}
+
 	Vertex v0;
 	Vertex v1;
 };
 
 /*****************************************************************************************************/
-/* angle formed by p1 (and points sorted counter-clockwise */
+/* angle formed by p1 (and points sorted counter-clockwise, so order matters!!!) */
 struct Angle
 {
-	Angle(Vertex p0,Vertex p1,Vertex p2) : p0(p0),p1(p1),p2(p2) {}
+	Angle(Vertex p0,Vertex p1,Vertex p2) : p0(p0),p1(p1),p2(p2)
+	{}
+
+	bool operator<(const Angle& other)  const
+	{
+		if (p0 != other.p0)
+			return p0 < other.p0;
+		if (p1 != other.p1)
+			return p1 < other.p1;
+		return p2 < other.p2;
+	}
+
+	bool operator==(const Angle& other)  const
+	{
+		return (p0 == other.p0 && p1 == other.p1 && p2 == other.p2);
+	}
+
+
 	Vertex p0;
 	Vertex p1;
 	Vertex p2;

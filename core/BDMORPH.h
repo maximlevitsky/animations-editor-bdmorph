@@ -35,7 +35,7 @@ enum command
 class BDMORPH_BUILDER
 {
 public:
-	BDMORPH_BUILDER(std::vector<Face> &faces, std::set<int>& boundary_vertexes);
+	BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& boundary_vertexes);
 
 	bool is_mempos_valid(int pos) {return memory_end - pos < 0xF000; }
 	bool is_layout_mempos_valid(int pos) {return layout_memory_end - pos < 0xF000; }
@@ -126,7 +126,7 @@ private:
 	void setup_iterations(MeshModel *a, MeshModel* b, double t);
 	bool newton_iteration(int iteration);
 	void finalize_iterations();
-	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
+	double getK(Vertex index) { return index == -1 ? 0 : (*K)[index]; }
 };
 
 #endif

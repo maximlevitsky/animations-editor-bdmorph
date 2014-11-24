@@ -20,6 +20,7 @@ SET(kvf2d_SOURCES
 	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/ThumbnailRenderer.cpp
 	GUI/widgets/ActionButton.cpp
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
+	core/BDMORPH.cpp
 	utils/cholmod_matrix.cpp utils/vector2d.cpp 
 )
 

@@ -14,10 +14,8 @@
 /*****************************************************************************************************/
 static double inline calculate_tan_half_angle(double a,double b,double c)
 {
-	double p = a+b+c;
-
-	double up = (a+c-b)(c+b-a);
-	double down = (b+a-c)(a+b+c);
+	double up = (a+c-b)*(c+b-a);
+	double down = (b+a-c)*(a+b+c);
 
 	/* degenerate cases to make convex problem domain */
 	if (up <= 0) return 0;
@@ -73,7 +71,7 @@ int BDMORPH_BUILDER::get_K_index(Vertex vertex)
 
 	auto iter = external_vertex_id_to_K.find(vertex);
 	if (iter != external_vertex_id_to_K.end())
-		return *iter;
+		return iter->second;
 
 	int new_K  = external_vertex_id_to_K.size();
 	external_vertex_id_to_K[vertex] = new_K;
@@ -104,7 +102,7 @@ uint16_t BDMORPH_BUILDER::load_computed_edge_len(Edge& e)
 	/* creates command that copies edge len from L array to tmp buffer
 	 * rarely used, used only in case the edge len in tmp buffer got overwritten */
 
-	int L_location = *edge_L_locations.find(e);
+	int L_location = edge_L_locations.find(e)->second;
 
 	iteration_stream.push_byte(LOAD_EDGE_LEN);
 	iteration_stream.push_dword(L_location);
@@ -181,8 +179,10 @@ uint16_t BDMORPH_BUILDER::load_vertex_position(Vertex vertex)
 		int position = layout_memory_end;
 		vertex_position_tmpbuf_locations[vertex] = position;
 		layout_memory_end += 2; /* we store this as two positions */
-		return position;
+		return (uint16_t)position;
 	}
+
+	return (uint16_t)iter->second;
 }
 
 /*****************************************************************************************************/
@@ -205,7 +205,6 @@ void BDMORPH_BUILDER::compute_vertex_position(Edge d, Edge r1, Edge r0, Vertex p
 	int position = layout_memory_end;
 	vertex_position_tmpbuf_locations[p2] = position;
 	layout_memory_end += 2; /* we store this as two positions */
-	return position;
 }
 
 /*****************************************************************************************************/
@@ -236,7 +235,7 @@ void BDMORPHModel::initialize(Vertex startVertex)
 	std::deque<Vertex> vertexQueue;
 
 	boundaryVerticesSet.insert(boundaryVertices->begin(),boundaryVertices->end());
-	BDMORPH_BUILDER builder(faces,boundaryVerticesSet);
+	BDMORPH_BUILDER builder(*faces,boundaryVerticesSet);
 
 	/*==============================================================*/
 
@@ -276,7 +275,8 @@ void BDMORPHModel::initialize(Vertex startVertex)
 		 * 3. has at least one mapped neighbor - ensured by above
 		 * */
 
-		Vertex v0 = vertexQueue.pop_front();
+		Vertex v0 = vertexQueue.front();
+		vertexQueue.pop_front();
 		assert(mappedVertices.count(v0) == 1);
 
 		/* Find first mapped neighbor (must exist, rule 2)*/
@@ -337,8 +337,8 @@ void BDMORPHModel::initialize(Vertex startVertex)
 	kCount = builder.getK_count();
 	edgeCount = builder.getL_count();
 
-	K = new CholmodVector(kCount);
-	EnergyGradient = new CholmodVector(kCount);
+	K = new CholmodVector(kCount, cholmod_get_common());
+	EnergyGradient = new CholmodVector(kCount, cholmod_get_common());
 	EnergyHessian.reshape(kCount,kCount,numFaces*6);
 
 	temp_data = new double_t[std::max(builder.memory_end,builder.layout_memory_end)];
@@ -361,8 +361,8 @@ void BDMORPHModel::setup_iterations(MeshModel *a, MeshModel* b, double t)
 	{
 		uint32_t vertex1  = commands.dword();
 		uint32_t vertex2  = commands.dword();
-		assert (vertex1 < numVertices);
-		assert (vertex2 < numVertices);
+		assert (vertex1 < (uint32_t)numVertices);
+		assert (vertex2 < (uint32_t)numVertices);
 
 		double dist1_squared = a->vertices[vertex1].distanceSquared(a->vertices[vertex2]);
 		double dist2_squared = b->vertices[vertex1].distanceSquared(b->vertices[vertex2]);
@@ -395,10 +395,11 @@ bool BDMORPHModel::newton_iteration(int iteration)
 			assert(edge_num < edgeCount);
 
 			if (iteration > 0)
-				L[edge_num++] = temp_data[tmp_idx++]  = edge_len(L0[edge_num],k1,k2);
+				L[edge_num] = temp_data[tmp_idx++]  = edge_len(L0[edge_num],k1,k2);
 			else
-				L[edge_num++] = L0[edge_num];
+				L[edge_num] = L0[edge_num];
 
+			edge_num++;
 			break;
 
 		} case LOAD_EDGE_LEN: {
@@ -427,7 +428,7 @@ bool BDMORPHModel::newton_iteration(int iteration)
 				halfangle_sum += atan(temp_data[commands.word()]);
 			grad_sum += fabs(halfangle_sum);
 
-			EnergyGradient[vertex_num] = halfangle_sum;
+			(*EnergyGradient)[vertex_num] = halfangle_sum;
 
 			/* calculate corresponding row in the Hessian */
 			double cotan_sum = 0;
