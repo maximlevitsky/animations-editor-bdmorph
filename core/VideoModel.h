@@ -6,6 +6,8 @@
 #include <string>
 #include "KVFModel.h"
 
+class BDMORPHModel;
+
 /****************************************************************************/
 class VideoKeyFrame : public KVFModel
 {
@@ -40,6 +42,7 @@ public:
 
 private:
 	std::vector<VideoKeyFrame*> keyframes;
+	BDMORPHModel* interpolationModel;
 };
 
 #endif /* VIDEOMODEL_H_ */

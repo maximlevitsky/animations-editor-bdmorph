@@ -77,29 +77,34 @@ struct Face
 };
 
 /*****************************************************************************************************/
-/* edge of two vertexes */
-struct Edge
+struct OrderedEdge
 {
-	/* Edged are unordered, so sort endpoints*/
-	Edge(Vertex v0,Vertex v1) : v0(v0), v1(v1)
-	{
-		if (v1 > v0) std::swap(v0,v1);
-	}
+	OrderedEdge(Vertex v0, Vertex v1) : v0(v0),v1(v1) {}
 
-	bool operator<(const Edge& other) const
+	bool operator<(const OrderedEdge& other) const
 	{
 		if (v0 != other.v0)
 			return v0 < other.v0;
 		return v1 < other.v1;
 	}
 
-	bool operator==(const Edge& other)  const
+	bool operator==(const OrderedEdge& other)  const
 	{
 		return (v0 == other.v0 && v1 == other.v1);
 	}
 
 	Vertex v0;
 	Vertex v1;
+};
+
+/*****************************************************************************************************/
+struct Edge :  public OrderedEdge
+{
+	/* Edged are unordered, so sort endpoints*/
+	Edge(Vertex v0,Vertex v1) : OrderedEdge(v0,v1)
+	{
+		if (v1 > v0) std::swap(v0,v1);
+	}
 };
 
 /*****************************************************************************************************/

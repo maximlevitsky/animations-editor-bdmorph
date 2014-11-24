@@ -50,7 +50,7 @@ BDMORPH_BUILDER::BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& bou
 		for (auto iter = faces.begin() ; iter != faces.end() ; iter++)
 		{
 			Face& face = *iter;
-			neighbours.insert(make_pair(Edge(face[0],face[1]),face[2]));
+			neighbours.insert(make_pair(OrderedEdge(face[0],face[1]),face[2]));
 			aNeighbour[face[0]] = face[1];
 			aNeighbour[face[1]] = face[2];
 			aNeighbour[face[2]] = face[0];
@@ -60,8 +60,8 @@ BDMORPH_BUILDER::BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& bou
 /*****************************************************************************************************/
 Vertex BDMORPH_BUILDER::getNeighbourVertex(Vertex v1, Vertex v2)
 {
-	assert(neighbours.find(Edge(v1, v2)) != neighbours.end());
-	return neighbours[Edge(v1, v2)];
+	assert(neighbours.find(OrderedEdge(v1, v2)) != neighbours.end());
+	return neighbours[OrderedEdge(v1, v2)];
 }
 /*****************************************************************************************************/
 int BDMORPH_BUILDER::get_K_index(Vertex vertex)

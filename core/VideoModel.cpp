@@ -1,4 +1,5 @@
 #include "VideoModel.h"
+#include "BDMORPH.h"
 #include <assert.h>
 
 /******************************************************************************************************************************/
@@ -6,6 +7,7 @@ VideoModel::VideoModel(std::string filename) : MeshModel(filename)
 {
 	/* create one keyframe */
 	keyframes.push_back(new VideoKeyFrame(this));
+	interpolationModel = new BDMORPHModel(*this);
 }
 
 /******************************************************************************************************************************/
@@ -16,7 +18,6 @@ VideoModel::~VideoModel()
 		iter = keyframes.erase(iter);
 	}
 }
-
 /******************************************************************************************************************************/
 int VideoModel::count()
 {
@@ -24,7 +25,6 @@ int VideoModel::count()
 }
 
 /******************************************************************************************************************************/
-
 int VideoModel::getTotalTime()
 {
 	int retval = 0;
@@ -34,14 +34,12 @@ int VideoModel::getTotalTime()
 }
 
 /******************************************************************************************************************************/
-
 VideoKeyFrame* VideoModel::getKeyframeByIndex(int index)
 {
 	if (index >= 0 && index < (int)keyframes.size())
 		return keyframes[index];
 	return NULL;
 }
-
 /******************************************************************************************************************************/
 VideoKeyFrame* VideoModel::getLastKeyframeBeforeTime(int msecs)
 {
@@ -57,9 +55,7 @@ VideoKeyFrame* VideoModel::getLastKeyframeBeforeTime(int msecs)
 
 	return keyframes.back();
 }
-
 /******************************************************************************************************************************/
-
 int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
 {
 	int i = 0;
@@ -71,7 +67,6 @@ int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
 
 	return -1;
 }
-
 /******************************************************************************************************************************/
 int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)
 {
@@ -96,7 +91,6 @@ VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
 	keyframes.insert(iter + 1, frame);
 	return frame;
 }
-
 /******************************************************************************************************************************/
 void VideoModel::deleteFrame(VideoKeyFrame* frame)
 {

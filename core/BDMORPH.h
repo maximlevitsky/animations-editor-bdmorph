@@ -65,7 +65,7 @@ public:
 	std::set<Vertex>& boundary_vertexes_set;
 
 	/* For each edge, stores the third vertex that makes up the face, counter clockwise */
-	std::map<Edge, Vertex> neighbours;
+	std::map<OrderedEdge, Vertex> neighbours;
 
 	/* Stores for each vertex one of its neighbors */
 	std::map<Vertex,Vertex> aNeighbour;
