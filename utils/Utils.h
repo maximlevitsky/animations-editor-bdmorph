@@ -3,6 +3,7 @@
 
 #include <ctime>
 #include <vector>
+#include <algorithm>
 #include <stdint.h>
 #include "vector2d.h"
 
@@ -47,12 +48,32 @@ typedef int Vertex;
 struct Face
 {
 	Face() {}
-	Face(Vertex v0, Vertex v1, Vertex v2) {
-		f[0] = v0; f[1] = v1; f[2] = v2;
+	Face(Vertex v0, Vertex v1, Vertex v2)
+	{
+		f[0] = v0;
+		f[1] = v1;
+		f[2] = v2;
 	}
 
 	Vertex f[3];
+
 	Vertex &operator[](int i) {return f[i];}
+
+	Vertex a() { return f[0]; }
+	Vertex b() { return f[1]; }
+	Vertex c() { return f[2]; }
+
+
+	void makeClockWise(const std::vector<Point2> &points)
+	{
+		const Point2 &a = points[f[0]];
+		const Point2 &b = points[f[1]];
+		const Point2 &c = points[f[2]];
+
+		double signedArea = a.x * (b.y-c.y) + b.x * (c.y-a.y) + c.x * (a.y-b.y);
+		if (signedArea < 0)
+			std::swap(f[0],f[2]);
+	}
 };
 
 /*****************************************************************************************************/
