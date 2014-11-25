@@ -7,7 +7,6 @@ VideoModel::VideoModel(std::string filename) : MeshModel(filename)
 {
 	/* create one keyframe */
 	keyframes.push_back(new VideoKeyFrame(this));
-	interpolationModel = new BDMORPHModel(*this);
 }
 
 /******************************************************************************************************************************/

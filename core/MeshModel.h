@@ -24,10 +24,12 @@ public:
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
     int getClosestVertex(Point2 point);
+    int getFaceUnderPoint(Point2 point);
 
 	/* rendering */
     virtual void render(double wireframeTrans);
 	void renderVertex(int v, double scale);
+	void renderFace(int f);
 
 	/* save and load code */
     void replacePoints(const QString &filename);

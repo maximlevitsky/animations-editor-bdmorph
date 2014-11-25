@@ -51,6 +51,9 @@ BDMORPH_BUILDER::BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& bou
 		{
 			Face& face = *iter;
 			neighbours.insert(make_pair(OrderedEdge(face[0],face[1]),face[2]));
+			neighbours.insert(make_pair(OrderedEdge(face[1],face[2]),face[0]));
+			neighbours.insert(make_pair(OrderedEdge(face[2],face[0]),face[1]));
+
 			aNeighbour[face[0]] = face[1];
 			aNeighbour[face[1]] = face[2];
 			aNeighbour[face[2]] = face[0];
@@ -85,8 +88,8 @@ uint16_t BDMORPH_BUILDER::compute_edge_len(Edge& e)
 	int new_edge_L_index = edge_L_locations.size();
 	edge_L_locations.insert(std::make_pair(e, new_edge_L_index));
 
-	init_stream.push_dword(get_K_index(e.v0));
-	init_stream.push_dword(get_K_index(e.v1));
+	init_stream.push_dword(e.v0);
+	init_stream.push_dword(e.v1);
 
 	iteration_stream.push_byte(COMPUTE_EDGE_LEN);
 	iteration_stream.push_dword(get_K_index(e.v0));
@@ -213,6 +216,7 @@ void BDMORPH_BUILDER::compute_vertex_info(Vertex v0, int neighbourCount,
 		std::map<Vertex, std::pair<uint16_t,uint16_t> > &outer_angles)
 {
 	iteration_stream.push_byte(COMPUTE_VERTEX_INFO);
+	iteration_stream.push_dword(v0);
 	iteration_stream.push_word(neighbourCount);
 
 	for (auto iter = inner_angles.begin() ; iter != inner_angles.end() ; iter++)
@@ -363,15 +367,20 @@ void BDMORPHModel::setup_iterations(MeshModel *a, MeshModel* b, double t)
 		uint32_t vertex2  = commands.dword();
 		assert (vertex1 < (uint32_t)numVertices);
 		assert (vertex2 < (uint32_t)numVertices);
+		assert (vertex1 != vertex2);
 
 		double dist1_squared = a->vertices[vertex1].distanceSquared(a->vertices[vertex2]);
 		double dist2_squared = b->vertices[vertex1].distanceSquared(b->vertices[vertex2]);
 
-		L0[edge_num++] = sqrt((1-t)*dist1_squared+t*dist2_squared);
-		assert(edge_num < edgeCount);
+		double dist = sqrt((1-t)*dist1_squared+t*dist2_squared);
+
+		assert(dist > 0);
+		L0[edge_num++] = dist;
+
+		assert(edge_num <= edgeCount);
 	}
 
-	assert(edge_num == edgeCount - 1);
+	assert(edge_num == edgeCount);
 }
 /*****************************************************************************************************/
 bool BDMORPHModel::newton_iteration(int iteration)
@@ -388,16 +397,16 @@ bool BDMORPHModel::newton_iteration(int iteration)
 			/* calculate new length of an edge, including edges that touch or between boundary edges
 			 * For them getK will return 0 - their K's don't participate in the algorithm otherwise
 			 * result is also saved in temp_data for faster retrieval */
-			double k1  = getK(commands.dword());
-			double k2  = getK(commands.dword());
+			int k1  = commands.dword();
+			int k2  = commands.dword();
 
 			assert (k1 < kCount && k2 < kCount);
 			assert(edge_num < edgeCount);
 
 			if (iteration > 0)
-				L[edge_num] = temp_data[tmp_idx++]  = edge_len(L0[edge_num],k1,k2);
+				L[edge_num] = temp_data[tmp_idx++]  = edge_len(L0[edge_num],getK(k1),getK(k2));
 			else
-				L[edge_num] = L0[edge_num];
+				L[edge_num] = temp_data[tmp_idx++]  =  L0[edge_num];
 
 			edge_num++;
 			break;

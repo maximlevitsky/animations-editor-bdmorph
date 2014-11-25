@@ -7,6 +7,7 @@
 #include <QPointF>
 #include <QTouchEvent>
 #include "vector2d.h"
+#include "Utils.h"
 
 #define ZOOM_FACTOR 1.2
 
@@ -31,6 +32,7 @@ public slots:
 	void drawVFModeChanged(bool m);
 	void drawOrigVFModeChanged(bool m);
 	void pinModeChanged(bool m);
+	void showSelectionChanged(bool m);
 
 	void changeAlpha(int i);
 	void changeWireframe(int i);
@@ -52,10 +54,10 @@ public slots:
 
 signals:
 	void modelEdited(KVFModel* model);
+	void selectionChanged(int selectedVertex, int selectedFace);
 
 private:
     /* transformations*/
-	int closestIndex(QPointF pos);
     void zoom(double factor) {modelWidth *= factor;}
     void move(QPointF direction) {modelLocation += direction;}
     void moveLeft() {move(QPointF(-10,0));}
@@ -87,7 +89,7 @@ private:
     /* Model state */
     QPointF modelLocation;
     float modelWidth;
-    std::vector<int> selectedVertices;
+    std::vector<Vertex> selectedVertices;
     bool pinMode;
     bool multitouchMode;
 
@@ -95,6 +97,8 @@ private:
     unsigned int texHandle;
     int wireframeTransparency;
     GLuint textureRef;
+    Vertex hoveredVertex;
+    int hoveredFace;
 
     /* Input state */
     QPointF lastMousePos;
@@ -104,6 +108,7 @@ private:
     bool drawVF;
     bool drawVFOrig;
     bool disableEdit;
+    bool showSelection;
 
 };
 

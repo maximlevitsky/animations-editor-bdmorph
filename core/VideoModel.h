@@ -42,7 +42,6 @@ public:
 
 private:
 	std::vector<VideoKeyFrame*> keyframes;
-	BDMORPHModel* interpolationModel;
 };
 
 #endif /* VIDEOMODEL_H_ */

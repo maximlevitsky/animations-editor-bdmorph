@@ -145,10 +145,27 @@ public:
 	uint8_t* stream;
 	uint8_t* end;
 
-	uint8_t  byte () { return *(uint8_t*) (stream++ ); }
-	uint16_t word () { return *(uint16_t*)(stream+=2); }
-	uint32_t dword() { return *(uint32_t*)(stream+=4); }
-	bool     ended() { return stream == end;           }
+	uint8_t  byte () {
+		uint8_t retval = *(uint8_t*) (stream);
+		stream++;
+		return retval;
+	}
+
+	uint16_t word () {
+		uint16_t retval = *(uint16_t*) (stream);
+		stream += 2;
+		return retval;
+	}
+
+	uint32_t dword() {
+		uint32_t retval = *(uint32_t*) (stream);
+		stream += 4;
+		return retval;
+	}
+
+	bool     ended() {
+		return stream == end;
+	}
 };
 
 /***********************************************************************************************/
@@ -177,6 +194,11 @@ public:
 		int size = cmd_stream.size();
 		out.stream = (uint8_t*)malloc(size);
 		out.end = out.stream + size;
+
+		int i = 0;
+		for (auto iter = cmd_stream.begin() ; iter != cmd_stream.end() ; iter++,i++) {
+			out.stream[i] = *iter;
+		}
 	}
 };
 
@@ -191,6 +213,24 @@ inline bool ends_with(std::string const & value, std::string const & ending)
 {
     if (ending.size() > value.size()) return false;
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+
+/**********************************************************************************************/
+/* stolen from http://stackoverflow.com/questions/2049582/how-to-determine-a-point-in-a-triangle */
+
+static inline double planeSign (Point2 p1, Point2 p2, Point2 p3)
+{
+    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+}
+
+static inline bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3)
+{
+    bool b1, b2, b3;
+    b1 = planeSign(pt, v1, v2) < 0.0f;
+    b2 = planeSign(pt, v2, v3) < 0.0f;
+    b3 = planeSign(pt, v3, v1) < 0.0f;
+    return ((b1 == b2) && (b2 == b3));
 }
 
 #endif

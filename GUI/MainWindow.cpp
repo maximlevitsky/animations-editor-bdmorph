@@ -14,6 +14,7 @@
 #include "AnimationPanel.h"
 #include "Utils.h"
 #include "VideoModel.h"
+#include "BDMORPH.h"
 
 /*****************************************************************************************************/
 MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
@@ -41,6 +42,8 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	connect_(sidePanel->chkPinMode, clicked(bool), mainScene, pinModeChanged(bool));
 	connect_(sidePanel->chkVFMode, clicked(bool), mainScene, drawVFModeChanged(bool));
 	connect_(sidePanel->chkVFOrigMode, clicked(bool), mainScene, drawOrigVFModeChanged(bool));
+	connect_(sidePanel->chkShowSelection, clicked(bool), mainScene, showSelectionChanged(bool));
+
 	connect_(sidePanel->btnApplyVF, clicked(), mainScene, reuseVF());
 
 	connect_(sidePanel->sliderWireframeTransparency, valueChanged(int), mainScene, changeWireframe(int));
@@ -57,13 +60,25 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	statusBar()->showMessage(tr("Ready"));
 	lblVertexCount = new QLabel(this);
 	lblVertexCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
-	statusBar()->addPermanentWidget(lblVertexCount);
+
 	lblFacesCount = new QLabel(this);
 	lblFacesCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
-	statusBar()->addPermanentWidget(lblFacesCount);
+
 	lblFPS = new QLabel(this);
 	lblFPS->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+
+	lblSelectedFace = new QLabel(this);
+	lblSelectedFace->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+
+	lblSelectedVertex = new QLabel(this);
+	lblSelectedVertex->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+
+	statusBar()->addPermanentWidget(lblFacesCount);
+	statusBar()->addPermanentWidget(lblVertexCount);
+	statusBar()->addPermanentWidget(lblSelectedVertex);
+	statusBar()->addPermanentWidget(lblSelectedFace);
 	statusBar()->addPermanentWidget(lblFPS);
+
 
 	thumbnailRender = new ThumbnailRenderer(NULL, mainScene);
 	animationPanel->setThumbailRenderer(thumbnailRender);
@@ -81,10 +96,12 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	connect_(this, textureChanged(GLuint), animationPanel, onTextureChanged(GLuint));
 
 	/* we listen to main scene for edit events */
-	connect_(mainScene, modelEdited(KVFModel*), this, onModelUpdate(KVFModel*));
+	connect_(mainScene, modelEdited(KVFModel*), this, onEditorModelEdited(KVFModel*));
+	connect_(mainScene, selectionChanged(int,int), this, onEditorSelectionChanged(int,int));
+
 	/* we listen on keyframe switches */
 	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
-	connect_(animationPanel, frameSelectionChanged(MeshModel*), this, onEditBoxNewFrameSelected(MeshModel*));
+	connect_(animationPanel, frameSelectionChanged(MeshModel*), this, onAnimationpanelNewFrameSelected(MeshModel*));
 
 	connect_(animationPanel, animationStarted(), sidePanel, onAnimationStarted());
 	connect_(animationPanel, animationStopped(), sidePanel, onAnimationStopped());
@@ -129,6 +146,7 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 	actionSide_panel->setChecked(true);
 	actionAnimation_panel->setChecked(true);
 
+	connect_(sidePanel->btnTestInterpolation, clicked(), this, onInterpolationTest());
 	clearStatusBar();
 }
 
@@ -156,6 +174,26 @@ void MainWindow::setStatusBarStatistics(int vertexCount, int facesCount)
 	lblFacesCount->show();
 }
 
+void MainWindow::onEditorSelectionChanged(int selectedVertex, int selectedFace)
+{
+	QString str;
+
+	if (selectedVertex != -1) {
+		lblSelectedVertex->show();
+		str.sprintf("Vertex: %d", selectedVertex);
+		lblSelectedVertex->setText(str);
+	} else
+		lblSelectedVertex->hide();
+
+	if (selectedFace != -1) {
+		lblSelectedFace->show();
+		str.sprintf("Face: %d", selectedFace);
+		lblSelectedFace->setText(str);
+	} else
+		lblSelectedFace->hide();
+
+}
+
 /*****************************************************************************************************/
 void MainWindow::setStatusBarFPS(int msec)
 {
@@ -171,6 +209,8 @@ void MainWindow::clearStatusBar()
 	lblFPS->hide();
 	lblFacesCount->hide();
 	lblVertexCount->hide();
+	lblSelectedFace->hide();
+	lblSelectedVertex->hide();
 }
 
 /*****************************************************************************************************/
@@ -242,7 +282,7 @@ void MainWindow::resetTexture()
 }
 
 /*****************************************************************************************************/
-void MainWindow::onModelUpdate(KVFModel* model)
+void MainWindow::onEditorModelEdited(KVFModel* model)
 {
 	if (!model) return;
 
@@ -252,7 +292,7 @@ void MainWindow::onModelUpdate(KVFModel* model)
 }
 
 /*****************************************************************************************************/
-void MainWindow::onEditBoxNewFrameSelected(MeshModel* model)
+void MainWindow::onAnimationpanelNewFrameSelected(MeshModel* model)
 {
 	emit frameSwitched(model);
 }
@@ -296,3 +336,12 @@ void MainWindow::onAbout()
 {
 	/* TODO*/
 }
+
+
+void MainWindow::onInterpolationTest()
+{
+	testModel  = new BDMORPHModel(*currentFrameModel);
+	testModel->initialize(3);
+	testModel->solve(currentFrameModel,currentFrameModel,0);
+}
+

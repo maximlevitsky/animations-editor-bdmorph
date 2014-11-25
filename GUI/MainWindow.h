@@ -14,6 +14,7 @@ class VideoModel;
 class MeshModel;
 class KVFModel;
 class QLabel;
+class BDMORPHModel;
 
 class MainWindow : public QMainWindow, public Ui_MainWindow
 {
@@ -33,22 +34,23 @@ public slots:
 	void resetTexture();
 
 	void onFrameSwitched(MeshModel* model);
-	void onModelUpdate(KVFModel* model);
-	void onEditBoxNewFrameSelected(MeshModel* model);
+	void onAnimationpanelNewFrameSelected(MeshModel* model);
 
 	void onSidePanelMenuShowHide(bool checked);
 	void onAnimationPanelMenuShowHide(bool checked);
 
 	void onSaveScreenShot();
 	void onSaveVideo();
-
 	void onAbout();
+
+	void onEditorSelectionChanged(int selectedVertex, int selectedFace);
+	void onEditorModelEdited(KVFModel* model);
+	void onInterpolationTest();
 
 signals:
 	void videoModelLoaded(VideoModel* model);
 	void frameSwitched(MeshModel* model);
 	void textureChanged(GLuint textureRef);
-
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;
@@ -57,12 +59,16 @@ private:
 	QLabel* lblVertexCount;
 	QLabel* lblFacesCount;
 	QLabel* lblFPS;
+	QLabel* lblSelectedVertex;
+	QLabel* lblSelectedFace;
 
 	VideoModel* model;
 	MeshModel* currentFrameModel;
 	GLuint textureRef;
 
 	ThumbnailRenderer* thumbnailRender;
+
+	BDMORPHModel* testModel;
 };
 
 #endif

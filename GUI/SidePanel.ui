@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>261</width>
-    <height>571</height>
+    <height>622</height>
    </rect>
   </property>
   <property name="features">
@@ -260,6 +260,20 @@
          </property>
          <property name="tickPosition">
           <enum>QSlider::TicksBelow</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="ActionCheckBox" name="chkShowSelection">
+         <property name="text">
+          <string>Show selection</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnTestInterpolation">
+         <property name="text">
+          <string>Test interpolation</string>
          </property>
         </widget>
        </item>

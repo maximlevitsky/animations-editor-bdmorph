@@ -55,7 +55,6 @@ public:
 	void compute_vertex_position(Edge r0, Edge r1, Edge d, Vertex p0, Vertex p1,Vertex p2);
 
 	Vertex getNeighbourVertex(Vertex v) { return aNeighbour[v];}
-
 	Vertex getNeighbourVertex(Vertex v1, Vertex v2);
 
 	/* output */

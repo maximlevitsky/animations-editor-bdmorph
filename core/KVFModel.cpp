@@ -381,9 +381,12 @@ void KVFModel::applyVFLogSpiral()
 		vertices[i] = newPoints[i] / counts[i];
 
 	int totalTime = lastVFCalcTime + lastLogSpiralTime;
-    int FPS = 1000 / (totalTime);
-    printf("Total solve time:      %i msec (%i FPS)\n", totalTime, FPS);
-    printf("\n");
+
+	if (totalTime) {
+		int FPS = 1000 / (totalTime);
+		printf("Total solve time:      %i msec (%i FPS)\n", totalTime, FPS);
+		printf("\n");
+	}
 
     historyAdd(disps);
 }

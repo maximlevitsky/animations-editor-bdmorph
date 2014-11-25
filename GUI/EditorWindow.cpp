@@ -25,11 +25,16 @@ EditorWindow::EditorWindow(QWidget* parent) :
 			multitouchMode(false),
 			drawVF(false),
 			drawVFOrig(false),
-			disableEdit(false)
+			disableEdit(false),
+			hoveredVertex(-1),
+			hoveredFace(-1),
+			showSelection(false)
 {
     setAttribute(Qt::WA_AcceptTouchEvents);
     setAttribute(Qt::WA_StaticContents);
     setFocusPolicy(Qt::WheelFocus);
+    setMouseTracking(true);
+    setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
 /******************************************************************************************************************************/
@@ -111,6 +116,22 @@ void EditorWindow::drawVFModeChanged(bool m)
 void EditorWindow::drawOrigVFModeChanged(bool m)
 {
 	drawVFOrig = m;
+	repaint();
+}
+
+void EditorWindow::showSelectionChanged(bool m)
+{
+	showSelection = m;
+
+	if (showSelection) {
+		setMouseTracking(true);
+	} else {
+		setMouseTracking(false);
+		hoveredFace = -1;
+		hoveredVertex = -1;
+		emit selectionChanged(-1,-1);
+	}
+
 	repaint();
 }
 
@@ -242,7 +263,19 @@ void EditorWindow::paintGL()
 	/* render selected vertices */
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	glColor4f(1,0,0,1);
+	if (hoveredFace != -1)
+	{
+		glColor4f(0,0,1,0.5);
+		renderModel->renderFace(hoveredFace);
+	}
+
+	if (hoveredVertex != -1)
+	{
+		glColor3f(0,0,1);
+		renderModel->renderVertex(hoveredVertex, ratio);
+	}
+
+	glColor3f(1,0,0);
 	for (unsigned int i = 0; i < selectedVertices.size(); i++)
 		renderModel->renderVertex(selectedVertices[i], ratio);
 
@@ -310,7 +343,7 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 		QTouchEvent::TouchPoint p = touchPoints[i];
 		if (touchPointLocations.count(p.id()) == 0) {
 			touchPointLocations[p.id()] = p.pos();
-			touchToVertex[p.id()] = closestIndex(p.pos());
+			touchToVertex[p.id()] = editModel->getClosestVertex(screenToModel(p.pos()));
 		}
 		ids.insert(p.id());
 	}
@@ -406,28 +439,29 @@ void EditorWindow::keyPressEvent(QKeyEvent *e)
 /******************************************************************************************************************************/
 void EditorWindow::mousePressEvent(QMouseEvent *event)
 {
-	if (disableEdit)
+	if (disableEdit || !editModel)
 		return;
 
     setCursor(Qt::BlankCursor);
+
     QPointF pos = event->pos(); // (0,0) is upper left
     pos.setY(height()-pos.y()-1);
+    lastMousePos = pos;
 
-    lastMousePos = event->pos();
-    if (!editModel) return;
-
-    Vertex v = closestIndex(pos);
+    Vertex v = editModel->getClosestVertex(screenToModel(pos));
     if (v == -1) return;
 
 	if ((QApplication::keyboardModifiers() & Qt::ShiftModifier) || pinMode)
 	{
 		editModel->togglePinVertex(v);
+		repaint();
 
 	} else
 	{
 		/* Select this vertex */
 		selectedVertices.clear();
 		selectedVertices.push_back(v);
+		repaint();
 	}
 }
 /******************************************************************************************************************************/
@@ -435,47 +469,49 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 {
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
-	if (disableEdit)
+	if (disableEdit || !editModel || multitouchMode)
 		return;
 
 	QPointF oldPos = lastMousePos;
     QPointF curPos = event->pos();
-    lastMousePos = curPos;
+    curPos.setY(height()-curPos.y()-1);
 
-    if (multitouchMode)
-    	return;
+    lastMousePos = curPos;
 
 	if ((event->buttons() & Qt::RightButton))
 	{
         QPointF diff = curPos - oldPos;
-		move(QPointF(diff.x(),-diff.y()));
-	} 
-
-    if ((event->buttons() & Qt::LeftButton) && (!(mods & Qt::ShiftModifier)) && !pinMode && selectedVertices.size())
+		move(QPointF(diff.x(),diff.y()));
+		repaint();
+	}
+	else if ((event->buttons() & Qt::LeftButton) && (!(mods & Qt::ShiftModifier)) && !pinMode && selectedVertices.size())
     {
+		QPointF diff = curPos - oldPos;
+		Vertex selectedVertex = selectedVertices[0];
+		diff *= editModel->getWidth() / modelWidth;
 
-    	if (editModel) {
-			QPointF diff = curPos - oldPos;
-			Vertex selectedVertex = selectedVertices[0];
-			diff *= editModel->getWidth() / modelWidth;
+		if (diff.rx() == 0 && diff.ry() == 0)
+			return;
 
-			std::cout << "Mouse move delta:" << diff.rx() << "-" << diff.ry() << std::endl;
+		std::cout << "Mouse move delta:(" << diff.rx() << "," << diff.ry() << ")" << std::endl;
 
-			if (diff.rx() == 0 && diff.ry() == 0)
-				return;
+		std::set<DisplacedVertex> disps;
+		disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),diff.y())));
+		editModel->calculateVF(disps);
 
-			std::set<DisplacedVertex> disps;
-			disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),-diff.y())));
-			editModel->calculateVF(disps);
+		if (!drawVF && !drawVFOrig)
+			editModel->applyVFLogSpiral();
 
-			if (!drawVF && !drawVFOrig)
-				editModel->applyVFLogSpiral();
-
-			emit modelEdited(editModel);
-    	}
-        update();
+		emit modelEdited(editModel);
+    	repaint();
     }
-    repaint();
+	else if (event->buttons() == Qt::NoButton && showSelection)
+	{
+		hoveredVertex = editModel->getClosestVertex(screenToModel(curPos));
+		hoveredFace = editModel->getFaceUnderPoint(screenToModel(curPos));
+		emit selectionChanged(hoveredVertex,hoveredFace);
+		repaint();
+	}
 }
 
 /******************************************************************************************************************************/
@@ -494,14 +530,6 @@ void EditorWindow::wheelEvent(QWheelEvent *event)
 
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
 	update();
-}
-
-/******************************************************************************************************************************/
-int EditorWindow::closestIndex(QPointF pos)
-{
-	if (!renderModel)
-		return -1;
-	return renderModel->getClosestVertex(screenToModel(pos));
 }
 
 /******************************************************************************************************************************/
