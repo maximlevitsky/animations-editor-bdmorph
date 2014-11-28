@@ -32,6 +32,10 @@ static double inline twice_cot_from_tan_half_angle(double x)
 	/* case for degenerate triangles */
 	if (x == 0 || x == std::numeric_limits<double>::infinity())
 		return 0;
+
+	/* TODO: restore optimized version when we are happy with the code */
+	return 2.0 / tan(atan(x)*2);
+
 	return (1.0 - (x * x)) /  x;
 }
 
@@ -285,13 +289,11 @@ void BDMORPH_BUILDER::layoutVertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex p
 	TmpMemAdddress p1_pos = load_vertex_position(p1);
 	TmpMemAdddress r0_pos = compute_squared_edge_len(r0);
 	TmpMemAdddress r1_pos = compute_squared_edge_len(r1);
-	TmpMemAdddress d_pos  = compute_squared_edge_len(d);
 
 	extract_stream.push_byte(COMPUTE_VERTEX);
 	extract_stream.push_word(p0_pos);
 	extract_stream.push_word(p1_pos);
 	extract_stream.push_dword(p2);
-	extract_stream.push_word(d_pos);
 	extract_stream.push_word(r0_pos);
 	extract_stream.push_word(r1_pos);
 
@@ -587,6 +589,12 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	solver.analyzePattern(*EnergyHessian);
 	solver.factorize(*EnergyHessian);
+
+	if (solver.info() != 0) {
+		printf("factorization falied, retval = %d\n", solver.info());
+		return true;
+	}
+
 	K = solver.solve(NewtonRHS);
 	return false;
 }
@@ -645,7 +653,7 @@ void BDMORPHModel::finalize_iterations()
 
 			Point2& p2 = vertices[v2];
 
-			double d   = temp_data[cmd.word()];
+			double d   = p0->distanceSquared(*p1);
 			double r0d = temp_data[cmd.word()] / d;
 			double r1d = temp_data[cmd.word()] / d;
 
