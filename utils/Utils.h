@@ -4,6 +4,7 @@
 #include <ctime>
 #include <vector>
 #include <algorithm>
+#include <assert.h>
 #include <stdint.h>
 #include "vector2d.h"
 
@@ -101,7 +102,7 @@ struct OrderedEdge
 struct Edge :  public OrderedEdge
 {
 	/* Edged are unordered, so sort endpoints*/
-	Edge(Vertex v0,Vertex v1) : OrderedEdge(v0,v1)
+	Edge(Vertex v0new,Vertex v1new) : OrderedEdge(v0new,v1new)
 	{
 		if (v1 > v0) std::swap(v0,v1);
 	}
@@ -184,7 +185,7 @@ public:
 	}
 
 	void push_dword(uint32_t data) {
-		cmd_stream.push_back((data >> 0)  & 0xFF);
+		cmd_stream.push_back((data >> 0)  & 0xFF );
 		cmd_stream.push_back((data >> 8)  & 0xFF );
 		cmd_stream.push_back((data >> 16) & 0xFF );
 		cmd_stream.push_back((data >> 24) & 0xFF );
@@ -200,6 +201,32 @@ public:
 			out.stream[i] = *iter;
 		}
 	}
+};
+
+typedef unsigned int TmpMemAdddress;
+
+class TmpMemAllocator
+{
+public:
+
+	TmpMemAllocator() { nextVarAddress = 0; }
+
+	TmpMemAdddress getNewVar(int size = 1)
+	{
+		TmpMemAdddress retval = nextVarAddress;
+		nextVarAddress += size;
+		return retval;
+	}
+
+	uint16_t getSize() { return (uint16_t)nextVarAddress; }
+
+	bool validAddress(TmpMemAdddress address)
+	{
+		assert(address <= nextVarAddress);
+		return nextVarAddress - address < 0x7FFF;
+	}
+private:
+	TmpMemAdddress nextVarAddress;
 };
 
 /***********************************************************************************************/

@@ -260,7 +260,7 @@ double* CholmodSparseMatrix::addElement(int r, int c, double value)
 	column[curLocation] = c;
 	numNonzero++;
 	curLocation++;
-	return &values[curLocation];
+	return &values[curLocation-1];
 }
 
 /******************************************************************************************************************************/

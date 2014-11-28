@@ -340,8 +340,16 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
-	testModel  = new BDMORPHModel(*currentFrameModel);
-	testModel->initialize(3);
-	testModel->solve(currentFrameModel,currentFrameModel,0);
+	testModel  = new BDMORPHModel(*model);
+	testModel->initialize(570);
+	testModel->solve(model,currentFrameModel,0.5);
+
+	TimeMeasurment t;
+	int iterations = testModel->solve(model,currentFrameModel,0.5);
+	int msec = t.measure_msec();
+
+	emit frameSwitched(testModel);
+
+	printf("Took (%i) iterations %d msec, %d FPS\n", iterations, msec, 1000/msec);
 }
 

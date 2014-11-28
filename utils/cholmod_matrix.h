@@ -98,11 +98,14 @@ public:
     	matrix.p = getAp();
     	matrix.i = getAi();
     	matrix.x = getAx();
+    	matrix.z = NULL;
     	matrix.stype = 0;
     	matrix.itype = CHOLMOD_INT;
     	matrix.xtype = CHOLMOD_REAL;
+    	matrix.dtype = CHOLMOD_DOUBLE;
     	matrix.sorted = 1;
     	matrix.packed = TRUE;
+    	matrix.nz = NULL;
     }
 
 
@@ -165,7 +168,7 @@ public:
 	double* getValues()  { return (double*)values->x; }
 
 	~CholmodVector() { cholmod_free_dense(&values,cm); }
-private:
+public:
 	cholmod_dense* values;
 	cholmod_common *cm;
 };
