@@ -18,8 +18,12 @@ static double inline calculate_tan_half_angle(double a,double b,double c)
 	double down = (b+a-c)*(a+b+c);
 
 	/* degenerate cases to make convex problem domain */
-	if (up <= 0) return 0;
+	if (up <= 0)
+		return 0;
 	if (down <= 0) return std::numeric_limits<double>::infinity();
+
+	//assert(up > 0);
+	//assert(down > 0);
 
 	return sqrt (up/down);
 }
@@ -34,7 +38,7 @@ static double inline twice_cot_from_tan_half_angle(double x)
 		return 0;
 
 	/* TODO: restore optimized version when we are happy with the code */
-	return 2.0 / tan(atan(x)*2);
+	//return 2.0 / tan(atan(x)*2);
 
 	return (1.0 - (x * x)) /  x;
 }
@@ -498,6 +502,9 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	data.clear();
 
+	minTangent = std::numeric_limits<double>::max();
+	maxTangent = std::numeric_limits<double>::min();
+
 	while(!commands.ended()) {
 		switch(commands.byte())
 		{
@@ -532,7 +539,16 @@ bool BDMORPHModel::newton_iteration(int iteration)
 			double a = temp_data[commands.word()];
 			double b = temp_data[commands.word()];
 			double c = temp_data[commands.word()];
-			temp_data[tmp_idx] = calculate_tan_half_angle(a,b,c);
+
+			double tangent = calculate_tan_half_angle(a,b,c);
+
+			if (tangent < minTangent)
+				minTangent = tangent;
+
+			if (tangent > maxTangent)
+				maxTangent = tangent;
+
+			temp_data[tmp_idx] = tangent;
 			tmp_idx++;
 			break;
 
@@ -578,12 +594,15 @@ bool BDMORPHModel::newton_iteration(int iteration)
 		}}
 	}
 
-	if (grad_sum < END_ITERATION_VALUE)
+	printf("Iteretion %i, grad = %f, min tangent = %f, max tangent = %f\n", iteration, grad_sum, minTangent, maxTangent);
+
+	if (grad_sum < END_ITERATION_VALUE) {
 		return true;
+	}
 
 	EnergyHessian->setFromTriplets(data.begin(),data.end());
 	EnergyHessian->makeCompressed();
-	NewtonRHS = *EnergyHessian * K - EnergyGradient;
+	NewtonRHS = *EnergyHessian * K - 0.5 *EnergyGradient;
 
 	Eigen::SparseLU<Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
 

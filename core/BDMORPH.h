@@ -137,6 +137,9 @@ private:
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
 
 	std::vector<Eigen::Triplet<double>> data;
+
+	double maxTangent;
+	double minTangent;
 };
 
 #endif

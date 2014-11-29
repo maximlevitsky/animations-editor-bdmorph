@@ -342,7 +342,7 @@ void MainWindow::onInterpolationTest()
 {
 	testModel  = new BDMORPHModel(*model);
 	testModel->initialize(800);
-	testModel->solve(model,currentFrameModel,0.5);
+	//testModel->solve(model,currentFrameModel,0.5);
 
 	TimeMeasurment t;
 	int iterations = testModel->solve(model,currentFrameModel,0.5);
