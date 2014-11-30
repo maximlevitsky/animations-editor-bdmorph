@@ -639,6 +639,12 @@ bool BDMORPHModel::newton_iteration(int iteration)
 	}
 
 	K = solver.solve(NewtonRHS);
+
+	if (solver.info() != 0) {
+		printf("solve falied, retval = %d\n", solver.info());
+		return true;
+	}
+
 	return false;
 }
 
