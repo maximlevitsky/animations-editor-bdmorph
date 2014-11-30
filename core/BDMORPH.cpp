@@ -93,11 +93,11 @@ int BDMORPH_BUILDER::allocate_K(Vertex vertex)
 }
 
 /*****************************************************************************************************/
-TmpMemAdddress BDMORPH_BUILDER::compute_edge_len(Edge e)
+int BDMORPH_BUILDER::compute_edge_len(Edge e)
 {
-	auto iter = edge_tmpbuf_locations.find(e);
+	auto iter = edge_L_locations.find(e);
 
-	if (iter == edge_tmpbuf_locations.end())
+	if (iter == edge_L_locations.end())
 	{
 		assert(edge_L_locations.find(e) == edge_L_locations.end());
 
@@ -113,13 +113,15 @@ TmpMemAdddress BDMORPH_BUILDER::compute_edge_len(Edge e)
 		iteration_stream.push_dword(allocate_K(e.v0));
 		iteration_stream.push_dword(allocate_K(e.v1));
 
-		TmpMemAdddress address = mainMemoryAllocator.getNewVar();
-		edge_tmpbuf_locations[e] = address;
+		//TmpMemAdddress address = mainMemoryAllocator.getNewVar();
+		//edge_tmpbuf_locations[e] = address;
+
+
 
 		//printf(">>>E(%i,%i) <-> L%i,T%i \n", e.v0,e.v1,edge_L_index,address);
-		return address;
+		return edge_L_index;
 	}
-
+#if 0
 	if (!mainMemoryAllocator.validAddress(iter->second))
 	{
 		/* creates command that copies edge len from L array to tmp buffer
@@ -136,6 +138,7 @@ TmpMemAdddress BDMORPH_BUILDER::compute_edge_len(Edge e)
 		//printf(">>>E(%i,%i) <-again-> L%i,T%i \n", e.v0,e.v1,iter->second, address);
 		return address;
 	}
+#endif
 
 	return iter->second;
 }
@@ -150,14 +153,14 @@ TmpMemAdddress BDMORPH_BUILDER::compute_angle(Vertex p0, Vertex p1, Vertex p2)
 	{
 		Edge e0(p0, p1), e1(p1, p2), e2(p2, p0);
 
-		TmpMemAdddress e0_len_pos = compute_edge_len(e0);
-		TmpMemAdddress e1_len_pos = compute_edge_len(e1);
-		TmpMemAdddress e2_len_pos = compute_edge_len(e2);
+		int e0_len_pos = compute_edge_len(e0);
+		int e1_len_pos = compute_edge_len(e1);
+		int e2_len_pos = compute_edge_len(e2);
 
 		iteration_stream.push_byte(COMPUTE_HALF_TAN_ANGLE);
-		iteration_stream.push_word((uint16_t)e0_len_pos);
-		iteration_stream.push_word((uint16_t)e1_len_pos);
-		iteration_stream.push_word((uint16_t)e2_len_pos);
+		iteration_stream.push_dword(e0_len_pos);
+		iteration_stream.push_dword(e1_len_pos);
+		iteration_stream.push_dword(e2_len_pos);
 
 		TmpMemAdddress address = mainMemoryAllocator.getNewVar();
 
@@ -525,28 +528,28 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 			assert (k1 < kCount && k2 < kCount);
 			assert(edge_num < edgeCount);
-			L[edge_num] = temp_data[tmp_idx]  = edge_len(L0[edge_num],getK(k1),getK(k2));
+			L[edge_num] = edge_len(L0[edge_num],getK(k1),getK(k2));
 
-			tmp_idx++;
+			//tmp_idx++;
 			edge_num++;
 			break;
 
 		} case LOAD_EDGE_LEN: {
 			/* this will be used rarely (if ever) to recompute overwritten edge lengths */
-			int L_location = commands.dword();
-			assert(L_location >=0 && L_location < edgeCount);
+			//int L_location = commands.dword();
+			//assert(L_location >=0 && L_location < edgeCount);
 
-			temp_data[tmp_idx] = L[L_location];
-			tmp_idx++;
+			//temp_data[tmp_idx] = L[L_location];
+			//tmp_idx++;
 			break;
 
 		} case COMPUTE_HALF_TAN_ANGLE: {
 			/* calculate 1/2 * tan(alpha) for an angle given lengths of its sides
 			 * the angle is between a and b
 			 * Lengths are taken from temp_data storage */
-			double a = temp_data[commands.word()];
-			double b = temp_data[commands.word()];
-			double c = temp_data[commands.word()];
+			double a = L[commands.dword()];
+			double b = L[commands.dword()];
+			double c = L[commands.dword()];
 
 			double tangent = calculate_tan_half_angle(a,b,c);
 

@@ -51,7 +51,7 @@ public:
 	/* Main phase */
 	VertexK allocate_K(Vertex vertex);
 
-	TmpMemAdddress compute_edge_len(Edge e);
+	int compute_edge_len(Edge e);
 	TmpMemAdddress compute_angle(Vertex p0, Vertex p1, Vertex p2);
 
 	void processVertexForNewtonIteration(Vertex v0, int neigh_count,
