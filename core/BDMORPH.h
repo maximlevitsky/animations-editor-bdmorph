@@ -23,7 +23,6 @@ enum command
 {
 	/* compute lengths of and edge*/
 	COMPUTE_EDGE_LEN = 0xF0,
-	LOAD_EDGE_LEN,
 
 	/* compute tan(alpha)/2 for an triangle*/
 	COMPUTE_HALF_TAN_ANGLE,
@@ -84,7 +83,6 @@ public:
 	std::map<Edge,int>  edge_L_locations;
 
 	/* locations of temp variables in tmpbuffer of iteration stream */
-	std::map<Edge,TmpMemAdddress>  edge_tmpbuf_locations;
 	std::map<Angle,TmpMemAdddress> angle_tmpbuf_len_variables;
 	TmpMemAllocator mainMemoryAllocator;
 
@@ -146,5 +144,8 @@ private:
 	Eigen::CholmodDecomposition <Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
 	bool firstRun;
 };
+
+
+
 
 #endif

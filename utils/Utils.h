@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include "vector2d.h"
+#include <stdarg.h>
 
 /***********************************************************************************************/
 
@@ -170,7 +171,6 @@ public:
 };
 
 /***********************************************************************************************/
-
 class CmdStreamBuilder
 {
 	std::vector<uint8_t> cmd_stream;
@@ -203,8 +203,8 @@ public:
 	}
 };
 
+/***********************************************************************************************/
 typedef unsigned int TmpMemAdddress;
-
 class TmpMemAllocator
 {
 public:
@@ -258,6 +258,18 @@ static inline bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3)
     b2 = planeSign(pt, v2, v3) < 0.0f;
     b3 = planeSign(pt, v3, v1) < 0.0f;
     return ((b1 == b2) && (b2 == b3));
+}
+
+/**********************************************************************************************/
+
+
+static inline void debug_printf(const char* string, ...)
+{
+#ifdef __DEBUG__
+	va_list list;
+	va_start(list,string);
+	vprintf(string,list);
+#endif
 }
 
 #endif

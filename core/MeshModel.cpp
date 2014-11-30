@@ -71,7 +71,7 @@ MeshModel::MeshModel(std::string &filename) :
 	std::map< int , std::map<int,int> > edgeCount;
 	for (auto iter = faces->begin() ; iter != faces->end() ; iter++)
     {
-		iter->makeClockWise(vertices);
+		//iter->makeClockWise(vertices);
 
         int a = iter->a();
         int b = iter->b();

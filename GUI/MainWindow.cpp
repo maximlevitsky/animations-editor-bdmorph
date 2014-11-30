@@ -235,7 +235,6 @@ void MainWindow::loadModel()
 
     TimeMeasurment t;
     testModel  = new BDMORPHModel(*model);
-    testModel->initialize(800);
     printf("Took (%i) msec to init, \n", t.measure_msec());
 }
 
@@ -345,6 +344,7 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
+	 testModel->initialize(570);
 	//testModel->solve(model,currentFrameModel,0.5);
 	TimeMeasurment t;
 	int iterations = testModel->solve(model,currentFrameModel,0.5);
