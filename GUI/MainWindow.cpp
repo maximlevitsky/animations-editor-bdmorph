@@ -232,6 +232,11 @@ void MainWindow::loadModel()
 
     /* set these statistics - will only change when loading new model */
     setStatusBarStatistics(model->getNumVertices(), model->getNumFaces());
+
+    TimeMeasurment t;
+    testModel  = new BDMORPHModel(*model);
+    testModel->initialize(800);
+    printf("Took (%i) msec to init, \n", t.measure_msec());
 }
 
 /*****************************************************************************************************/
@@ -340,15 +345,14 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
-	testModel  = new BDMORPHModel(*model);
-	testModel->initialize(800);
 	//testModel->solve(model,currentFrameModel,0.5);
-
 	TimeMeasurment t;
 	int iterations = testModel->solve(model,currentFrameModel,0.5);
 	int msec = t.measure_msec();
 
 	emit frameSwitched(testModel);
+
+	if (msec == 0) msec = 1;
 
 	printf("Took (%i) iterations %d msec, %d FPS\n", iterations, msec, 1000/msec);
 }

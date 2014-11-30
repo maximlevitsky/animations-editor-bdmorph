@@ -12,6 +12,8 @@
 #include "MeshModel.h"
 
 #include <Eigen/Eigen>
+#include <Eigen/SparseCore>
+#include <Eigen/CholmodSupport>
 #include <Eigen/SparseLU>
 
 using std::make_pair;
@@ -102,7 +104,7 @@ public:
 class BDMORPHModel : public MeshModel
 {
 public:
-	BDMORPHModel(MeshModel& orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) {
+	BDMORPHModel(MeshModel& orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , firstRun(true){
 
 	}
 
@@ -140,6 +142,9 @@ private:
 
 	double maxTangent;
 	double minTangent;
+
+	Eigen::CholmodDecomposition <Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
+	bool firstRun;
 };
 
 #endif

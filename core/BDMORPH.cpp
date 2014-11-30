@@ -11,6 +11,9 @@
 #define END_ITERATION_VALUE 1e-5
 #define NEWTON_MAX_ITERATIONS 150
 
+#include <Eigen/CholmodSupport>
+
+
 /*****************************************************************************************************/
 static double inline calculate_tan_half_angle(double a,double b,double c)
 {
@@ -83,8 +86,8 @@ int BDMORPH_BUILDER::allocate_K(Vertex vertex)
 		return -1;
 
 	auto res = external_vertex_id_to_K.insert(std::make_pair(vertex, external_vertex_id_to_K.size()));
-	if (res.second)
-		printf("++++K%i <-> V%i\n", res.first->second, vertex);
+	//if (res.second)
+	//	printf("++++K%i <-> V%i\n", res.first->second, vertex);
 
 	return res.first->second;
 }
@@ -113,7 +116,7 @@ TmpMemAdddress BDMORPH_BUILDER::compute_edge_len(Edge e)
 		TmpMemAdddress address = mainMemoryAllocator.getNewVar();
 		edge_tmpbuf_locations[e] = address;
 
-		printf(">>>E(%i,%i) <-> L%i,T%i \n", e.v0,e.v1,edge_L_index,address);
+		//printf(">>>E(%i,%i) <-> L%i,T%i \n", e.v0,e.v1,edge_L_index,address);
 		return address;
 	}
 
@@ -130,7 +133,7 @@ TmpMemAdddress BDMORPH_BUILDER::compute_edge_len(Edge e)
 		TmpMemAdddress address = mainMemoryAllocator.getNewVar();
 		edge_tmpbuf_locations[e] = address;
 
-		printf(">>>E(%i,%i) <-again-> L%i,T%i \n", e.v0,e.v1,iter->second, address);
+		//printf(">>>E(%i,%i) <-again-> L%i,T%i \n", e.v0,e.v1,iter->second, address);
 		return address;
 	}
 
@@ -158,7 +161,7 @@ TmpMemAdddress BDMORPH_BUILDER::compute_angle(Vertex p0, Vertex p1, Vertex p2)
 
 		TmpMemAdddress address = mainMemoryAllocator.getNewVar();
 
-		printf(">>>Angle [%i,%i,%i] : (T%i,T%i,T%i) <->T%i\n", p0,p1,p2,e0_len_pos,e1_len_pos,e2_len_pos, address);
+		//printf(">>>Angle [%i,%i,%i] : (T%i,T%i,T%i) <->T%i\n", p0,p1,p2,e0_len_pos,e1_len_pos,e2_len_pos, address);
 		angle_tmpbuf_len_variables[a] = address;
 		return address;
 	}
@@ -177,19 +180,19 @@ void BDMORPH_BUILDER::processVertexForNewtonIteration(Vertex v0, int neighbourCo
 	iteration_stream.push_dword(k0);
 	iteration_stream.push_word(neighbourCount);
 
-	printf("===== creating main code for vertex v%i - neightbour count == %i:\n", v0, neighbourCount);
-	printf(" ==> inner angles: ");
+	//printf("===== creating main code for vertex v%i - neightbour count == %i:\n", v0, neighbourCount);
+	//printf(" ==> inner angles: ");
 
 	/**********************************************************************************/
 
 	for (auto iter = inner_angles.begin() ; iter != inner_angles.end() ; iter++)
 	{
 		TmpMemAdddress angle_address = *iter;
-		printf("T%i ", angle_address);
+		//printf("T%i ", angle_address);
 		iteration_stream.push_word(angle_address);
 	}
 
-	printf("\n");
+	//printf("\n");
 
 	/**********************************************************************************/
 
@@ -209,29 +212,29 @@ void BDMORPH_BUILDER::processVertexForNewtonIteration(Vertex v0, int neighbourCo
 
 	/**********************************************************************************/
 
-	printf(" ==> not boundary vertices and their angles:\n");
+	//printf(" ==> not boundary vertices and their angles:\n");
 
 	for (auto iter = outer_anglesK.begin() ; iter != outer_anglesK.end() ; iter++)
 	{
 		iteration_stream.push_dword(iter->first);
 
-		printf("    K%i ", iter->first);
+		//printf("    K%i ", iter->first);
 
 		if (iter->first != k0) {
 			iteration_stream.push_word((uint16_t)iter->second.first);
 			iteration_stream.push_word((uint16_t)iter->second.second);
 
-			printf("(A T%i, A T%i)\n", iter->second.first, iter->second.second);
+			//printf("(A T%i, A T%i)\n", iter->second.first, iter->second.second);
 		} else
-			printf("(same vertex) \n");
+			;//printf("(same vertex) \n");
 	}
 
-	printf(" ==> boundary vertices and their angles:\n");
+	//printf(" ==> boundary vertices and their angles:\n");
 
 	/**********************************************************************************/
 	for (auto iter = outerAnglesOther.begin() ; iter != outerAnglesOther.end() ; iter++)
 	{
-		printf("    (A T%i, A T%i)\n", iter->first, iter->second);
+		//printf("    (A T%i, A T%i)\n", iter->first, iter->second);
 
 		iteration_stream.push_dword(-1);
 		iteration_stream.push_word((uint16_t)iter->first);
@@ -240,7 +243,7 @@ void BDMORPH_BUILDER::processVertexForNewtonIteration(Vertex v0, int neighbourCo
 
 	/**********************************************************************************/
 
-	printf("\n");
+	//printf("\n");
 }
 
 
@@ -392,8 +395,11 @@ void BDMORPHModel::initialize(Vertex startVertex)
 			/* Calculate the edges for newton iteration */
 			inner_angles.push_back(builder.compute_angle(v2,v0,v1));
 
-			outer_angles[v1].second = builder.compute_angle(v0,v1,v2);
-			outer_angles[v2].first = builder.compute_angle(v1,v2,v0);
+			Vertex a = builder.getNeighbourVertex(v0,v1);
+			Vertex b = builder.getNeighbourVertex(v1,v0);
+
+			outer_angles[v1].second = builder.compute_angle(v0,a,v1);
+			outer_angles[v1].first = builder.compute_angle(v0,b,v1);
 
 			/* Switch to next external edge */
 			v1 = v2;
@@ -502,6 +508,8 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	data.clear();
 
+	TimeMeasurment t;
+
 	minTangent = std::numeric_limits<double>::max();
 	maxTangent = std::numeric_limits<double>::min();
 
@@ -561,9 +569,9 @@ bool BDMORPHModel::newton_iteration(int iteration)
 			assert (neigh_count > 0 && neigh_count < 1000); /* sane value for debug */
 
 			/* calculate gradient  */
-			double grad_value =  -M_PI;
+			double grad_value =  M_PI;
 			for (int i = 0 ; i < neigh_count ; i++)
-				grad_value += atan(temp_data[commands.word()]);
+				grad_value -= atan(temp_data[commands.word()]);
 
 			grad_sum += fabs(grad_value);
 
@@ -584,10 +592,14 @@ bool BDMORPHModel::newton_iteration(int iteration)
 				double twice_cot2 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
 				double value = (twice_cot1 + twice_cot2)/8.0;
 
-				cotan_sum -= value;
+				cotan_sum += value;
 
-				if (neigh_K_index != -1)
-					data.push_back(Eigen::Triplet<double>(vertex_K_num, neigh_K_index, value));
+
+				if (neigh_K_index != -1) {
+
+					data.push_back(Eigen::Triplet<double>(vertex_K_num, neigh_K_index, -value));
+				}
+
 			}
 
 			data.push_back(Eigen::Triplet<double>(vertex_K_num, vertex_K_num, cotan_sum));
@@ -596,19 +608,28 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	printf("Iteretion %i, grad = %f, min tangent = %f, max tangent = %f\n", iteration, grad_sum, minTangent, maxTangent);
 
+
 	if (grad_sum < END_ITERATION_VALUE) {
 		return true;
 	}
 
+
+
 	EnergyHessian->setFromTriplets(data.begin(),data.end());
+
 	EnergyHessian->makeCompressed();
-	NewtonRHS = *EnergyHessian * K - 0.5 *EnergyGradient;
 
-	Eigen::SparseLU<Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
+	int msec = t.measure_msec();
+	printf("init took %d\n",msec);
 
-	solver.analyzePattern(*EnergyHessian);
+	NewtonRHS = *EnergyHessian * K - EnergyGradient;
+
+	if (firstRun) {
+		solver.analyzePattern(*EnergyHessian);
+		firstRun = false;
+	}
+
 	solver.factorize(*EnergyHessian);
-
 	if (solver.info() != 0) {
 		printf("factorization falied, retval = %d\n", solver.info());
 		return true;
