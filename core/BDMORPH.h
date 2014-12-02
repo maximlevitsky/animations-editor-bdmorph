@@ -141,7 +141,7 @@ private:
 	double maxTangent;
 	double minTangent;
 
-	Eigen::CholmodDecomposition <Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
+	Eigen::SparseLU<Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
 	bool firstRun;
 };
 
