@@ -559,11 +559,14 @@ bool BDMORPHModel::newton_iteration(int iteration)
 	EnergyHessian->setFromTriplets(data.begin(),data.end());
 	EnergyHessian->makeCompressed();
 
+
+
 	int msec = t.measure_msec();
 	printf("init took %d\n",msec);
 
 	NewtonRHS = *EnergyHessian * K - EnergyGradient;
 
+	/*
 	if (firstRun) {
 		solver.analyzePattern(*EnergyHessian);
 		firstRun = false;
@@ -579,7 +582,41 @@ bool BDMORPHModel::newton_iteration(int iteration)
 	if (solver.info() != 0) {
 		printf("solve falied, retval = %d\n", solver.info());
 		return true;
-	}
+	}*/
+
+
+	cholmod_sparse res;
+	  res.nzmax   = EnergyHessian->nonZeros();
+	  res.nrow    = EnergyHessian->rows();;
+	  res.ncol    = EnergyHessian->cols();
+	  res.p       = EnergyHessian->outerIndexPtr();
+	  res.i       = EnergyHessian->innerIndexPtr();
+	  res.x       = EnergyHessian->valuePtr();
+	  res.sorted  = 1;
+	  res.packed  = 1;
+	  res.dtype   = 0;
+	  res.stype   = -1;
+	  res.itype = CHOLMOD_LONG;
+	  res.xtype = CHOLMOD_REAL;
+	  res.dtype = CHOLMOD_DOUBLE;
+
+	if (!LL)
+		LL = cholmod_analyze(&res, cholmod_get_common());
+
+	cholmod_factorize(&res, LL, cholmod_get_common());
+
+    cholmod_dense *B = cholmod_zeros(kCount,1,CHOLMOD_REAL, cholmod_get_common());
+
+    for (int i = 0 ; i < kCount ; i++)
+    	((double*)(B->x))[i] = NewtonRHS[i];
+
+    cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, B, cholmod_get_common());
+
+    for (int i = 0 ; i < kCount ; i++)
+    	K[i] = ((double*)(Xcholmod->x))[i];
+
+    cholmod_free_dense(&B,cholmod_get_common());
+    cholmod_free_dense(&Xcholmod,cholmod_get_common());
 	return false;
 }
 

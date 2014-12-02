@@ -102,7 +102,7 @@ public:
 class BDMORPHModel : public MeshModel
 {
 public:
-	BDMORPHModel(MeshModel& orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , firstRun(true){
+	BDMORPHModel(MeshModel& orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , LL(NULL){
 
 	}
 
@@ -141,8 +141,7 @@ private:
 	double maxTangent;
 	double minTangent;
 
-	Eigen::SparseLU<Eigen::SparseMatrix<double, Eigen::ColMajor> > solver;
-	bool firstRun;
+	cholmod_factor *LL;
 };
 
 
