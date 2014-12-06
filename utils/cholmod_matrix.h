@@ -61,6 +61,7 @@ public:
     void transpose(CholmodSparseMatrix &result);
 
     void multiply(double* x, double* b);
+    void multiplySymm(double* x, double* b);
 	void transposeMultiply(double* x, double* b);
 
 	void zeroOutColumns(std::set<int>& cols, int shift = 0);
@@ -101,7 +102,7 @@ public:
     	matrix.x = getAx();
     	matrix.z = NULL;
     	matrix.stype = 0;
-    	matrix.itype = CHOLMOD_LONG;
+    	matrix.itype = CHOLMOD_INT;
     	matrix.xtype = CHOLMOD_REAL;
     	matrix.dtype = CHOLMOD_DOUBLE;
     	matrix.sorted = 1;

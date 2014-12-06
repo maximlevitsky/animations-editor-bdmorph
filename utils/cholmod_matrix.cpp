@@ -279,6 +279,23 @@ void CholmodSparseMatrix::multiply(double* x, double* b)
 			b[i] += values[j] * x[column[j]];
 }
 
+void CholmodSparseMatrix::multiplySymm(double* x, double* b)
+{
+	for (unsigned int i = 0; i < nr; i++)
+		b[i] = 0;
+	for (unsigned int i = 0; i < nr; i++)
+		for (unsigned int j = rowStart[i]; j < rowEnd(i) && column[j] <= i; j++)
+			b[i] += values[j] * x[column[j]];
+
+	for (unsigned int i = 0; i < nr; i++)
+		// row i
+		for (unsigned int j = rowStart[i]; j < rowEnd(i) && column[j] < i; j++)
+			// column column[j]
+			b[column[j]] += values[j] * x[i];
+
+}
+
+
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::transposeMultiply(double* x, double* b)
 {

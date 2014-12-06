@@ -1,5 +1,5 @@
 
-#define __DEBUG__
+#undef __DEBUG__
 
 #include <assert.h>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "BDMORPH.h"
 
 #define END_ITERATION_VALUE 1e-10
-#define NEWTON_MAX_ITERATIONS 5
+#define NEWTON_MAX_ITERATIONS 20
 
 /*****************************************************************************************************/
 static double inline calculate_tan_half_angle(double a,double b,double c)
@@ -206,32 +206,30 @@ void BDMORPH_BUILDER::processVertexForNewtonIteration(Vertex v0, int neighbourCo
 		Vertex v = iter->first;
 		VertexK k = allocate_K(v);
 
-		if (k != -1)
+		if (k != -1 && k <= k0)
 			outer_anglesK[k] = iter->second;
 		else
 			outerAnglesOther.insert(iter->second);
 	}
 
 	/**********************************************************************************/
-	debug_printf(" ==> not boundary vertices and their angles:\n");
+	debug_printf(" ==> angles for hessian:\n");
 	for (auto iter = outer_anglesK.begin() ; iter != outer_anglesK.end() ; iter++)
 	{
-		iteration_stream.push_dword(iter->first);
 
 		debug_printf("    K%i ", iter->first);
 
 		if (iter->first != k0) {
+			iteration_stream.push_dword(iter->first);
 			iteration_stream.push_word((uint16_t)iter->second.first);
 			iteration_stream.push_word((uint16_t)iter->second.second);
-
 			debug_printf("(A T%i, A T%i)\n", iter->second.first, iter->second.second);
-		} else
-			debug_printf("(same vertex) \n");
+		}
 	}
 
 
 	/**********************************************************************************/
-	debug_printf(" ==> boundary vertices and their angles:\n");
+	debug_printf(" ==> other angles:\n");
 	for (auto iter = outerAnglesOther.begin() ; iter != outerAnglesOther.end() ; iter++)
 	{
 		debug_printf("    (A T%i, A T%i)\n", iter->first, iter->second);
@@ -478,7 +476,7 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) : MeshModel(orig), L(NULL), L0(NULL)
 	EnergyGradient.resize(kCount);
 	NewtonRHS.resize(kCount);
 
-	EnergyHessian.reshape(kCount,kCount, 6*numFaces);
+	EnergyHessian.reshape(kCount,kCount, 3*numFaces);
 
 	int tempMemSize = std::max(builder.mainMemoryAllocator.getSize(),builder.finalizeStepMemoryAllocator.getSize());
 	temp_data = new double_t[tempMemSize];
@@ -553,10 +551,10 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	TimeMeasurment t;
 
-	printf("K: ");
-    for (int i = 0 ; i < kCount ; i++)
-    	printf("%20.16f ", K[i]);
-    printf("\n");
+	//printf("K: ");
+    //for (int i = 0 ; i < kCount ; i++)
+    //	printf("%20.16f ", K[i]);
+    //printf("\n");
 
 
 	double minAngle = std::numeric_limits<double>::max();
@@ -626,19 +624,16 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 			/* calculate corresponding row in the Hessian */
 			double cotan_sum = 0;
-			double *sumCell = NULL;
 
-			printf("row %d: ", vertex_K_num);
+			//printf("row %d: ", vertex_K_num);
 
-			for (int i = 0 ; i < neigh_count+1 ; i++)
+			for (int i = 0 ; i < neigh_count ; i++)
 			{
 				VertexK neigh_K_index = commands.dword();
 				assert (neigh_K_index >= -1 && neigh_K_index < kCount);
 
-				if (neigh_K_index == vertex_K_num) {
-					sumCell = EnergyHessian.addElement(vertex_K_num,vertex_K_num,0);
-					continue;
-				}
+				//if (neigh_K_index == vertex_K_num)
+				//	continue;
 
 				double twice_cot1 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
 				double twice_cot2 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
@@ -648,14 +643,14 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 				if (neigh_K_index != -1) {
 					EnergyHessian.addElement(vertex_K_num, neigh_K_index, -value);
-					printf("%d - %5.10f(value) ", neigh_K_index, -value);
+					//printf("%d - %5.10f(value) ", neigh_K_index, -value);
 
 				}
 			}
 
-			*sumCell = cotan_sum;
-			printf("diag - %5.10f(value) ", cotan_sum);
-			printf("\n");
+			EnergyHessian.addElement(vertex_K_num, vertex_K_num, cotan_sum);
+			//printf("diag - %5.10f(value) ", cotan_sum);
+			//printf("\n");
 		}}
 	}
 
@@ -672,27 +667,27 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	printf("BDMORPH: iteration %i : matrix construct time: %f msec\n", iteration, t.measure_msec());
 
-	printf("EnergyGradient: ");
-    for (int i = 0 ; i < kCount ; i++)
-    	printf("%20.16f ", EnergyGradient[i]);
-    printf("\n");
+	//printf("EnergyGradient: ");
+    //for (int i = 0 ; i < kCount ; i++)
+    //	printf("%20.16f ", EnergyGradient[i]);
+    //printf("\n");
 
 
-	EnergyHessian.multiply(K.getValues(),NewtonRHS.getValues());
+	EnergyHessian.multiplySymm(K.getValues(),NewtonRHS.getValues());
 
-	printf("NewtonRHS before sub: ");
-    for (int i = 0 ; i < kCount ; i++)
-    	printf("%20.16f ", NewtonRHS[i]);
-    printf("\n");
+	//printf("NewtonRHS before sub: ");
+    //for (int i = 0 ; i < kCount ; i++)
+   // 	printf("%20.16f ", NewtonRHS[i]);
+    //printf("\n");
 
 
 	NewtonRHS.sub(EnergyGradient);
 
 
-	printf("NewtonRHS after sub: ");
-    for (int i = 0 ; i < kCount ; i++)
-    	printf("%20.16f ", NewtonRHS[i]);
-    printf("\n");
+	//printf("NewtonRHS after sub: ");
+    //for (int i = 0 ; i < kCount ; i++)
+    //	printf("%20.16f ", NewtonRHS[i]);
+    //printf("\n");
 
 
 
@@ -701,22 +696,15 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 	cholmod_sparse res;
 	EnergyHessian.getCholmodMatrix(res);
+	res.stype = 1;
 
 	if (!LL)
 		LL = cholmod_analyze(&res, cholmod_get_common());
 
 	cholmod_factorize(&res, LL, cholmod_get_common());
 
-    cholmod_dense *B = cholmod_zeros(kCount,1,CHOLMOD_REAL, cholmod_get_common());
-
-    for (int i = 0 ; i < kCount ; i++)
-    	((double*)(B->x))[i] = NewtonRHS[i];
-
-    cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, B, cholmod_get_common());
-
-    for (int i = 0 ; i < kCount ; i++)
-    	K[i] = ((double*)Xcholmod->x)[i];
-
+	cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, NewtonRHS, cholmod_get_common());
+    K.setData(Xcholmod);
 
 	printf("BDMORPH: iteration %i : solve time: %f msec\n", iteration, t.measure_msec());
     return false;
