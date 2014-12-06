@@ -19,17 +19,17 @@ public:
 
     double getWidth() { return maxPoint.x - minPoint.x; }
     double getHeight() { return maxPoint.y - minPoint.y; }
-    void getActualBBox(Vector2 &minP, Vector2 &maxP);
+    BBOX getActualBBox();
 
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
-    int getClosestVertex(Point2 point);
+    int getClosestVertex(Point2 point, bool onlyInnerVertex = false);
     int getFaceUnderPoint(Point2 point);
 
 	/* rendering */
     virtual void render(double wireframeTrans);
-	void renderVertex(int v, double scale);
-	void renderFace(int f);
+	void renderVertex(unsigned int v, double scale);
+	void renderFace(unsigned int f);
 
 	/* save and load code */
     void replacePoints(const QString &filename);
@@ -42,7 +42,7 @@ public:
 	std::vector<Face> *faces;
 	std::set<int> *boundaryVertices;
 	std::vector<Point2> *texCoords;
-    int numVertices, numFaces;
+    unsigned int numVertices, numFaces;
 
     Vector2 minPoint;
     Vector2 maxPoint;

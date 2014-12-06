@@ -7,12 +7,6 @@
 #include <cholmod.h>
 #include <QtOpenGL>
 
-extern "C" {
-#include <amd.h>
-#include <ldl.h>
-#include <camd.h>
-}
-
 #define SQRT_2 1.41421356
 
 #include "Utils.h"
@@ -40,7 +34,9 @@ KVFModel::KVFModel(MeshModel* model) :
 	alpha1(0.5),
 	lastVFCalcTime(0),
 	lastLogSpiralTime(0),
-	MeshModel(*model)
+	MeshModel(*model),
+	L2(NULL),
+	L1(NULL)
 {
 	faces = model->faces;
 	boundaryVertices = model->boundaryVertices;
@@ -52,132 +48,37 @@ KVFModel::KVFModel(MeshModel* model) :
     newPoints.resize(numVertices);
     counts.resize(numVertices);
 
+    P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
+    dx2.reshape(numFaces, numVertices, 3*numFaces);
+    dy2.reshape(numFaces, numVertices, 3*numFaces);
+
 	historyReset();
 
     KVFModel* otherModel = dynamic_cast<KVFModel*>(model);
+
     if (otherModel) {
-    	shared = true;
     	pinnedVertexes = otherModel->pinnedVertexes;
     	alpha1 = otherModel->alpha1;
-    	L2 = otherModel->L2;
-    } else
-    {
-    	shared = false;
-    	initialize();
     }
-}
-
-/******************************************************************************************************************************/
-void KVFModel::initialize()
-{
-    getP(P);
-    Pcopy.copy(P);
-    CholmodSparseMatrix covariance;
-    CholmodSparseMatrix trans;
-
-    /**********************************************************************/
-    TimeMeasurment t;
-    P.transpose(trans);
-    printf("Transpose time: %i msec\n", t.measure_msec());
-
-    /**********************************************************************/
-    trans.multiply(P, covariance);
-    printf("Covariance product time: %i msec\n", t.measure_msec());
-
-    /**********************************************************************/
-    printf("Computing permutation...\n");
-
-    int n = 2*numVertices;
-    LDL_int  *Parent, *Flag,  *Lp, *Lnz, *Pfw, *Pinv;
-    ALLOC_MEMORY(Parent, LDL_int, n);
-    ALLOC_MEMORY(Flag, LDL_int, n);
-    ALLOC_MEMORY(Lp, LDL_int, n+1);
-    ALLOC_MEMORY(Lnz, LDL_int, n);
-    ALLOC_MEMORY(Pfw, LDL_int, n);
-    ALLOC_MEMORY(Pinv, LDL_int, n);
-    LDL_int *Ap = covariance.getAp();
-
-    double Info[AMD_INFO];
-    if (amd_order (n, Ap, covariance.getAi(), Pfw, (double *) NULL, Info) < AMD_OK) {
-        printf("call to AMD failed\n");
-        exit(1);
-    }
-    amd_control((double*)NULL);
-    amd_info(Info);
-    printf("AMD time: %i msec\n", t.measure_msec());
-    /**********************************************************************/
-
-    printf("Doing symbolic ldl...\n");
-    ldl_symbolic (2*numVertices, Ap, covariance.getAi(), Lp, Parent, Lnz, Flag, Pfw, Pinv);
-    printf("Symbolic time: %i\n", t.measure_msec());
-
-    /**********************************************************************/
-    // Prefactor
-    CholmodVector boundaryRHS(2*numVertices,cholmod_get_common());
-
-    // for fun constrain boundary to (1,1)
-    for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it) {
-    	boundaryRHS[*it] = 1;
-    	boundaryRHS[*it + numVertices] = 1;
-    }
-
-    double *rhsMove = (double*)malloc(Pcopy.numRows()*sizeof(double));
-    Pcopy.multiply(boundaryRHS.getValues(), rhsMove);
-    for (int i = 0; i < Pcopy.numRows(); i++)
-        rhsMove[i] *= -1;
-
-    Pcopy.zeroOutColumns(*boundaryVertices);
-    Pcopy.zeroOutColumns(*boundaryVertices, numVertices);
-
-    CholmodVector B2(Pcopy.numCols(),cholmod_get_common());
-
-    Pcopy.transposeMultiply(rhsMove,B2.getValues());
-    std::vector<int> constrained;
-    for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it) {
-        int bv = *it;
-        constrained.push_back(*it);
-        constrained.push_back(*it+numVertices);
-        B2[bv] += 1;
-        B2[bv+numVertices] += 1;
-    }
-
-    Pcopy.addConstraint(constrained,1);
-
-    cholmod_sparse cSparse;
-    Pcopy.getCholmodMatrix(cSparse);
-    L2 = cholmod_analyze(&cSparse, cholmod_get_common());
-
-    printf("Prefactor time: %i\n", t.measure_msec());
-
-    free(rhsMove);
-    FREE_MEMORY(Parent, LDL_int);
-    FREE_MEMORY(Flag, LDL_int);
-    FREE_MEMORY(Lp, LDL_int);
-    FREE_MEMORY(Lnz, LDL_int);
-    FREE_MEMORY(Pfw, LDL_int);
-    FREE_MEMORY(Pinv, LDL_int);
 }
 
 /******************************************************************************************************************************/
 KVFModel::~KVFModel()
 {
-	if (!shared)
-		cholmod_free_factor(&L2, cholmod_get_common());
+	cholmod_free_factor(&L2, cholmod_get_common());
+	cholmod_free_factor(&L1, cholmod_get_common());
 }
 
 /******************************************************************************************************************************/
 void KVFModel::getP(CholmodSparseMatrix &prod)
 {
-    P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
-    dx2.reshape(numFaces, numVertices, 3*numFaces);
-    dy2.reshape(numFaces, numVertices, 3*numFaces);
 
     // examine matrix push_back when in right order
     P2.startMatrixFill();
     dx2.startMatrixFill();
     dy2.startMatrixFill();
 
-    for (int f = 0; f < numFaces; f++)
+    for (unsigned int f = 0; f < numFaces; f++)
     {
         int i = (*faces)[f][0];
         int j = (*faces)[f][1];
@@ -210,7 +111,7 @@ void KVFModel::getP(CholmodSparseMatrix &prod)
         P2.addElement(3*f+2, f+3*numFaces, 2);
     }
 
-    int colShift[4] = 				{0,       0,     numVertices, numVertices };
+    unsigned int colShift[4] = 				{0,       0,     numVertices, numVertices };
     CholmodSparseMatrix *list[4] =  {&dx2,    &dy2,  &dx2,        &dy2        };
 
     stacked.stack(list, 4, colShift);
@@ -236,11 +137,11 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 
     getP(P);
     Pcopy.copy(P);
-    printf("Construct P time:      %i msec\n", t.measure_msec());
+    printf("Construct P time:      %f msec\n", t.measure_msec());
 
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
-    CholmodVector B = CholmodVector(P.numCols(),cm);
+    CholmodVector B = CholmodVector(P.numCols());
     std::vector<int> indices2;
 
     double alpha = alpha1 / (2*allDisplacements.size()) * P.infinityNorm();
@@ -258,19 +159,19 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     cholmod_sparse cSparse;
     P.getCholmodMatrix(cSparse);
 
-    cholmod_factor *L = cholmod_analyze(&cSparse, cm);
-    cholmod_factorize(&cSparse, L, cm);
-    cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L, B, cm);
+    if (!L1) L1 = cholmod_analyze(&cSparse, cm);
+    cholmod_factorize(&cSparse, L1, cm);
+    cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L1, B, cm);
     double* Xx = (double*)Xcholmod->x;
 
-	for (int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < numVertices; i++)
 		vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
 
-    printf("Solve time:            %i msec\n", t.measure_msec());
+    printf("Solve time:            %f msec\n", t.measure_msec());
 
     /*+++++DIRICHLET SOLVE +++++++++++++++++++++++++++++++++++++++++*/
 
-    CholmodVector boundaryRHS = CholmodVector(2*numVertices,cm);
+    CholmodVector boundaryRHS = CholmodVector(2*numVertices);
     for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it)
     {
     	boundaryRHS[*it] = Xx[*it];
@@ -285,7 +186,7 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     Pcopy.zeroOutColumns(*boundaryVertices, 0);
     Pcopy.zeroOutColumns(*boundaryVertices, numVertices);
 
-    CholmodVector B2(Pcopy.numCols(), cm);
+    CholmodVector B2(Pcopy.numCols());
     Pcopy.transposeMultiply(rhsMove,B2.getValues());
 
     std::vector<int> constrained;
@@ -300,18 +201,18 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 
     Pcopy.addConstraint(constrained,1);
     Pcopy.getCholmodMatrix(cSparse);
+
+    if (!L2) L2 = cholmod_analyze(&cSparse, cm);
     cholmod_factorize(&cSparse, L2, cm);
     cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
     Xx = (double*)Xcholmod2->x;
 
-    printf("Dirichlet time:        %i msec\n", t.measure_msec());
+    printf("Dirichlet time:        %f msec\n", t.measure_msec());
 
-	for (int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < numVertices; i++)
 		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
 
     lastVFCalcTime = total.measure_msec();
-
-    cholmod_free_factor(&L, cm);
     cholmod_free_dense(&Xcholmod, cm);
     cholmod_free_dense(&Xcholmod2, cm);
     free(rhsMove);
@@ -326,7 +227,7 @@ void KVFModel::applyVFLogSpiral()
 	if(!pinnedVertexes.size())
 		return;
 
-    for (int i = 0; i < numVertices; i++)
+    for (unsigned int i = 0; i < numVertices; i++)
     {
         counts[i] = 0;
         newPoints[i] = Point2(0,0);
@@ -334,7 +235,7 @@ void KVFModel::applyVFLogSpiral()
 
     for (unsigned int i = 0; i < faces->size(); i++)
     {
-        for (int j = 0; j < 3; j++)
+        for (unsigned int j = 0; j < 3; j++)
         {
             int e1 = (*faces)[i][j];
             int e2 = (*faces)[i][(j+1)%3];
@@ -375,16 +276,16 @@ void KVFModel::applyVFLogSpiral()
     }
 
     lastLogSpiralTime  = t.measure_msec();
-    printf("Log spiral  time:      %i msec\n", lastLogSpiralTime);
+    printf("Log spiral  time:      %f msec\n", lastLogSpiralTime);
 
-	for (int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < numVertices; i++)
 		vertices[i] = newPoints[i] / counts[i];
 
-	int totalTime = lastVFCalcTime + lastLogSpiralTime;
+	double totalTime = lastVFCalcTime + lastLogSpiralTime;
 
 	if (totalTime) {
-		int FPS = 1000 / (totalTime);
-		printf("Total solve time:      %i msec (%i FPS)\n", totalTime, FPS);
+		double FPS = 1000 / (totalTime);
+		printf("Total solve time:      %f msec (%f FPS)\n", totalTime, FPS);
 		printf("\n");
 	}
 
@@ -394,9 +295,8 @@ void KVFModel::applyVFLogSpiral()
 /*****************************************************************************************************/
 void KVFModel::applyVF()
 {
-	for (int i = 0; i < numVertices; i++)
-		for (int j = 0; j < 2; j++)
-			vertices[i][j] += vf[i][j] * .5;
+	for (unsigned int i = 0; i < numVertices; i++)
+			vertices[i] += vf[i] * 0.5;
 
 	/* TODO: not completely correct*/
     historyAdd(disps);
@@ -411,26 +311,9 @@ void KVFModel::resetDeformations()
 /*****************************************************************************************************/
 void KVFModel::renderVFOrig()
 {
-	#define VF_SCALE 1
-
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-
-    glLineWidth(1.5);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	double totalNorm = 0;
-	for (int i = 0; i < numVertices; i++)
-		totalNorm += vfOrig[i].normSquared();
-	totalNorm = sqrt(totalNorm);
-
 	glColor3f(0,0,1);
-	glBegin(GL_LINES);
-	for (int i = 0; i < numVertices; i++) {
-		glVertex2f(vertices[i][0], vertices[i][1]);
-		glVertex2f(vertices[i][0]+vfOrig[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vfOrig[i][1]/totalNorm*VF_SCALE);
-	}
-	glEnd();
-
+	renderVF_common(vf);
     glPopAttrib();
 }
 
@@ -438,28 +321,30 @@ void KVFModel::renderVFOrig()
 void KVFModel::renderVF()
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-    glLineWidth(1.5);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-
-	double totalNorm = 0;
-	for (int i = 0; i < numVertices; i++)
-		totalNorm += vf[i].normSquared();
-	totalNorm = sqrt(totalNorm);
-
 	glColor3f(0,.5,0);
-	glBegin(GL_LINES);
-	for (int i = 0; i < numVertices; i++) {
-		glVertex2f(vertices[i][0], vertices[i][1]);
-		glVertex2f(vertices[i][0]+vf[i][0]/totalNorm*VF_SCALE, vertices[i][1]+vf[i][1]/totalNorm*VF_SCALE);
-	}
-	glEnd();
-
+	renderVF_common(vf);
     glPopAttrib();
 }
+/*****************************************************************************************************/
+void KVFModel::renderVF_common(std::vector<Vector2> &VF)
+{
+	#define VF_SCALE 1
 
+	glLineWidth(1.5);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-/* TODO: test undo/redo/log = lot of bugs there now */
+	double totalNorm = 0;
+	for (unsigned int i = 0; i < numVertices; i++)
+		totalNorm += VF[i].normSquared();
+	totalNorm = sqrt(totalNorm);
+
+	glBegin(GL_LINES);
+	for (unsigned int i = 0; i < numVertices; i++) {
+		glVertex2f(vertices[i][0], vertices[i][1]);
+		glVertex2f(vertices[i][0]+VF[i][0]/totalNorm*VF_SCALE, vertices[i][1]+VF[i][1]/totalNorm*VF_SCALE);
+	}
+	glEnd();
+}
 
 /******************************************************************************************************************************/
 void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
@@ -557,14 +442,14 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
     pinnedVertexes.clear();
 
 	/* load displacements */
-    int numDisplacements;
+    unsigned int numDisplacements;
     infile >> numDisplacements;
 
     if (numDisplacements == 0)
     	return;
 
     std::set<DisplacedVertex> displacements;
-    for (int j = 0; j < numDisplacements; j++)
+    for (unsigned int j = 0; j < numDisplacements; j++)
     {
     	DisplacedVertex v;
     	infile >> v.v >> v.displacement[0] >> v.displacement[1];
@@ -590,6 +475,7 @@ void KVFModel::historyReset()
 	redolog.clear();
 }
 
+/******************************************************************************************************************************/
 
 void KVFModel::setAlpha(double alpha)
 {
@@ -599,11 +485,13 @@ void KVFModel::setAlpha(double alpha)
 void KVFModel::pinVertex(Vertex v)
 {
 	pinnedVertexes.insert(v);
+	cholmod_free_factor(&L1, cholmod_get_common());
 }
 /******************************************************************************************************************************/
 void KVFModel::unPinVertex(Vertex v)
 {
 	pinnedVertexes.erase(v);
+	cholmod_free_factor(&L1, cholmod_get_common());
 }
 /******************************************************************************************************************************/
 
@@ -613,9 +501,13 @@ void KVFModel::togglePinVertex(Vertex v)
 		pinnedVertexes.erase(v);
 	else
 		pinnedVertexes.insert(v);
+
+	cholmod_free_factor(&L1, cholmod_get_common());
 }
 /******************************************************************************************************************************/
 void KVFModel::clearPins()
 {
 	pinnedVertexes.clear();
+
+	cholmod_free_factor(&L1, cholmod_get_common());
 }

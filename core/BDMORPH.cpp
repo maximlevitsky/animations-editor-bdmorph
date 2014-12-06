@@ -1,5 +1,5 @@
 
-#undef __DEBUG__
+#define __DEBUG__
 
 #include <assert.h>
 #include <vector>
@@ -10,8 +10,8 @@
 #include "Utils.h"
 #include "BDMORPH.h"
 
-#define END_ITERATION_VALUE 1e-5
-#define NEWTON_MAX_ITERATIONS 40
+#define END_ITERATION_VALUE 1e-10
+#define NEWTON_MAX_ITERATIONS 5
 
 /*****************************************************************************************************/
 static double inline calculate_tan_half_angle(double a,double b,double c)
@@ -22,9 +22,16 @@ static double inline calculate_tan_half_angle(double a,double b,double c)
 	/* degenerate cases to make convex problem domain */
 	if (up <= 0)
 		return 0;
-	if (down <= 0) return std::numeric_limits<double>::infinity();
 
-	return sqrt (up/down);
+	if (down <= 0)
+		return std::numeric_limits<double>::infinity();
+
+	assert(!isnan(up) && !isnan(down));
+
+	double val = up/down;
+	assert(val >= 0);
+
+	return sqrt (val);
 }
 
 /*****************************************************************************************************/
@@ -64,8 +71,44 @@ BDMORPH_BUILDER::BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& bou
 /*****************************************************************************************************/
 Vertex BDMORPH_BUILDER::getNeighbourVertex(Vertex v1, Vertex v2)
 {
-	assert(neighbours.find(OrderedEdge(v1, v2)) != neighbours.end());
-	return neighbours[OrderedEdge(v1, v2)];
+	auto iter = neighbours.find(OrderedEdge(v1, v2));
+	if (iter != neighbours.end())
+		return iter->second;
+	return -1;
+}
+
+/*****************************************************************************************************/
+
+
+void BDMORPH_BUILDER::getNeighbourVertices(Vertex v0, std::vector<Vertex>& result)
+{
+	result.clear();
+	Vertex v_start = getNeighbourVertex(v0);
+	Vertex v1 = v_start;
+
+	if (boundary_vertexes_set.count(v0) == 0)
+	{
+		do {
+			result.push_back(v1);
+			v1 = getNeighbourVertex(v0, v1);
+			assert(v1 != -1);
+		} while ( v1 != v_start);
+	}
+	else {
+
+		/* find first vertex in topological half circle*/
+		while (1) {
+			Vertex v_prev = getNeighbourVertex(v1,v0);
+			if (v_prev == -1)
+				break;
+			v1 = v_prev;
+		}
+
+		while (v1 != -1) {
+			result.push_back(v1);
+			v1 = getNeighbourVertex(v0, v1);
+		}
+	}
 }
 
 /*****************************************************************************************************/
@@ -208,18 +251,17 @@ TmpMemAdddress BDMORPH_BUILDER::compute_squared_edge_len(Edge& e)
 	auto iter = sqr_len_tmpbuf_locations.find(e);
 	if (iter == sqr_len_tmpbuf_locations.end() || !finalizeStepMemoryAllocator.validAddress(iter->second))
 	{
-		auto iter = edge_L_locations.find(e);
-		assert(iter != edge_L_locations.end());
-		int L_location = iter->second;
+		int L_location = compute_edge_len(e);
 
 		extract_stream.push_byte(LOAD_LENGTH_SQUARED);
 		extract_stream.push_dword(L_location);
 
 		TmpMemAdddress address = finalizeStepMemoryAllocator.getNewVar();
 		sqr_len_tmpbuf_locations[e] = address;
-		debug_printf(">>>Squared edge (%i,%i) len at mem[%i]\n", e.v0,e.v1,address);
+		debug_printf(">>>Squared edge (%i,%i) len (L%i) at mem[%i]\n", e.v0,e.v1, L_location, address);
 		return address;
 	}
+
 	return (iter->second);
 }
 
@@ -257,56 +299,72 @@ void BDMORPH_BUILDER::layoutVertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex p
 	extract_stream.push_word(r1_pos);
 
 	TmpMemAdddress address = finalizeStepMemoryAllocator.getNewVar(2);
-	debug_printf("++++ Computing vertex position for vertex %i to mem[%i]\n", p2, address);
-	debug_printf("   Using vertexes mem[%i],mem[%i] and distances: d at mem[%i], r0 at mem[%i] and r1 at mem[%i]", p0,p1,d,r0,r1);
+	debug_printf("++++ Computing vertex position for vertex %i to T%i\n", p2, address);
+	debug_printf("   Using vertexes T%i,T%i and distances: d at T%i, r0 at T%i and r1 at T%i\n", p0,p1,d,r0,r1);
 
 	vertex_position_tmpbuf_locations[p2] = address;
 }
 
 /*****************************************************************************************************/
-void BDMORPHModel::initialize(Vertex startVertex)
+BDMORPHModel::BDMORPHModel(MeshModel &orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , LL(NULL)
 {
-	std::set<Vertex> visitedVertices, mappedVertices, boundaryVerticesSet;
+	TimeMeasurment t;
+
+	std::set<Vertex> visitedVertices, mappedVertices;
 	std::deque<Vertex> vertexQueue;
 
-	boundaryVerticesSet.insert(boundaryVertices->begin(),boundaryVertices->end());
-	BDMORPH_BUILDER builder(*faces,boundaryVerticesSet);
-	builder.origModel = this;
+	BDMORPH_BUILDER builder(*faces,*boundaryVertices);
 
 	/*==============================================================*/
+	/* Find good enough start vertex*/
+	Point2 center = getActualBBox().center();
+	Vertex p0 = getClosestVertex(center, true);
+	Vertex p1 = builder.getNeighbourVertex(p0);
 
-	/* We assume that vertex queue has only non boundary vertexes
-	 * (and we start with non boundary vertex )
-	 */
-	while  (boundaryVerticesSet.count(startVertex) == 1) {
-		printf("Vertex is on boundary\n");
+	e0 = OrderedEdge(p0,p1);
 
-		startVertex = builder.aNeighbour[startVertex];
+	printf("+++++ Initial edge: %d,%d\n", e0.v0,e0.v1);
+
+	/* ================Pre allocate all K's=========== */
+	vertexQueue.push_back(e0.v0);
+	visitedVertices.insert(e0.v0);
+	while (!vertexQueue.empty())
+	{
+		Vertex v0 = vertexQueue.front();
+		vertexQueue.pop_front();
+		builder.allocate_K(v0);
+
+		std::vector<Vertex> neighbourVertices;
+		builder.getNeighbourVertices(v0, neighbourVertices);
+		for (unsigned int  i = 0 ; i < neighbourVertices.size() ; i++)
+		{
+					Vertex v1 = neighbourVertices[i];
+					if (visitedVertices.count(v1) == 0)
+					{
+						vertexQueue.push_back(v1);
+						visitedVertices.insert(v1);
+					}
+		}
+
 	}
-	vertexQueue.push_back(startVertex);
-	visitedVertices.insert(startVertex);
+	visitedVertices.clear();
+	assert(builder.getK_count() == numVertices - boundaryVertices->size());
 
 	/* ================Put information about initial triangle=========== */
 
-	Vertex v0 = startVertex;
-	Vertex v1 = builder.getNeighbourVertex(v0);
-	Vertex v2 = builder.getNeighbourVertex(v0,v1);
+	edge1_L_location = builder.compute_edge_len(Edge(e0.v0,e0.v1));
+	vertexQueue.push_back(e0.v0);
+	visitedVertices.insert(e0.v0);
 
-	builder.compute_edge_len(Edge(v0,v1));
-	builder.compute_edge_len(Edge(v1,v2));
-	builder.compute_edge_len(Edge(v2,v0));
+	/* ================Put information about initial triangle=========== */
 
-	builder.extract_stream.push_dword(v0);
-	builder.extract_stream.push_dword(v1);
-	builder.extract_stream.push_dword(builder.edge_L_locations[Edge(v0,v1)]);
+	Vertex v2 = builder.getNeighbourVertex(e0.v0,e0.v1);
+	builder.compute_edge_len(Edge(e0.v1,v2));
+	builder.compute_edge_len(Edge(v2,e0.v0));
+	builder.layoutVertex(Edge(e0.v0,e0.v1),Edge(e0.v1,v2),Edge(v2,e0.v0), e0.v0, e0.v1, v2);
 
-	/* Calculate the position of 3rd vertex almost normally
-	 * We need this, so later we keep the promise that we always have mapped neighbour */
-
-	builder.layoutVertex(Edge(v0,v1),Edge(v1,v2),Edge(v2,v0), v0, v1, v2);
-
-	mappedVertices.insert(v0);
-	mappedVertices.insert(v1);
+	mappedVertices.insert(e0.v0);
+	mappedVertices.insert(e0.v1);
 	mappedVertices.insert(v2);
 
 	/*==============================================================*/
@@ -314,16 +372,10 @@ void BDMORPHModel::initialize(Vertex startVertex)
 	std::vector<Face> neighFaces;
 	while (!vertexQueue.empty())
 	{
-		/* Center vertex that we deal with is assumed to be:
-		 * 1. non boundary (ensured by starting with non-boundary vertex and adding to queue only non-boundary vertexes
-		 * 2. mapped (ensured by mapping first face, and then always visiting neighbors and mapping their neighbors
-		 * 3. has at least one mapped neighbor - ensured by above
-		 * */
-
 		Vertex v0 = vertexQueue.front();
 		vertexQueue.pop_front();
-		assert(mappedVertices.count(v0) == 1);
 
+		bool boundaryVertex = boundaryVertices->count(v0) != 0;
 		Vertex v1_start = builder.getNeighbourVertex(v0);
 
 		/* These sets hold all relevant into to finally emit the COMPUTE_VERTEX_INFO command */
@@ -332,62 +384,55 @@ void BDMORPHModel::initialize(Vertex startVertex)
 
 		/* +++++++++++++++++++++Loop on neighbors to collect info +++++++++++++++++++++++++ */
 		Vertex map_start = -1;
-		Vertex v1 = v1_start;
-		Vertex v2 = builder.getNeighbourVertex(v0,v1);
-		int neighbourCount=0;
-		do
-		{
-			/* add the neighbor to BFS queue only if its not-boundary vertex (rule 1) and not visited yet */
-			if (boundaryVerticesSet.count(v2) == 0 && visitedVertices.count(v2) == 0) {
 
-				vertexQueue.push_back(v2);
-				visitedVertices.insert(v2);
+		std::vector<Vertex> neighbourVertices;
+		builder.getNeighbourVertices(v0, neighbourVertices);
+
+		assert(neighbourVertices.size() > 1);
+
+		for (unsigned int  i = 0 ; i < neighbourVertices.size() ; i++)
+		{
+			Vertex v1 = neighbourVertices[i];
+			Vertex v2 = (i == neighbourVertices.size() - 1) ? neighbourVertices[0] : neighbourVertices[i+1];
+
+			/* add the neighbor to BFS queue only if its not-boundary vertex (rule 1) and not visited yet */
+			if (visitedVertices.count(v1) == 0)
+			{
+				vertexQueue.push_back(v1);
+				visitedVertices.insert(v1);
 			}
 
 			/* one of vertices must be mapped */
 			if (mappedVertices.count(v1) != 0 && map_start == -1)
 				map_start = v1;
 
-			/* Calculate the edges for newton iteration */
-			inner_angles.push_back(builder.compute_angle(v2,v0,v1));
+			if (!boundaryVertex) {
+				/* Calculate the edges for newton iteration */
+				inner_angles.push_back(builder.compute_angle(v2,v0,v1));
 
-			Vertex a = builder.getNeighbourVertex(v0,v1);
-			Vertex b = builder.getNeighbourVertex(v1,v0);
+				Vertex a = builder.getNeighbourVertex(v0,v1);
+				Vertex b = builder.getNeighbourVertex(v1,v0);
 
-			outer_angles[v1].second = builder.compute_angle(v0,a,v1);
-			outer_angles[v1].first = builder.compute_angle(v0,b,v1);
-
-			/* Switch to next external edge */
-			v1 = v2;
-			v2 = builder.getNeighbourVertex(v0,v1);
-
-			assert(v1 != v0);
-
-			neighbourCount++;
+				outer_angles[v1].first = builder.compute_angle(v0,b,v1);
+				outer_angles[v1].second = builder.compute_angle(v0,a,v1);
+			}
 		}
-		while(v1 != v1_start);
 
-		outer_angles[v0].first = 0;
-
-		/* and finally emit command to compute the vertex */
-		builder.processVertexForNewtonIteration(v0,neighbourCount,inner_angles,outer_angles);
+		if (!boundaryVertex) {
+			outer_angles[v0].first = 0;
+			/* and finally emit command to compute the vertex */
+			builder.processVertexForNewtonIteration(v0,neighbourVertices.size(),inner_angles,outer_angles);
+		}
 
 		/* +++++++++++++++++++++Loop on neighbors to map them +++++++++++++++++++++++++ */
-
 		assert(map_start != -1);
+
 		v1_start = map_start;
+		Vertex v1 = v1_start;
+		Vertex v2 = builder.getNeighbourVertex(v0,v1);
 
-		v1 = v1_start;
-		v2 = builder.getNeighbourVertex(v0,v1);
-
-		do {
-			/* Mapping for solution extract pass:
-			 * v2 for sure has mapped edge, because we start with mapped edge v0,v1_start and
-			 * work counter clockwise from there.
-			 * We skip vertexes that were already mapped earlier
-			 *
-			 * this ensures correctness of rule 2
-			 */
+		while(v2 != -1)
+		{
 			if (mappedVertices.count(v2) == 0) {
 				builder.layoutVertex(Edge(v0,v1),Edge(v1,v2),Edge(v2,v0), v0, v1, v2);
 				mappedVertices.insert(v2);
@@ -395,10 +440,33 @@ void BDMORPHModel::initialize(Vertex startVertex)
 
 			v1 = v2;
 			v2 = builder.getNeighbourVertex(v0,v1);
+			if (v2 == v1_start)
+				break;
+		}
 
-		} while (v2 != v1_start);
+		/* ++++++++++++++++Loop on neighbors to map them (backward) ++++++++++++++++++++ */
 
+		if (boundaryVertex)
+		{
+			v1 = v1_start;
+			v2 = builder.getNeighbourVertex(v1,v0);
+
+			while(v2 != -1)
+			{
+				if (mappedVertices.count(v2) == 0) {
+					builder.layoutVertex(Edge(v1,v0),Edge(v0,v2),Edge(v2,v1), v1, v0, v2);
+					mappedVertices.insert(v2);
+				}
+
+				v1 = v2;
+				v2 = builder.getNeighbourVertex(v1,v0);
+			}
+		}
 	}
+
+
+	assert(visitedVertices.size() == numVertices);
+	assert(mappedVertices.size() == numVertices);
 
 	/*==============================================================*/
 	/* Allocate the arrays used for the real thing */
@@ -410,7 +478,7 @@ void BDMORPHModel::initialize(Vertex startVertex)
 	EnergyGradient.resize(kCount);
 	NewtonRHS.resize(kCount);
 
-	EnergyHessian = new Eigen::SparseMatrix<double>(kCount,kCount);
+	EnergyHessian.reshape(kCount,kCount, 6*numFaces);
 
 	int tempMemSize = std::max(builder.mainMemoryAllocator.getSize(),builder.finalizeStepMemoryAllocator.getSize());
 	temp_data = new double_t[tempMemSize];
@@ -418,18 +486,37 @@ void BDMORPHModel::initialize(Vertex startVertex)
 	L0 = new double[edgeCount];
 	L = new double[edgeCount];
 
-	builder.init_stream.get_stream(init_cmd_stream);
-	builder.iteration_stream.get_stream(iteration_cmd_stream);
-	builder.extract_stream.get_stream(extract_solution_cmd_stream);
+	init_cmd_stream = builder.init_stream.get_stream();
+	iteration_cmd_stream = builder.iteration_stream.get_stream();
+	extract_solution_cmd_stream = builder.extract_stream.get_stream();
 
-	data.resize(numFaces * 6);
+	printf("BDMORPH initialization time:  %f msec\n", t.measure_msec());
+}
+
+BDMORPHModel::~BDMORPHModel()
+{
+	delete [] L0;
+	delete [] L;
+	delete init_cmd_stream;
+	delete iteration_cmd_stream;
+	delete extract_solution_cmd_stream;
+	delete temp_data;
+	cholmod_free_factor(&LL, cholmod_get_common());
 }
 
 /*****************************************************************************************************/
 void BDMORPHModel::setup_iterations(MeshModel *a, MeshModel* b, double t)
 {
-	CmdStream commands = init_cmd_stream;
+	TimeMeasurment t1;
+
+	CmdStream commands(*init_cmd_stream);
 	int edge_num = 0;
+
+	Vector2 e0_direction1 = (a->vertices[e0.v1] - a->vertices[e0.v0]).normalize();
+	Vector2 e0_direction2 = (b->vertices[e0.v1] - b->vertices[e0.v0]).normalize();
+
+	vertices[e0.v0] = a->vertices[e0.v0] * (1.0-t) + b->vertices[e0.v0] * t;
+	e0_direction = (e0_direction1 * (1.0-t) + e0_direction2 * t).normalize();
 
 	while (!commands.ended())
 	{
@@ -454,20 +541,27 @@ void BDMORPHModel::setup_iterations(MeshModel *a, MeshModel* b, double t)
 		K[i] = 0;
 
 	assert(edge_num == edgeCount);
+
+	printf("BDMORPH: initial lengths evaluations took: %f msec\n", t1.measure_msec());
 }
 /*****************************************************************************************************/
 bool BDMORPHModel::newton_iteration(int iteration)
 {
 	uint16_t tmp_idx = 0; /* this is uint16_t on purpose to overflow when reaches maximum value*/
 	int edge_num = 0; double grad_sum = 0;
-	CmdStream commands = iteration_cmd_stream;
-
-	data.clear();
+	CmdStream commands(*iteration_cmd_stream);
 
 	TimeMeasurment t;
 
-	minTangent = std::numeric_limits<double>::max();
-	maxTangent = std::numeric_limits<double>::min();
+	printf("K: ");
+    for (int i = 0 ; i < kCount ; i++)
+    	printf("%20.16f ", K[i]);
+    printf("\n");
+
+
+	double minAngle = std::numeric_limits<double>::max();
+	double maxAngle = std::numeric_limits<double>::min();
+	EnergyHessian.startMatrixFill();
 
 	while(!commands.ended()) {
 		switch(commands.byte())
@@ -497,9 +591,6 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 			double tangent = calculate_tan_half_angle(a,b,c);
 
-			if (tangent < minTangent) minTangent = tangent;
-			if (tangent > maxTangent) maxTangent = tangent;
-
 			temp_data[tmp_idx] = tangent;
 			tmp_idx++;
 			break;
@@ -516,8 +607,18 @@ bool BDMORPHModel::newton_iteration(int iteration)
 			/* calculate gradient  */
 			double grad_value =  M_PI;
 
-			for (int i = 0 ; i < neigh_count ; i++)
-				grad_value -= atan(temp_data[commands.word()]);
+			for (int i = 0 ; i < neigh_count ; i++) {
+
+				double value = temp_data[commands.word()];
+				assert(value >= 0);
+
+				double angle = atan(value);
+
+				if (angle < minAngle) minAngle = angle;
+				if (angle > maxAngle) maxAngle = angle;
+
+				grad_value -= angle;
+			}
 
 			grad_sum += (grad_value*grad_value);
 
@@ -525,14 +626,19 @@ bool BDMORPHModel::newton_iteration(int iteration)
 
 			/* calculate corresponding row in the Hessian */
 			double cotan_sum = 0;
+			double *sumCell = NULL;
+
+			printf("row %d: ", vertex_K_num);
 
 			for (int i = 0 ; i < neigh_count+1 ; i++)
 			{
 				VertexK neigh_K_index = commands.dword();
 				assert (neigh_K_index >= -1 && neigh_K_index < kCount);
 
-				if (neigh_K_index == vertex_K_num)
+				if (neigh_K_index == vertex_K_num) {
+					sumCell = EnergyHessian.addElement(vertex_K_num,vertex_K_num,0);
 					continue;
+				}
 
 				double twice_cot1 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
 				double twice_cot2 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
@@ -541,64 +647,60 @@ bool BDMORPHModel::newton_iteration(int iteration)
 				cotan_sum += value;
 
 				if (neigh_K_index != -1) {
-					data.push_back(Eigen::Triplet<double>(vertex_K_num, neigh_K_index, -value));
+					EnergyHessian.addElement(vertex_K_num, neigh_K_index, -value);
+					printf("%d - %5.10f(value) ", neigh_K_index, -value);
+
 				}
 			}
 
-			data.push_back(Eigen::Triplet<double>(vertex_K_num, vertex_K_num, cotan_sum));
+			*sumCell = cotan_sum;
+			printf("diag - %5.10f(value) ", cotan_sum);
+			printf("\n");
 		}}
 	}
 
 	grad_sum = sqrt(grad_sum);
-	printf("Iteretion %i, grad = %f, min tangent = %f, max tangent = %f\n", iteration, grad_sum, minTangent, maxTangent);
+
+	printf("BDMORPH: iteration %i : ||grad|| = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
+			iteration, grad_sum, minAngle*2*(180.0/M_PI), maxAngle*2*(180.0/M_PI));
+	printf("BDMORPH: iteration %i : grad(F) and hess(F) evaluation time: %f msec\n",iteration, t.measure_msec());
 
 	if (grad_sum < END_ITERATION_VALUE) {
+		printf("BDMORPH: iteration %i : found solution\n", iteration);
 		return true;
 	}
 
-	EnergyHessian->setFromTriplets(data.begin(),data.end());
-	EnergyHessian->makeCompressed();
+	printf("BDMORPH: iteration %i : matrix construct time: %f msec\n", iteration, t.measure_msec());
+
+	printf("EnergyGradient: ");
+    for (int i = 0 ; i < kCount ; i++)
+    	printf("%20.16f ", EnergyGradient[i]);
+    printf("\n");
+
+
+	EnergyHessian.multiply(K.getValues(),NewtonRHS.getValues());
+
+	printf("NewtonRHS before sub: ");
+    for (int i = 0 ; i < kCount ; i++)
+    	printf("%20.16f ", NewtonRHS[i]);
+    printf("\n");
+
+
+	NewtonRHS.sub(EnergyGradient);
+
+
+	printf("NewtonRHS after sub: ");
+    for (int i = 0 ; i < kCount ; i++)
+    	printf("%20.16f ", NewtonRHS[i]);
+    printf("\n");
 
 
 
-	int msec = t.measure_msec();
-	printf("init took %d\n",msec);
 
-	NewtonRHS = *EnergyHessian * K - EnergyGradient;
-
-	/*
-	if (firstRun) {
-		solver.analyzePattern(*EnergyHessian);
-		firstRun = false;
-	}
-
-	solver.factorize(*EnergyHessian);
-	if (solver.info() != 0) {
-		printf("factorization falied, retval = %d\n", solver.info());
-		return true;
-	}
-
-	K = solver.solve(NewtonRHS);
-	if (solver.info() != 0) {
-		printf("solve falied, retval = %d\n", solver.info());
-		return true;
-	}*/
-
+	printf("BDMORPH: iteration %i : right side build time: %f msec\n", iteration, t.measure_msec());
 
 	cholmod_sparse res;
-	  res.nzmax   = EnergyHessian->nonZeros();
-	  res.nrow    = EnergyHessian->rows();;
-	  res.ncol    = EnergyHessian->cols();
-	  res.p       = EnergyHessian->outerIndexPtr();
-	  res.i       = EnergyHessian->innerIndexPtr();
-	  res.x       = EnergyHessian->valuePtr();
-	  res.sorted  = 1;
-	  res.packed  = 1;
-	  res.dtype   = 0;
-	  res.stype   = -1;
-	  res.itype = CHOLMOD_LONG;
-	  res.xtype = CHOLMOD_REAL;
-	  res.dtype = CHOLMOD_DOUBLE;
+	EnergyHessian.getCholmodMatrix(res);
 
 	if (!LL)
 		LL = cholmod_analyze(&res, cholmod_get_common());
@@ -613,34 +715,24 @@ bool BDMORPHModel::newton_iteration(int iteration)
     cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, B, cholmod_get_common());
 
     for (int i = 0 ; i < kCount ; i++)
-    	K[i] = ((double*)(Xcholmod->x))[i];
+    	K[i] = ((double*)Xcholmod->x)[i];
 
-    cholmod_free_dense(&B,cholmod_get_common());
-    cholmod_free_dense(&Xcholmod,cholmod_get_common());
-	return false;
+
+	printf("BDMORPH: iteration %i : solve time: %f msec\n", iteration, t.measure_msec());
+    return false;
 }
 
 /*****************************************************************************************************/
 void BDMORPHModel::finalize_iterations()
 {
-	CmdStream cmd = extract_solution_cmd_stream;
+
+	TimeMeasurment t;
+
+	CmdStream cmd(*extract_solution_cmd_stream);
 	uint16_t tmp_idx = 0;
 
 	/* first calculate vertex 0,and 1 */
-	Vertex anchor_vertex1 = cmd.dword();
-	Vertex anchor_vertex2 = cmd.dword();
-
-	assert(anchor_vertex1 >= 0 && anchor_vertex1 < numVertices);
-	assert(anchor_vertex2 >= 0 && anchor_vertex2 < numVertices);
-
-	int L_location = cmd.dword();
-	assert(L_location >= 0 && L_location < edgeCount);
-	double anchor_edge_len = L[L_location];
-
-	vertices[anchor_vertex1].x = 0;
-	vertices[anchor_vertex1].y = 0;
-	vertices[anchor_vertex2].x = anchor_edge_len;
-	vertices[anchor_vertex2].y = 0;
+	vertices[e0.v1] = vertices[e0.v0] + e0_direction * L[edge1_L_location];
 
 	while(!cmd.ended())
 	{
@@ -654,10 +746,18 @@ void BDMORPHModel::finalize_iterations()
 			temp_data[tmp_idx++] = len * len;
 			break;
 		}
+		case COMPUTE_EDGE_LEN_SQUARED:
+		{
+			Vertex v1 = cmd.dword();
+			Vertex v2 = cmd.dword();
+			temp_data[tmp_idx++] = vertices[v1].distanceSquared(vertices[v2]);
+			break;
+		}
+
 		case LOAD_VERTEX_POSITION:
 		{
 			Vertex v = cmd.dword();
-			assert(v >= 0 && v < numVertices);
+			assert(v >=0 && (unsigned int)v < numVertices);
 
 			Point2& p = vertices[v];
 			temp_data[tmp_idx++] = p.x;
@@ -670,7 +770,7 @@ void BDMORPHModel::finalize_iterations()
 			Point2* p1 = (Point2*)&temp_data[cmd.word()];
 
 			Vertex v2 = cmd.dword();
-			assert(v2 >= 0 && v2 < numVertices);
+			assert(v2 >= 0 && (unsigned int)v2 < numVertices);
 
 			Point2& p2 = vertices[v2];
 
@@ -691,10 +791,15 @@ void BDMORPHModel::finalize_iterations()
 			break;
 		}}
 	}
+
+	printf("BDMORPH: layout time: %f msec\n", t.measure_msec());
+
 }
 /*****************************************************************************************************/
 int BDMORPHModel::solve(MeshModel *a, MeshModel* b, double t)
 {
+	TimeMeasurment t1;
+
 	setup_iterations(a,b,t);
 	int iteration_num;
 
@@ -709,6 +814,11 @@ int BDMORPHModel::solve(MeshModel *a, MeshModel* b, double t)
 	}
 
 	finalize_iterations();
+
+	double msec = t1.measure_msec();
+	printf("BDMORPH: Took (%i) iterations, %f msec, %f FPS\n", iteration_num, msec, 1000.0/msec);
+	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
+
 	return iteration_num;
 }
 

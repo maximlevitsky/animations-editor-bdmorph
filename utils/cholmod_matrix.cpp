@@ -14,7 +14,7 @@ public:
 
 protected:
     void run() {
-    	std::map<int, double> rowValues; // for a given column, holds nonzero values
+    	std::map<unsigned int, double> rowValues; // for a given column, holds nonzero values
 
         for (int i = firstRow; i < lastRow; i++) { // compute the i-th row
             rowValues.clear(); // start out with zeroes
@@ -32,7 +32,7 @@ protected:
 
             // this better traverse in sorted order...
             int count = result->rowStart[i];
-            for (typename std::map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
+            for (auto it = rowValues.begin(); it != rowValues.end(); ++it) {
                 result->column[count] = it->first;
                 result->values[count] = it->second;
                 count++;
@@ -50,8 +50,8 @@ CholmodSparseMatrix::CholmodSparseMatrix()
 
     capacity = nz;
     values = (double*)malloc(nz*sizeof(double));
-    rowStart = (int*)malloc(nr*sizeof(int));
-    column = (int*)malloc(nz*sizeof(int));
+    rowStart = (unsigned int*)malloc(nr*sizeof(unsigned int));
+    column = (unsigned int*)malloc(nz*sizeof(unsigned int));
 
     if (!values || !rowStart || !column) {
         qWarning("Out of memory");
@@ -63,8 +63,8 @@ CholmodSparseMatrix::CholmodSparseMatrix(int r, int c, int nz)
     : nr(r), nc(c), numNonzero(0), capacity(nz) {
 
     values = (double*)malloc(nz*sizeof(double));
-    rowStart = (int*)malloc(nr*sizeof(int));
-    column = (int*)malloc(nz*sizeof(int));
+    rowStart = (unsigned int*)malloc(nr*sizeof(unsigned int));
+    column = (unsigned int*)malloc(nz*sizeof(unsigned int));
 
     if (!values || !rowStart || !column) {
         qWarning("Out of memory");
@@ -77,10 +77,10 @@ CholmodSparseMatrix::CholmodSparseMatrix(int r, int c, int nz)
 double CholmodSparseMatrix::infinityNorm()
 {
     double max = 0;
-    for (int i = 0; i < nr; i++) {
+    for (unsigned int i = 0; i < nr; i++) {
         double rowSum = 0;
 
-        for (int j = rowStart[i]; j < rowEnd(i); j++)
+        for (unsigned int j = rowStart[i]; j < rowEnd(i); j++)
             rowSum += ABS(values[j]);
 
         max = (max < rowSum)?rowSum:max;
@@ -96,16 +96,16 @@ void CholmodSparseMatrix::transpose(CholmodSparseMatrix &result)
 
     result.setCapacity(numNonzero);
     result.numNonzero = numNonzero;
-    result.rowStart = (int*)realloc(result.rowStart,nc*sizeof(int));
+    result.rowStart = (unsigned int*)realloc(result.rowStart,nc*sizeof(unsigned int));
 
     // colSize is malloc'ed -- eventually we should allocate it elsewhere
-    int *colSize = (int*)malloc(nc*sizeof(int));
-    memset(colSize, 0, nc*sizeof(int)); // make sure I did this right...
+    unsigned int *colSize = (unsigned int*)malloc(nc*sizeof(int));
+    memset(colSize, 0, nc*sizeof(int));
 
-    for (int i = 0; i < numNonzero; i++) colSize[ column[i] ]++;
+    for (unsigned int i = 0; i < numNonzero; i++) colSize[ column[i] ]++;
 
     result.rowStart[0] = 0;
-    for (int i = 1; i < nc; i++)
+    for (unsigned int i = 1; i < nc; i++)
         result.rowStart[i] = result.rowStart[i-1] + colSize[i-1];
 
     if (result.rowStart[nc-1] + colSize[nc-1] != numNonzero) {
@@ -115,8 +115,8 @@ void CholmodSparseMatrix::transpose(CholmodSparseMatrix &result)
 
     // now, reuse colSize to tell us now many things we've written
     memset(colSize, 0, nc*sizeof(int));
-    for (int i = 0; i < nr; i++)
-        for (int j = rowStart[i]; j < rowEnd(i); j++) {
+    for (unsigned int i = 0; i < nr; i++)
+        for (unsigned int j = rowStart[i]; j < rowEnd(i); j++) {
             int position = colSize[ column[j] ]++;
             position += result.rowStart[ column[j] ];
 
@@ -127,11 +127,11 @@ void CholmodSparseMatrix::transpose(CholmodSparseMatrix &result)
 }
 
 /******************************************************************************************************************************/
-void CholmodSparseMatrix::stack(CholmodSparseMatrix **matrices, int numMatrices, int *colShifts)
+void CholmodSparseMatrix::stack(CholmodSparseMatrix **matrices, unsigned int numMatrices, unsigned int *colShifts)
 {
     CholmodSparseMatrix &result = *this;
-    int nonzeroSum = 0, rowSum = 0, maxCol = 0;
-    for (int i = 0; i < numMatrices; i++) {
+    unsigned int nonzeroSum = 0, rowSum = 0, maxCol = 0;
+    for (unsigned int i = 0; i < numMatrices; i++) {
         nonzeroSum += matrices[i]->numNonzero;
         rowSum += matrices[i]->nr;
         maxCol = std::max(maxCol, matrices[i]->nc + colShifts[i]);
@@ -141,13 +141,13 @@ void CholmodSparseMatrix::stack(CholmodSparseMatrix **matrices, int numMatrices,
     result.nr = rowSum;
     result.nc = maxCol;
 
-    result.rowStart = (int*)realloc(result.rowStart, rowSum*sizeof(int));
+    result.rowStart = (unsigned int*)realloc(result.rowStart, rowSum*sizeof(unsigned int));
 
     result.startMatrixFill();
-    int rowShift = 0;
-    for (int i = 0; i < numMatrices; i++) {
-        for (int j = 0; j < matrices[i]->nr; j++)
-            for (int k = matrices[i]->rowStart[j]; k < matrices[i]->rowEnd(j); k++)
+    unsigned int rowShift = 0;
+    for (unsigned int i = 0; i < numMatrices; i++) {
+        for (unsigned int j = 0; j < matrices[i]->nr; j++)
+            for (unsigned int k = matrices[i]->rowStart[j]; k < matrices[i]->rowEnd(j); k++)
                 result.addElement(j+rowShift,matrices[i]->column[k]+colShifts[i],matrices[i]->values[k]);
         rowShift += matrices[i]->nr;
     }
@@ -165,7 +165,7 @@ void CholmodSparseMatrix::parallelMultiply(CholmodSparseMatrix &m, CholmodSparse
     }
 
     int s = nr / N_THREADS;
-    for (int i = 0; i < N_THREADS; i++) {
+    for (unsigned int i = 0; i < N_THREADS; i++) {
         multipliers[i].firstRow = i*s;
         multipliers[i].lastRow = (i+1)*s;
         multipliers[i].lhs = this;
@@ -174,30 +174,30 @@ void CholmodSparseMatrix::parallelMultiply(CholmodSparseMatrix &m, CholmodSparse
     }
     multipliers[N_THREADS-1].lastRow = nr;
 
-    for (int i = 0; i < N_THREADS; i++)
+    for (unsigned int i = 0; i < N_THREADS; i++)
         multipliers[i].start();
 
-    for (int i = 0; i < N_THREADS; i++)
+    for (unsigned int i = 0; i < N_THREADS; i++)
         multipliers[i].wait();
 }
 
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &result) {
 	std::map<int, double> rowValues; // for a given column, holds nonzero values
-    int curNonzero = 0;
+	unsigned int curNonzero = 0;
 
     result.setRows(nr);
     result.setCols(m.nc);
 
     result.startMatrixFill();
-    for (int i = 0; i < nr; i++) { // compute the i-th row
+    for (unsigned int i = 0; i < nr; i++) { // compute the i-th row
         result.rowStart[i] = curNonzero;
 
         rowValues.clear(); // start out with zeroes
 
-        int end = rowEnd(i);
+        unsigned int end = rowEnd(i);
 
-        for (int p = rowStart[i]; p < end; p++) { // for all elements in row i
+        for (unsigned int p = rowStart[i]; p < end; p++) { // for all elements in row i
             int k = column[p]; // this is the k-th column
             double value = values[p]; // value = element (i,k)
 
@@ -245,6 +245,12 @@ void CholmodSparseMatrix::addConstraint(const std::vector<int>& rows,double alph
 	}
 }
 
+void CholmodSparseMatrix::startMatrixFill() {
+	curLocation = 0;
+	lastR = -1;
+	numNonzero = 0;
+}
+
 /******************************************************************************************************************************/
 double* CholmodSparseMatrix::addElement(int r, int c, double value)
 {
@@ -266,21 +272,21 @@ double* CholmodSparseMatrix::addElement(int r, int c, double value)
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::multiply(double* x, double* b)
 {
-	for (int i = 0; i < nr; i++)
+	for (unsigned int i = 0; i < nr; i++)
 		b[i] = 0;
-	for (int i = 0; i < nr; i++)
-		for (int j = rowStart[i]; j < rowEnd(i); j++)
+	for (unsigned int i = 0; i < nr; i++)
+		for (unsigned int j = rowStart[i]; j < rowEnd(i); j++)
 			b[i] += values[j] * x[column[j]];
 }
 
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::transposeMultiply(double* x, double* b)
 {
-	for (int i = 0; i < nc; i++)
+	for (unsigned int i = 0; i < nc; i++)
 		b[i] = 0;
-	for (int i = 0; i < nr; i++)
+	for (unsigned int i = 0; i < nr; i++)
 		// row i
-		for (int j = rowStart[i]; j < rowEnd(i); j++)
+		for (unsigned int j = rowStart[i]; j < rowEnd(i); j++)
 			// column column[j]
 			b[column[j]] += values[j] * x[i];
 }
@@ -288,7 +294,7 @@ void CholmodSparseMatrix::transposeMultiply(double* x, double* b)
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::zeroOutColumns(std::set<int>& cols, int shift)
 {
-	for (int i = 0; i < numNonzero; i++)
+	for (unsigned int i = 0; i < numNonzero; i++)
 		if (cols.count(column[i] - shift) >= 1)
 			values[i] = 0;
 }
@@ -313,10 +319,10 @@ static bool cholmod_common_initilaized = false;
 /******************************************************************************************************************************/
 static void cholmod_error_handler(int status, char *file, int line,  char *message)
 {
-    qWarning("CHOLMOD error status %d", status);
-    qWarning("File: %s", file);
-    qWarning("Line: %d", line);
-    qWarning("Message: %s", message);
+    printf("CHOLMOD error status %d\n", status);
+    printf("File: %s\n", file);
+    printf("Line: %d\n", line);
+    printf("Message: %s\n", message);
 }
 
 /******************************************************************************************************************************/
@@ -344,4 +350,3 @@ void cholmod_finalize() {
 	if (cholmod_common_initilaized)
 		cholmod_finish(&common);
 }
-

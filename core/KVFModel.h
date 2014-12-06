@@ -38,7 +38,6 @@ class KVFModel : public MeshModel
 {
 public:
 	KVFModel(MeshModel* model);
-	void initialize();
     virtual ~KVFModel();
 
 	/* deformation entry points*/
@@ -66,8 +65,6 @@ public:
 	void historyReset();
 
 private:
-	bool shared;
-
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
 	std::vector<Point2> initialVertexes;
@@ -87,12 +84,14 @@ private:
     CholmodSparseMatrix stacked;
 
     /* pre-factor*/
+    cholmod_factor *L1;
     cholmod_factor *L2;
 
     std::vector<Point2> newPoints;
     std::vector<double> counts;
 
 	void getP(CholmodSparseMatrix &prod);
+	void renderVF_common(std::vector<Vector2> &VF);
 
 	/*undo stuff*/
     vertexList undoVertices[UNDOSIZE];
@@ -108,8 +107,8 @@ private:
 
 public:
     /* statistics */
-    int lastVFCalcTime;
-    int lastLogSpiralTime;
+    double lastVFCalcTime;
+    double lastLogSpiralTime;
 };
 
 #endif

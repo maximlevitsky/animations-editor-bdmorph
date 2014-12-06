@@ -71,3 +71,62 @@ void MainScene::loadImage()
 	system("cc -O -o triangle triangle.c -lm");
 	system("triangle -pqDgPNE temp");
 }
+
+extern "C" {
+#include <amd.h>
+#include <ldl.h>
+#include <camd.h>
+}
+
+
+
+void KVFModel::initialize()
+{
+    getP(P);
+    Pcopy.copy(P);
+    CholmodSparseMatrix covariance;
+    CholmodSparseMatrix trans;
+
+    /**********************************************************************/
+    TimeMeasurment t;
+    P.transpose(trans);
+    printf("Transpose time: %f msec\n", t.measure_msec());
+
+    /**********************************************************************/
+    trans.multiply(P, covariance);
+    printf("Covariance product time: %f msec\n", t.measure_msec());
+
+    /**********************************************************************/
+    printf("Computing permutation...\n");
+
+    int n = 2*numVertices;
+    LDL_int  *Parent, *Flag,  *Lp, *Lnz, *Pfw, *Pinv;
+    ALLOC_MEMORY(Parent, LDL_int, n);
+    ALLOC_MEMORY(Flag, LDL_int, n);
+    ALLOC_MEMORY(Lp, LDL_int, n+1);
+    ALLOC_MEMORY(Lnz, LDL_int, n);
+    ALLOC_MEMORY(Pfw, LDL_int, n);
+    ALLOC_MEMORY(Pinv, LDL_int, n);
+    LDL_int *Ap = covariance.getAp();
+
+    double Info[AMD_INFO];
+    if (amd_order (n, Ap, covariance.getAi(), Pfw, (double *) NULL, Info) < AMD_OK) {
+        printf("call to AMD failed\n");
+        exit(1);
+    }
+    amd_control((double*)NULL);
+    amd_info(Info);
+    printf("AMD time: %f msec\n", t.measure_msec());
+    /**********************************************************************/
+
+    printf("Doing symbolic ldl...\n");
+    ldl_symbolic (2*numVertices, Ap, covariance.getAi(), Lp, Parent, Lnz, Flag, Pfw, Pinv);
+    printf("Symbolic time: %f\n", t.measure_msec());
+
+    FREE_MEMORY(Parent, LDL_int);
+    FREE_MEMORY(Flag, LDL_int);
+    FREE_MEMORY(Lp, LDL_int);
+    FREE_MEMORY(Lnz, LDL_int);
+    FREE_MEMORY(Pfw, LDL_int);
+    FREE_MEMORY(Pinv, LDL_int);
+}

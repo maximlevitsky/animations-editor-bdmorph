@@ -133,13 +133,13 @@ class Vector2D {
 
         std::complex<T> toComplex() { return std::complex<T>(x,y); }
 
-        Vector2D<T> min(Vector2D<T> &other) {
+        Vector2D<T> min(const Vector2D<T> &other) const {
         	T minX = std::min(x,other.x);
         	T minY = std::min(y,other.y);
         	return Vector2D<T>(minX,minY);
         }
 
-        Vector2D<T> max(Vector2D<T> &other) {
+        Vector2D<T> max(const Vector2D<T> &other) const {
         	T minX = std::max(x,other.x);
         	T minY = std::max(y,other.y);
         	return Vector2D<T>(minX,minY);

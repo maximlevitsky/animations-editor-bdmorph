@@ -17,7 +17,7 @@
 #include "BDMORPH.h"
 
 /*****************************************************************************************************/
-MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
+MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL), testModel(NULL)
 {
 	setupUi(this);
 
@@ -158,6 +158,7 @@ MainWindow::~MainWindow()
 	delete mainScene;
 	delete animationPanel;
 	delete sidePanel;
+	delete testModel;
 }
 
 /*****************************************************************************************************/
@@ -195,10 +196,10 @@ void MainWindow::onEditorSelectionChanged(int selectedVertex, int selectedFace)
 }
 
 /*****************************************************************************************************/
-void MainWindow::setStatusBarFPS(int msec)
+void MainWindow::setStatusBarFPS(double msec)
 {
 	QString str;
-	str.sprintf("%d FPS", 1000/msec);
+	str.sprintf("%f FPS", 1000.0/msec);
 	lblFPS->setText(str);
 	lblFPS->show();
 }
@@ -223,6 +224,7 @@ void MainWindow::loadModel()
     emit frameSwitched(NULL);
     emit videoModelLoaded(NULL);
     delete model;
+    delete testModel;
     resetTexture();
 
     /* load new model */
@@ -232,10 +234,7 @@ void MainWindow::loadModel()
 
     /* set these statistics - will only change when loading new model */
     setStatusBarStatistics(model->getNumVertices(), model->getNumFaces());
-
-    TimeMeasurment t;
     testModel  = new BDMORPHModel(*model);
-    printf("Took (%i) msec to init, \n", t.measure_msec());
 }
 
 /*****************************************************************************************************/
@@ -344,16 +343,7 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
-	 testModel->initialize(570);
-	//testModel->solve(model,currentFrameModel,0.5);
-	TimeMeasurment t;
-	int iterations = testModel->solve(model,currentFrameModel,0.5);
-	int msec = t.measure_msec();
-
+	testModel->solve(model,currentFrameModel,0.5);
 	emit frameSwitched(testModel);
-
-	if (msec == 0) msec = 1;
-
-	printf("Took (%i) iterations %d msec, %d FPS\n", iterations, msec, 1000/msec);
 }
 

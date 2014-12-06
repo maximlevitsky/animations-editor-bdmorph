@@ -94,7 +94,7 @@ void EditorWindow::runLog()
         emit modelEdited(editModel);
     }
 
-    printf("DONE WITH log replay (took %d msec)\n", t.measure_msec());
+    printf("DONE WITH log replay (took %f msec)\n", t.measure_msec());
 
 }
 
@@ -469,9 +469,6 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 {
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
-	if (disableEdit || !editModel || multitouchMode)
-		return;
-
 	QPointF oldPos = lastMousePos;
     QPointF curPos = event->pos();
     curPos.setY(height()-curPos.y()-1);
@@ -486,6 +483,9 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 	}
 	else if ((event->buttons() & Qt::LeftButton) && (!(mods & Qt::ShiftModifier)) && !pinMode && selectedVertices.size())
     {
+		if (disableEdit || !editModel || multitouchMode)
+			return;
+
 		QPointF diff = curPos - oldPos;
 		Vertex selectedVertex = selectedVertices[0];
 		diff *= editModel->getWidth() / modelWidth;
@@ -507,8 +507,8 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
     }
 	else if (event->buttons() == Qt::NoButton && showSelection)
 	{
-		hoveredVertex = editModel->getClosestVertex(screenToModel(curPos));
-		hoveredFace = editModel->getFaceUnderPoint(screenToModel(curPos));
+		hoveredVertex = renderModel->getClosestVertex(screenToModel(curPos));
+		hoveredFace = renderModel->getFaceUnderPoint(screenToModel(curPos));
 		emit selectionChanged(hoveredVertex,hoveredFace);
 		repaint();
 	}

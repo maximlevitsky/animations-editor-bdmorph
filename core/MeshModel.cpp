@@ -56,7 +56,7 @@ MeshModel::MeshModel(std::string &filename) :
 {
 	loadFromFile(filename);
 
-    for (int i = 0; i < numVertices; i++)
+    for (unsigned int i = 0; i < numVertices; i++)
     {
     	minPoint = minPoint.min(vertices[i]);
     	maxPoint = maxPoint.max(vertices[i]);
@@ -65,7 +65,7 @@ MeshModel::MeshModel(std::string &filename) :
     Vector2 center = (minPoint+maxPoint)/2;
     maxPoint -= center;
     minPoint -= center;
-    for (int i = 0; i < numVertices; i++)
+    for (unsigned int i = 0; i < numVertices; i++)
     	vertices[i] -= center;
 
 	std::map< int , std::map<int,int> > edgeCount;
@@ -165,7 +165,7 @@ void MeshModel::loadFromFile(std::string & filename)
 		if (is_vt == false)
 		{
 			texCoords->resize(numVertices);
-			for (int i = 0; i < numVertices; i++)
+			for (unsigned int i = 0; i < numVertices; i++)
 			(*texCoords)[i] = vertices[i];
 		}
 	}
@@ -182,16 +182,16 @@ void MeshModel::loadFromFile(std::string & filename)
 
 		vertices.resize(numVertices);
 		double z;
-		for (int i = 0; i < numVertices; i++)
+		for (unsigned int i = 0; i < numVertices; i++)
 			infile >> vertices[i].x >> vertices[i].y >> z;
 
 		texCoords->resize(numVertices);
-		for (int i = 0; i < numVertices; i++)
+		for (unsigned int i = 0; i < numVertices; i++)
 			(*texCoords)[i] = vertices[i];
 
 		int three;
 		faces->resize(numFaces);
-		for (int i = 0; i < numFaces; i++)
+		for (unsigned int i = 0; i < numFaces; i++)
 			infile >> three >> (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
 	}
 }
@@ -205,7 +205,7 @@ void MeshModel::render(double wireframeTrans)
 	glEnable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // GL_LINE
 
-	for (int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < numFaces; i++)
 		renderFace(i);
 
 	if (wireframeTrans)
@@ -216,7 +216,7 @@ void MeshModel::render(double wireframeTrans)
 		glLineWidth(1.5);
 
 		glBegin(GL_TRIANGLES);
-		for (int i = 0; i < numFaces; i++)
+		for (unsigned int i = 0; i < numFaces; i++)
 			renderFace(i);
 		glEnd();
 	}
@@ -225,7 +225,7 @@ void MeshModel::render(double wireframeTrans)
 }
 
 /******************************************************************************************************************************/
-void MeshModel::renderVertex(int v, double scale)
+void MeshModel::renderVertex(unsigned int v, double scale)
 {
 	#define VERTEX_SIZE 3
 	glPushAttrib(GL_LINE_BIT);
@@ -244,7 +244,7 @@ void MeshModel::renderVertex(int v, double scale)
     glPopAttrib();
 }
 
-void MeshModel::renderFace(int fnum)
+void MeshModel::renderFace(unsigned int fnum)
 {
 	std::vector<Point2> &coords = *texCoords;
 
@@ -255,7 +255,7 @@ void MeshModel::renderFace(int fnum)
 
 	glBegin(GL_TRIANGLES);
 
-	for (int j = 0; j < 3; j++) {
+	for (unsigned int j = 0; j < 3; j++) {
 		glTexCoord2f(coords[f[j]].x, coords[f[j]].y);
 		glVertex2f(vertices[f[j]].x, vertices[f[j]].y);
 	}
@@ -264,16 +264,19 @@ void MeshModel::renderFace(int fnum)
 }
 
 /******************************************************************************************************************************/
-int MeshModel::getClosestVertex(Point2 point)
+int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex)
 {
     int closest = -1;
     double closestDistance = std::numeric_limits<double>::max();
 
-    for (int i = 0; i < numVertices; i++)
+    for (unsigned int i = 0; i < numVertices; i++)
     {
         double distance = vertices[i].distanceSquared(point);
         if (distance < closestDistance)
         {
+        	if (onlyInnerVertex && boundaryVertices->count(i))
+        		continue;
+
             closestDistance = distance;
             closest = i;
         }
@@ -283,7 +286,7 @@ int MeshModel::getClosestVertex(Point2 point)
 
 int MeshModel::getFaceUnderPoint(Point2 point)
 {
-	for (int i=0; i < numFaces ; i++) {
+	for (unsigned int i=0; i < numFaces ; i++) {
 		Face& face = (*faces)[i];
 		if (PointInTriangle(point, vertices[face.a()],vertices[face.b()],vertices[face.c()]))
 			return i;
@@ -293,21 +296,14 @@ int MeshModel::getFaceUnderPoint(Point2 point)
 }
 
 /******************************************************************************************************************************/
-void MeshModel::getActualBBox(Vector2 &minP, Vector2 &maxP)
+BBOX MeshModel::getActualBBox()
 {
-	minP = Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
-	maxP = Vector2(std::numeric_limits<double>::min(), std::numeric_limits<double>::min());
-
-	for (int i = 0; i < numVertices; i++)
-	{
-		minP = minP.min(vertices[i]);
-		maxP = maxP.max(vertices[i]);
-	}
+	return BBOX(vertices);
 }
 /******************************************************************************************************************************/
 void MeshModel::copyPositions(MeshModel& m)
 {
-	for (int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < numVertices; i++)
 		vertices[i] = m.vertices[i];
 }
 /******************************************************************************************************************************/
@@ -315,7 +311,7 @@ void MeshModel::saveTextureUVs(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("obj"))
 	{
-		for (int i = 0; i < numVertices; i++)
+		for (unsigned int i = 0; i < numVertices; i++)
 			outfile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
 	}
 }
@@ -324,13 +320,13 @@ void MeshModel::saveFaces(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("off"))
 	{
-		for (int i = 0; i < numFaces; i++)
+		for (unsigned int i = 0; i < numFaces; i++)
 			outfile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
 	}
 
 	if (filename.endsWith("obj"))
 	{
-		for (int i = 0; i < numFaces; i++)
+		for (unsigned int i = 0; i < numFaces; i++)
 			outfile << "f " << (*faces)[i][0]+1 << '/' << (*faces)[i][0]+1 << ' ' <<
 			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' << (*faces)[i][2]+1 << '/' << (*faces)[i][2]+1 << std::endl;
 	}
@@ -341,12 +337,12 @@ void MeshModel::saveVertices(std::ofstream& outfile, const QString &filename)
 {
 	if (filename.endsWith("off"))
 	{
-		for (int i = 0; i < numVertices; i++)
+		for (unsigned int i = 0; i < numVertices; i++)
 			outfile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
 	}
 	if (filename.endsWith("obj"))
 	{
-		for (int i = 0; i < numVertices; i++)
+		for (unsigned int i = 0; i < numVertices; i++)
 			outfile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
 	}
 }

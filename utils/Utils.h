@@ -35,11 +35,11 @@ class TimeMeasurment
 	time_t last_time;
 public:
 	TimeMeasurment(): last_time(clock()) {}
-	int measure_msec() {
+	double measure_msec() {
 		time_t now = clock();
 		time_t last_time_saved = last_time;
 		last_time = now;
-		return (now - last_time_saved) / (CLOCKS_PER_SEC / 1000);
+		return ((double)(now - last_time_saved)) / (CLOCKS_PER_SEC / 1000);
 	}
 };
 
@@ -82,6 +82,7 @@ struct Face
 struct OrderedEdge
 {
 	OrderedEdge(Vertex v0, Vertex v1) : v0(v0),v1(v1) {}
+	OrderedEdge() {}
 
 	bool operator<(const OrderedEdge& other) const
 	{
@@ -136,16 +137,44 @@ struct Angle
 	Vertex p2;
 };
 
+
+struct BBOX
+{
+	Point2 minP;
+	Point2 maxP;
+
+	BBOX(const std::vector<Point2> &vertices)
+	{
+		minP = Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
+		maxP = Vector2(std::numeric_limits<double>::min(), std::numeric_limits<double>::min());
+
+		for (auto iter = vertices.begin() ; iter != vertices.end() ; iter++)
+		{
+			minP = minP.min(*iter);
+			maxP = maxP.max(*iter);
+		}
+	}
+
+	Point2 center() {
+		return (minP + maxP) /2.0;
+	}
+
+	double width() { return maxP.x - minP.x; }
+	double height() { return maxP.y - minP.y; }
+};
+
 /***********************************************************************************************/
 
 class CmdStream
 {
 public:
+	CmdStream(const CmdStream& other) : stream(other.stream), end(other.end), shared(true) {}
 
-	CmdStream() : stream(NULL),end(NULL) {}
-
-	uint8_t* stream;
-	uint8_t* end;
+	~CmdStream()
+	{
+		if (!shared) delete stream;
+		end = NULL;
+	}
 
 	uint8_t  byte () {
 		uint8_t retval = *(uint8_t*) (stream);
@@ -165,9 +194,17 @@ public:
 		return retval;
 	}
 
-	bool     ended() {
+	bool ended() {
 		return stream == end;
 	}
+private:
+	CmdStream() {}
+	bool operator=(const CmdStream &other);
+private:
+	uint8_t* stream;
+	uint8_t* end;
+	bool shared;
+	friend class CmdStreamBuilder;
 };
 
 /***********************************************************************************************/
@@ -191,15 +228,21 @@ public:
 		cmd_stream.push_back((data >> 24) & 0xFF );
 	}
 
-	void get_stream(CmdStream &out) {
+	CmdStream* get_stream()
+	{
+		CmdStream *retval = new CmdStream();
+
 		int size = cmd_stream.size();
-		out.stream = (uint8_t*)malloc(size);
-		out.end = out.stream + size;
+		retval->stream = (uint8_t*)malloc(size);
+		retval->end = retval->stream + size;
+		retval->shared = false;
 
 		int i = 0;
 		for (auto iter = cmd_stream.begin() ; iter != cmd_stream.end() ; iter++,i++) {
-			out.stream[i] = *iter;
+			retval->stream[i] = *iter;
 		}
+
+		return retval;
 	}
 };
 

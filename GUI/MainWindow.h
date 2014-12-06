@@ -24,7 +24,7 @@ public:
 	virtual ~MainWindow();
 
 	void setStatusBarStatistics(int vertexCount, int facesCount);
-	void setStatusBarFPS(int msec);
+	void setStatusBarFPS(double msec);
 	void clearStatusBar();
 
 public slots:

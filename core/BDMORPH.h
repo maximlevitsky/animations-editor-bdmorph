@@ -11,11 +11,6 @@
 #include "vector2d.h"
 #include "MeshModel.h"
 
-#include <Eigen/Eigen>
-#include <Eigen/SparseCore>
-#include <Eigen/CholmodSupport>
-#include <Eigen/SparseLU>
-
 using std::make_pair;
 
 /*****************************************************************************************************/
@@ -31,6 +26,7 @@ enum command
 	COMPUTE_VERTEX_INFO,
 
 	LOAD_VERTEX_POSITION,
+	COMPUTE_EDGE_LEN_SQUARED,
 	LOAD_LENGTH_SQUARED,
 	COMPUTE_VERTEX,
 };
@@ -46,6 +42,7 @@ public:
 	/* Mesh helpers */
 	Vertex getNeighbourVertex(Vertex v) { return aNeighbour[v];}
 	Vertex getNeighbourVertex(Vertex v1, Vertex v2);
+	void getNeighbourVertices(Vertex v1, std::vector<Vertex>& result);
 
 	/* Main phase */
 	VertexK allocate_K(Vertex vertex);
@@ -64,8 +61,8 @@ public:
 
 
 	/* output */
-	int getK_count() { return external_vertex_id_to_K.size(); }
-	int getL_count() { return edge_L_locations.size(); }
+	unsigned int getK_count() { return external_vertex_id_to_K.size(); }
+	unsigned int getL_count() { return edge_L_locations.size(); }
 
 	std::set<Vertex>& boundary_vertexes_set;
 
@@ -94,40 +91,39 @@ public:
 	CmdStreamBuilder iteration_stream;
 	CmdStreamBuilder init_stream;
 	CmdStreamBuilder extract_stream;
-
-	MeshModel* origModel; /* for debug */
 };
 
 /*****************************************************************************************************/
 class BDMORPHModel : public MeshModel
 {
 public:
-	BDMORPHModel(MeshModel& orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , LL(NULL){
+	BDMORPHModel(MeshModel& orig);
+	~BDMORPHModel();
 
-	}
-
-	void initialize(Vertex firstVertex);
 	int solve(MeshModel *a, MeshModel* b, double t);
 private:
+
+	OrderedEdge e0;
+	Vector2 e0_direction;
+	int edge1_L_location;
 
 	/* lengths */
 	double* L0;			/* initial lengths of each edge*/
 	double* L;			/* computed lengths of each edge */
 
-	Eigen::VectorXd K; 				 	/* array of K coefficients for each non boundary vertex */
-	Eigen::VectorXd EnergyGradient;  	/* grad(E(K)) */
-	Eigen::VectorXd NewtonRHS;		 	/* right size of newton method iteration linear system*/
-
-	Eigen::SparseMatrix<double> *EnergyHessian;	 /* hessain(E(K)) */
+	CholmodVector K; 				 	/* array of K coefficients for each non boundary vertex */
+	CholmodVector EnergyGradient;  	/* grad(E(K)) */
+	CholmodVector NewtonRHS;		 	/* right size of newton method iteration linear system*/
+	CholmodSparseMatrix EnergyHessian;	 /* hessain(E(K)) */
 
 	int kCount;
 	int edgeCount;
 
 private:
 	/* pre-computed command steams that will guide the steps of the algorithm*/
-	CmdStream init_cmd_stream;
-	CmdStream iteration_cmd_stream;
-	CmdStream extract_solution_cmd_stream;
+	CmdStream *init_cmd_stream;
+	CmdStream *iteration_cmd_stream;
+	CmdStream *extract_solution_cmd_stream;
 	double* temp_data;	/* array to hold temporary data for newton iteration*/
 
 private:
@@ -135,12 +131,6 @@ private:
 	bool newton_iteration(int iteration);
 	void finalize_iterations();
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
-
-	std::vector<Eigen::Triplet<double>> data;
-
-	double maxTangent;
-	double minTangent;
-
 	cholmod_factor *LL;
 };
 
