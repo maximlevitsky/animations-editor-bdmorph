@@ -109,7 +109,7 @@ MeshModel::MeshModel(std::string &filename) :
 /******************************************************************************************************************************/
 void MeshModel::loadFromFile(std::string & filename)
 {
-	if (ends_with(filename, "obj")) //handle obj file
+	if (ends_with(filename, "obj") || ends_with(filename, "OBJ")) //handle obj file
 	{
 		numVertices = 0;
 		numFaces = 0;
@@ -170,7 +170,7 @@ void MeshModel::loadFromFile(std::string & filename)
 		}
 	}
 
-    if (ends_with(filename, "off")) //handle off file
+    if (ends_with(filename, "off") || ends_with(filename, "OFF")) //handle off file
 	{
     	std::ifstream infile(filename);
     	std::string temp;

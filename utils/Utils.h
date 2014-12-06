@@ -197,6 +197,9 @@ public:
 	bool ended() {
 		return stream == end;
 	}
+
+	int getSize() { return end - stream; }
+
 private:
 	CmdStream() {}
 	bool operator=(const CmdStream &other);

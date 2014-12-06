@@ -26,7 +26,6 @@ enum command
 	COMPUTE_VERTEX_INFO,
 
 	LOAD_VERTEX_POSITION,
-	COMPUTE_EDGE_LEN_SQUARED,
 	LOAD_LENGTH_SQUARED,
 	COMPUTE_VERTEX,
 };
@@ -50,7 +49,7 @@ public:
 	int compute_edge_len(Edge e);
 	TmpMemAdddress compute_angle(Vertex p0, Vertex p1, Vertex p2);
 
-	void processVertexForNewtonIteration(Vertex v0, int neigh_count,
+	int processVertexForNewtonIteration(Vertex v0, int neigh_count,
 		std::vector<TmpMemAdddress> &inner_angles,
 		std::map<Vertex, std::pair<TmpMemAdddress,TmpMemAdddress> > &outer_angles);
 
