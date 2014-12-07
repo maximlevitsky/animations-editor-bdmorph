@@ -343,7 +343,7 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
-	testModel->solve(model,currentFrameModel,0.5);
+	testModel->interpolate_frame(model,currentFrameModel,0.5);
 	emit frameSwitched(testModel);
 }
 

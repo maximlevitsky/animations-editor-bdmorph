@@ -99,7 +99,7 @@ public:
 	BDMORPHModel(MeshModel& orig);
 	~BDMORPHModel();
 
-	int solve(MeshModel *a, MeshModel* b, double t);
+	int interpolate_frame(MeshModel *a, MeshModel* b, double t);
 private:
 
 	OrderedEdge e0;
@@ -115,6 +115,10 @@ private:
 	CholmodVector NewtonRHS;		 	/* right size of newton method iteration linear system*/
 	CholmodSparseMatrix EnergyHessian;	 /* hessain(E(K)) */
 
+	double minAngle;
+	double maxAngle;
+	double grad_norm;
+
 	int kCount;
 	int edgeCount;
 
@@ -126,9 +130,9 @@ private:
 	double* temp_data;	/* array to hold temporary data for newton iteration*/
 
 private:
-	void setup_iterations(MeshModel *a, MeshModel* b, double t);
-	bool newton_iteration(int iteration);
-	void finalize_iterations();
+	void calculate_initial_lengths(MeshModel *a, MeshModel* b, double t);
+	void calculate_grad_and_hessian(int iteration);
+	void calculate_new_vertex_positions();
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
 	cholmod_factor *LL;
 };
