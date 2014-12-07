@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>261</width>
-    <height>622</height>
+    <height>562</height>
    </rect>
   </property>
   <property name="features">
@@ -52,13 +52,6 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Load:</string>
-         </property>
-        </widget>
-       </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
@@ -107,13 +100,6 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>Edit:</string>
-         </property>
-        </widget>
-       </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
@@ -202,14 +188,25 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnApplyVF">
-         <property name="text">
-          <string>Apply VF</string>
-         </property>
-         <property name="default">
-          <bool>true</bool>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QPushButton" name="btnApplyVF">
+           <property name="text">
+            <string>Apply VF</string>
+           </property>
+           <property name="default">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnTestInterpolation">
+           <property name="text">
+            <string>Test interpolation</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>
@@ -267,13 +264,6 @@
         <widget class="ActionCheckBox" name="chkShowSelection">
          <property name="text">
           <string>Show selection</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnTestInterpolation">
-         <property name="text">
-          <string>Test interpolation</string>
          </property>
         </widget>
        </item>

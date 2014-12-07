@@ -199,7 +199,7 @@ void MainWindow::onEditorSelectionChanged(int selectedVertex, int selectedFace)
 void MainWindow::setStatusBarFPS(double msec)
 {
 	QString str;
-	str.sprintf("%f FPS", 1000.0/msec);
+	str.sprintf("%4.2f FPS", 1000.0/msec);
 	lblFPS->setText(str);
 	lblFPS->show();
 }

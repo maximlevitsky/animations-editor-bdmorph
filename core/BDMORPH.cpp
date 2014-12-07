@@ -709,9 +709,9 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	{
 		calculate_grad_and_hessian(iteration);
 
-		printf("BDMORPH: iteration %i : ||grad|| = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
+		printf("BDMORPH: iteration %i : ||\u2207F||\u2082 = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
 				iteration, grad_norm, minAngle*2*(180.0/M_PI), maxAngle*2*(180.0/M_PI));
-		printf("BDMORPH: iteration %i : grad(F) and hess(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
+		printf("BDMORPH: iteration %i : \u2207F and H(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
 
 		if (grad_norm < END_ITERATION_VALUE) {
 			printf("BDMORPH: iteration %i : found solution\n", iteration);
