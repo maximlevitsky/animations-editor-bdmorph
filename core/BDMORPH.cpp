@@ -718,7 +718,7 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 			 break;
 		}
 
-		EnergyHessian.multiplySymm(K.getValues(),NewtonRHS.getValues());
+		EnergyHessian.multiplySymm(K,NewtonRHS);
 		NewtonRHS.sub(EnergyGradient);
 
 		printf("BDMORPH: iteration %i : right side build time: %f msec\n", iteration, t2.measure_msec());
@@ -754,6 +754,5 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	double msec = t1.measure_msec();
 	printf("BDMORPH: total time %f msec, %f FPS (%i iterations)\n", msec, 1000.0/msec, iteration);
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
-
 	return iteration;
 }

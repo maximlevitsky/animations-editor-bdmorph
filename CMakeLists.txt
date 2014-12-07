@@ -20,9 +20,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")
 SET(kvf2d_SOURCES
 	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/ThumbnailRenderer.cpp
 	GUI/widgets/ActionButton.cpp
+
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
 	core/BDMORPH.cpp
-	utils/cholmod_matrix.cpp utils/vector2d.cpp 
+
+	utils/cholmod_matrix.cpp utils/cholmod_common.cpp utils/vector2d.cpp 
 )
 
 SET(kvf2d_HEADERS GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h GUI/ThumbnailRenderer.h GUI/widgets/ActionButton.h)

@@ -79,6 +79,22 @@ extern "C" {
 }
 
 
+#define ALLOC_MEMORY(p,type,size) \
+p = (type *) malloc ((((size) <= 0) ? 1 : (size)) * sizeof (type)); \
+if (p == (type *) NULL) \
+{ \
+    qWarning ("malloc out of memory; requested %d elements of size %d\n", (int)size, (int)sizeof(type)) ; \
+    exit(1) ; \
+}
+
+/***********************************************************************************************/
+
+#define FREE_MEMORY(p,type) \
+if (p != (type *) NULL) \
+{ \
+    free (p) ; \
+    p = (type *) NULL ; \
+}
 
 void KVFModel::initialize()
 {
@@ -130,3 +146,74 @@ void KVFModel::initialize()
     FREE_MEMORY(Pfw, LDL_int);
     FREE_MEMORY(Pinv, LDL_int);
 }
+
+
+class ParallelMatrixMultiplier : public QThread
+{
+public:
+    CholmodSparseMatrix *lhs, *rhs, *result;
+    int firstRow, lastRow;
+
+protected:
+    void run() {
+    	std::map<unsigned int, double> rowValues; // for a given column, holds nonzero values
+
+        for (int i = firstRow; i < lastRow; i++) { // compute the i-th row
+            rowValues.clear(); // start out with zeroes
+
+            int end = lhs->rowEnd(i);
+
+            for (int p = lhs->rowStart[i]; p < end; p++) { // for all elements in row i
+                int k = lhs->column[p]; // this is the k-th column
+                double value = lhs->values[p]; // value = element (i,k)
+
+                int stop = rhs->rowEnd(k);
+                for (int q = rhs->rowStart[k]; q < stop; q++) // look at row k in matrix m
+                    rowValues[ rhs->column[q] ] += value * rhs->values[q]; // add (i,k) * (k,q)
+            }
+
+            // this better traverse in sorted order...
+            int count = result->rowStart[i];
+            for (auto it = rowValues.begin(); it != rowValues.end(); ++it) {
+                result->column[count] = it->first;
+                result->values[count] = it->second;
+                count++;
+            }
+        }
+    }
+};
+
+/******************************************************************************************************************************/
+void CholmodSparseMatrix::parallelMultiply(CholmodSparseMatrix &m, CholmodSparseMatrix &result)
+{
+    ParallelMatrixMultiplier multipliers[N_THREADS];
+
+    if (result.nr == 0) {
+    	multiply(m,result);
+    	return;
+    }
+
+    // assume that sparsity pattern of result is the same, although we can throw out some rows
+    if (result.nr != nr) { // this is essentially a hack that only works because we're using this in one program
+        result.numNonzero = result.rowEnd(nr-1);
+        result.reshape(nr, m.nc, result.capacity);
+    }
+
+    int s = nr / N_THREADS;
+    for (unsigned int i = 0; i < N_THREADS; i++) {
+        multipliers[i].firstRow = i*s;
+        multipliers[i].lastRow = (i+1)*s;
+        multipliers[i].lhs = this;
+        multipliers[i].rhs = &m;
+        multipliers[i].result = &result;
+    }
+    multipliers[N_THREADS-1].lastRow = nr;
+
+    for (unsigned int i = 0; i < N_THREADS; i++)
+        multipliers[i].start();
+
+    for (unsigned int i = 0; i < N_THREADS; i++)
+        multipliers[i].wait();
+}
+
+

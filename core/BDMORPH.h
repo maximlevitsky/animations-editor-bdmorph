@@ -6,7 +6,9 @@
 #include <map>
 #include <vector>
 #include <assert.h>
+#include "cholmod_common.h"
 #include "cholmod_matrix.h"
+#include "cholmod_vector.h"
 #include "Utils.h"
 #include "vector2d.h"
 #include "MeshModel.h"

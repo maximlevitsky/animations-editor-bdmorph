@@ -1,6 +1,7 @@
 #include <QtGui>
 
 #include "MainWindow.h"
+#include "cholmod_common.h"
 #include "cholmod_matrix.h"
 #include <assert.h>
 

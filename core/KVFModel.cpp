@@ -11,6 +11,8 @@
 
 #include "Utils.h"
 #include "KVFModel.h"
+#include "cholmod_vector.h"
+#include "cholmod_common.h"
 /*****************************************************************************************************/
 struct LogSpiral
 {
@@ -69,11 +71,24 @@ KVFModel::~KVFModel()
 	cholmod_free_factor(&L1, cholmod_get_common());
 }
 
-/******************************************************************************************************************************/
-void KVFModel::getP(CholmodSparseMatrix &prod)
+/*****************************************************************************************************/
+void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 {
+    TimeMeasurment total,t;
+    cholmod_common* cm = cholmod_get_common();
 
-    // examine matrix push_back when in right order
+    this->disps = disps;
+    std::set<DisplacedVertex> allDisplacements = disps;
+
+    for (auto iter = pinnedVertexes.begin(); iter != pinnedVertexes.end() ; iter++)
+    	allDisplacements.insert(DisplacedVertex(*iter, Vector2(0,0)));
+
+    if (allDisplacements.size() <= 1)
+    	return;
+
+    /************************************************/
+    /* BUILD P matrix */
+
     P2.startMatrixFill();
     dx2.startMatrixFill();
     dy2.startMatrixFill();
@@ -111,33 +126,21 @@ void KVFModel::getP(CholmodSparseMatrix &prod)
         P2.addElement(3*f+2, f+3*numFaces, 2);
     }
 
-    unsigned int colShift[4] = 				{0,       0,     numVertices, numVertices };
+    printf("KVF: P components construct time: %f msec\n", t.measure_msec());
+
+    unsigned int colShift[4] = 		{0,       0,     numVertices, numVertices };
     CholmodSparseMatrix *list[4] =  {&dx2,    &dy2,  &dx2,        &dy2        };
-
     stacked.stack(list, 4, colShift);
-    P2.multiply(stacked, prod);
-}
 
-/*****************************************************************************************************/
-void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
-{
-    TimeMeasurment total,t;
-    cholmod_common* cm = cholmod_get_common();
+    printf("KVF: P Stack build time: %f msec\n", t.measure_msec());
 
-    printf("\n");
+    P2.multiply(stacked, P);
 
-    this->disps = disps;
-    std::set<DisplacedVertex> allDisplacements = disps;
+    printf("KVF: P Multiply time: %f msec\n", t.measure_msec());
 
-    for (auto iter = pinnedVertexes.begin(); iter != pinnedVertexes.end() ; iter++)
-    	allDisplacements.insert(DisplacedVertex(*iter, Vector2(0,0)));
-
-    if (allDisplacements.size() <= 1)
-    	return;
-
-    getP(P);
     Pcopy.copy(P);
-    printf("Construct P time:      %f msec\n", t.measure_msec());
+
+    printf("KVF: P copy time: %f msec\n", t.measure_msec());
 
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -156,9 +159,13 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     }
 
     P.addConstraint(indices2, alpha);
+
+    printf("KVF: P constraint adding time: %f msec\n", t.measure_msec());
+
+    /*++++++++++++++++++++++++++++++++++++++++++++++*/
+
     cholmod_sparse cSparse;
     P.getCholmodMatrix(cSparse);
-
     if (!L1) L1 = cholmod_analyze(&cSparse, cm);
     cholmod_factorize(&cSparse, L1, cm);
     cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, L1, B, cm);
@@ -167,7 +174,7 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 	for (unsigned int i = 0; i < numVertices; i++)
 		vfOrig[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
 
-    printf("Solve time:            %f msec\n", t.measure_msec());
+    printf("KVF: Solve time: %f msec\n", t.measure_msec());
 
     /*+++++DIRICHLET SOLVE +++++++++++++++++++++++++++++++++++++++++*/
 
@@ -178,8 +185,9 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     	boundaryRHS[*it + numVertices] = Xx[*it + numVertices];
     }
 
-    double *rhsMove = (double*)malloc(Pcopy.numRows()*sizeof(double));
-    Pcopy.multiply(boundaryRHS.getValues(), rhsMove);
+    CholmodVector rhsMove(Pcopy.numRows());
+
+    Pcopy.multiply(boundaryRHS, rhsMove);
     for (int i = 0; i < Pcopy.numRows(); i++)
         rhsMove[i] *= -1;
 
@@ -187,7 +195,7 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     Pcopy.zeroOutColumns(*boundaryVertices, numVertices);
 
     CholmodVector B2(Pcopy.numCols());
-    Pcopy.transposeMultiply(rhsMove,B2.getValues());
+    Pcopy.transposeMultiply(rhsMove,B2);
 
     std::vector<int> constrained;
     for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it)
@@ -200,22 +208,29 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     }
 
     Pcopy.addConstraint(constrained,1);
-    Pcopy.getCholmodMatrix(cSparse);
 
+
+    printf("KVF: Dirichlet prepare time: %f msec\n", t.measure_msec());
+
+    /*++++++++++++++++++++++++++++++++++++++++++++++*/
+
+    Pcopy.getCholmodMatrix(cSparse);
     if (!L2) L2 = cholmod_analyze(&cSparse, cm);
     cholmod_factorize(&cSparse, L2, cm);
     cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
     Xx = (double*)Xcholmod2->x;
 
-    printf("Dirichlet time:        %f msec\n", t.measure_msec());
+    printf("KVF: Dirichlet time: %f msec\n", t.measure_msec());
 
 	for (unsigned int i = 0; i < numVertices; i++)
 		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);
 
-    lastVFCalcTime = total.measure_msec();
     cholmod_free_dense(&Xcholmod, cm);
     cholmod_free_dense(&Xcholmod2, cm);
-    free(rhsMove);
+
+    printf("KVF: Fini time:  %f msec\n", t.measure_msec());
+
+    lastVFCalcTime = total.measure_msec();
 }
 
 /*****************************************************************************************************/
@@ -276,18 +291,15 @@ void KVFModel::applyVFLogSpiral()
     }
 
     lastLogSpiralTime  = t.measure_msec();
-    printf("Log spiral  time:      %f msec\n", lastLogSpiralTime);
+    printf("KVF: Log spiral  time: %f msec\n", lastLogSpiralTime);
 
 	for (unsigned int i = 0; i < numVertices; i++)
 		vertices[i] = newPoints[i] / counts[i];
 
 	double totalTime = lastVFCalcTime + lastLogSpiralTime;
-
-	if (totalTime) {
-		double FPS = 1000 / (totalTime);
-		printf("Total solve time:      %f msec (%f FPS)\n", totalTime, FPS);
-		printf("\n");
-	}
+	double FPS = 1000.0 / (totalTime);
+	printf("KVF: Total solve time: %f msec (%f FPS)\n", totalTime, FPS);
+	printf("\n\n");
 
     historyAdd(disps);
 }

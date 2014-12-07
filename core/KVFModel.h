@@ -90,7 +90,6 @@ private:
     std::vector<Point2> newPoints;
     std::vector<double> counts;
 
-	void getP(CholmodSparseMatrix &prod);
 	void renderVF_common(std::vector<Vector2> &VF);
 
 	/*undo stuff*/

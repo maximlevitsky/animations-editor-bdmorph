@@ -11,25 +11,6 @@
 
 /***********************************************************************************************/
 
-#define ALLOC_MEMORY(p,type,size) \
-p = (type *) malloc ((((size) <= 0) ? 1 : (size)) * sizeof (type)); \
-if (p == (type *) NULL) \
-{ \
-    qWarning ("malloc out of memory; requested %d elements of size %d\n", (int)size, (int)sizeof(type)) ; \
-    exit(1) ; \
-}
-
-/***********************************************************************************************/
-
-#define FREE_MEMORY(p,type) \
-if (p != (type *) NULL) \
-{ \
-    free (p) ; \
-    p = (type *) NULL ; \
-}
-
-/***********************************************************************************************/
-
 class TimeMeasurment
 {
 	time_t last_time;
@@ -137,6 +118,7 @@ struct Angle
 	Vertex p2;
 };
 
+/***********************************************************************************************/
 
 struct BBOX
 {
