@@ -307,7 +307,9 @@ void BDMORPH_BUILDER::layoutVertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex p
 }
 
 /*****************************************************************************************************/
-BDMORPHModel::BDMORPHModel(MeshModel &orig) : MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , LL(NULL)
+BDMORPHModel::BDMORPHModel(MeshModel &orig) :
+		MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , LL(NULL),
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR)
 {
 	TimeMeasurment t;
 
@@ -728,7 +730,7 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 			 break;
 		}
 
-		EnergyHessian.multiplySymm(K,NewtonRHS);
+		EnergyHessian.multiply(K,NewtonRHS);
 		NewtonRHS.sub(EnergyGradient);
 
 		//NewtonRHS.display("NEWTONRHS", matrix);
@@ -740,7 +742,6 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 		cholmod_sparse res;
 		EnergyHessian.getCholmodMatrix(res);
-		res.stype = 1;
 
 		if (!LL) LL = cholmod_analyze(&res, cholmod_get_common());
 		cholmod_factorize(&res, LL, cholmod_get_common());

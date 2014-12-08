@@ -495,6 +495,8 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 
 		std::cout << "Mouse move delta:(" << diff.rx() << "," << diff.ry() << ")" << std::endl;
 
+		TimeMeasurment t;
+
 		std::set<DisplacedVertex> disps;
 		disps.insert(DisplacedVertex(selectedVertex, Vector2D<double>(diff.x(),diff.y())));
 		editModel->calculateVF(disps);
@@ -504,6 +506,9 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 
 		emit modelEdited(editModel);
     	repaint();
+
+    	double msec = t.measure_msec();
+    	printf("KVF: Total frame time (with rendering): %f msec (%f FPS)\n\n", msec, 1000.0 / msec);
     }
 	else if (event->buttons() == Qt::NoButton && showSelection)
 	{

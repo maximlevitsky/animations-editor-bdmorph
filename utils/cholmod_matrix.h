@@ -1,49 +1,35 @@
 #ifndef SIMPLESPARSEMATRIX_H
 #define SIMPLESPARSEMATRIX_H
 
-#define N_THREADS 2
 #include <vector>
 #include <cstdlib>
-#include <QString>
 #include <set>
-#include <QThread>
-#include <QThreadPool>
 #include <iostream>
 #include <map>
 #include <stdio.h>
 #include <cholmod.h>
 
-class ParallelMatrixMultiplier;
 class CholmodVector;
-
 /******************************************************************************************************************************/
 class CholmodSparseMatrix
 {
 public:
-    CholmodSparseMatrix(int r, int c, int nz);
-    CholmodSparseMatrix();
 
-    ~CholmodSparseMatrix()
-    {
-        free(values);
-        free(rowStart);
-        free(column);
-    }
+	enum Type {
+		UPPER_TRANGULAR,
+		LOWER_TRIANGULAR,
+		ASSYMETRIC,
+	};
 
-    void reshape(int r, int c, int cap) { setRows(r); setCols(c); setCapacity(cap); }
-    void doubleCapacity() { setCapacity(capacity*2); }
+    CholmodSparseMatrix(CholmodSparseMatrix::Type type, int r, int c, int nz);
+    CholmodSparseMatrix(CholmodSparseMatrix::Type type);
+
+	~CholmodSparseMatrix();
 
 	/********************************************************************/
 
-    void setRows(int r) { nr = r; rowStart = (unsigned int*)realloc(rowStart, r*sizeof(unsigned int)); }
-    void setCols(int c) { nc = c; }
-
-    void setCapacity(int c)
-    {
-        capacity = c;
-        values = (double*)realloc((void*)values, capacity*sizeof(double));
-        column = (unsigned int*)realloc((void*)column, capacity*sizeof(unsigned int));
-    }
+	void reshape(unsigned int r, unsigned int c, unsigned int cap);
+	void setCapacity(unsigned int c);
 
 	/********************************************************************/
 
@@ -58,7 +44,6 @@ public:
     void transpose(CholmodSparseMatrix &result);
 
     void multiply(CholmodVector &x, CholmodVector &b);
-    void multiplySymm(CholmodVector &x, CholmodVector &b);
 	void transposeMultiply(CholmodVector &x, CholmodVector &b);
 
 	void zeroOutColumns(std::set<int>& cols, int shift = 0);
@@ -88,8 +73,9 @@ private:
 
     unsigned int curLocation;
     int lastR;
-};
 
+    Type type;
+};
 /******************************************************************************************************************************/
 
 

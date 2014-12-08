@@ -5,42 +5,65 @@
 #include <limits>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #define ABS(x) (((x)<0)?-(x):(x))
 
 
 /******************************************************************************************************************************/
-CholmodSparseMatrix::CholmodSparseMatrix()
-    : nr(0), nc(0), numNonzero(0), values(NULL), rowStart(NULL), column(NULL)
+CholmodSparseMatrix::CholmodSparseMatrix(CholmodSparseMatrix::Type type)
+    : nr(0), nc(0), numNonzero(0), values(NULL), rowStart(NULL), column(NULL), type(type), capacity(0)
+{}
+
+CholmodSparseMatrix::CholmodSparseMatrix(CholmodSparseMatrix::Type type, int r, int c, int nz)
+    : nr(r), nc(c), numNonzero(0), capacity(nz), type(type), values(NULL), rowStart(NULL), column(NULL)
 {
-
-    int nz = 200;
-
-    capacity = nz;
-    values = (double*)malloc(nz*sizeof(double));
-    rowStart = (unsigned int*)malloc(nr*sizeof(unsigned int));
-    column = (unsigned int*)malloc(nz*sizeof(unsigned int));
-
-    if (!values || !rowStart || !column) {
-        qWarning("Out of memory");
-        exit(0);
-    }
+	reshape(r,c,nz);
 }
 
-CholmodSparseMatrix::CholmodSparseMatrix(int r, int c, int nz)
-    : nr(r), nc(c), numNonzero(0), capacity(nz)
+/******************************************************************************************************************************/
+
+CholmodSparseMatrix::~CholmodSparseMatrix()
 {
-
-    values = (double*)malloc(nz*sizeof(double));
-    rowStart = (unsigned int*)malloc(nr*sizeof(unsigned int));
-    column = (unsigned int*)malloc(nz*sizeof(unsigned int));
-
-    if (!values || !rowStart || !column) {
-        qWarning("Out of memory");
-        exit(0);
-    }
+	free(values);
+	free(rowStart);
+	free(column);
 }
 
+/******************************************************************************************************************************/
+void CholmodSparseMatrix::reshape(unsigned int r, unsigned int c, unsigned int cap)
+{
+	if (r != nr || c != nc)
+	{
+		if (type != ASSYMETRIC)
+			assert(r == c);
+
+		rowStart = (unsigned int*) (realloc(rowStart, (r+1) * sizeof(unsigned int)));
+		nr = r;
+		nc = c;
+	}
+	setCapacity(cap);
+}
+
+/******************************************************************************************************************************/
+void CholmodSparseMatrix::setCapacity(unsigned int c)
+{
+	if (capacity == c)
+		return;
+
+	capacity = c;
+	values = (double*) (realloc((void*) (values), capacity * sizeof(double)));
+	column = (unsigned int*) (realloc((void*) (column),
+			capacity * sizeof(unsigned int)));
+}
+
+/******************************************************************************************************************************/
+
+void CholmodSparseMatrix::startMatrixFill() {
+	curLocation = 0;
+	lastR = -1;
+	numNonzero = 0;
+}
 /******************************************************************************************************************************/
 
 double CholmodSparseMatrix::infinityNorm()
@@ -60,12 +83,7 @@ double CholmodSparseMatrix::infinityNorm()
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::transpose(CholmodSparseMatrix &result)
 {
-    result.nc = nr;
-    result.nr = nc;
-
-    result.setCapacity(numNonzero);
-    result.numNonzero = numNonzero;
-    result.rowStart = (unsigned int*)realloc(result.rowStart,nc*sizeof(unsigned int));
+    result.reshape(nc,nr,numNonzero);
 
     // colSize is malloc'ed -- eventually we should allocate it elsewhere
     unsigned int *colSize = (unsigned int*)malloc(nc*sizeof(int));
@@ -78,7 +96,7 @@ void CholmodSparseMatrix::transpose(CholmodSparseMatrix &result)
         result.rowStart[i] = result.rowStart[i-1] + colSize[i-1];
 
     if (result.rowStart[nc-1] + colSize[nc-1] != numNonzero) {
-        qWarning("Something wrong with transpose!");
+        printf("Something wrong with transpose!\n");
         exit(0);
     }
 
@@ -106,13 +124,9 @@ void CholmodSparseMatrix::stack(CholmodSparseMatrix **matrices, unsigned int num
         maxCol = std::max(maxCol, matrices[i]->nc + colShifts[i]);
     }
 
-    result.setCapacity(nonzeroSum);
-    result.nr = rowSum;
-    result.nc = maxCol;
-
-    result.rowStart = (unsigned int*)realloc(result.rowStart, rowSum*sizeof(unsigned int));
-
+    result.reshape(rowSum,maxCol,nonzeroSum);
     result.startMatrixFill();
+
     unsigned int rowShift = 0;
     for (unsigned int i = 0; i < numMatrices; i++) {
         for (unsigned int j = 0; j < matrices[i]->nr; j++)
@@ -123,17 +137,20 @@ void CholmodSparseMatrix::stack(CholmodSparseMatrix **matrices, unsigned int num
 }
 
 /******************************************************************************************************************************/
-void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &result) {
+void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &result)
+{
 	std::map<int, double> rowValues; // for a given column, holds nonzero values
 	unsigned int curNonzero = 0;
 
-    result.setRows(nr);
-    result.setCols(m.nc);
+	if (result.capacity == 0)
+		result.setCapacity(200);
 
+	result.reshape(nr,m.nc,result.capacity);
     result.startMatrixFill();
-    for (unsigned int i = 0; i < nr; i++) { // compute the i-th row
-        result.rowStart[i] = curNonzero;
 
+    for (unsigned int i = 0; i < nr; i++) { // compute the i-th row
+
+    	result.rowStart[i] = curNonzero;
         rowValues.clear(); // start out with zeroes
 
         unsigned int end = rowEnd(i);
@@ -148,7 +165,7 @@ void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &
         }
 
         // now, copy those values into the matrix
-        while (curNonzero + (int)rowValues.size() > result.capacity) result.doubleCapacity();
+        while (curNonzero + (int)rowValues.size() > result.capacity) result.setCapacity(result.capacity*2);
 
         // this better traverse in sorted order...
         for (typename std::map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
@@ -161,13 +178,10 @@ void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &
 }
 
 /******************************************************************************************************************************/
-CholmodSparseMatrix& CholmodSparseMatrix::operator =(
-		const CholmodSparseMatrix& m) {
+CholmodSparseMatrix& CholmodSparseMatrix::operator =(const CholmodSparseMatrix& m)
+{
 	reshape(m.nr, m.nc, m.capacity);
 	numNonzero = m.numNonzero;
-	nc = m.nc;
-	nr = m.nr;
-	capacity = m.capacity;
 	memcpy(values, m.values, numNonzero * sizeof(double));
 	memcpy(rowStart, m.rowStart, nr * sizeof(int));
 	memcpy(column, m.column, numNonzero * sizeof(int));
@@ -186,12 +200,6 @@ void CholmodSparseMatrix::addConstraint(const std::vector<int>& rows,double alph
 	}
 }
 
-void CholmodSparseMatrix::startMatrixFill() {
-	curLocation = 0;
-	lastR = -1;
-	numNonzero = 0;
-}
-
 /******************************************************************************************************************************/
 double* CholmodSparseMatrix::addElement(int r, int c, double value)
 {
@@ -203,10 +211,19 @@ double* CholmodSparseMatrix::addElement(int r, int c, double value)
 			rowStart[++lastR] = curLocation;
 	}
 
+	assert(r < nr);
+	assert(c < nc);
+
+	if (type == UPPER_TRANGULAR)
+		assert(c >= r);
+	if (type == LOWER_TRIANGULAR)
+		assert(c <= r);
+
 	if (curLocation >= capacity) {
-		qWarning("Too far: %d %d", curLocation, capacity);
+		printf("Too far: %d %d", curLocation, capacity);
 		exit(0);
 	}
+
 	values[curLocation] = value;
 	column[curLocation] = c;
 	numNonzero++;
@@ -219,35 +236,35 @@ void CholmodSparseMatrix::multiply(CholmodVector &x, CholmodVector &b)
 {
 	for (unsigned int i = 0; i < nr; i++)
 		b[i] = 0;
-	for (unsigned int i = 0; i < nr; i++)
-		for (unsigned int j = rowStart[i]; j < rowEnd(i); j++)
-			b[i] += values[j] * x[column[j]];
+
+	switch(type) {
+	case ASSYMETRIC:
+		for (unsigned int i = 0; i < nr; i++)
+			for (unsigned int j = rowStart[i]; j < rowEnd(i); j++)
+				b[i] += values[j] * x[column[j]];
+		break;
+	case LOWER_TRIANGULAR:
+		for (unsigned int i = 0; i < nr; i++)
+			for (unsigned int j = rowStart[i]; j < rowEnd(i) && column[j] <= i; j++)
+				b[i] += values[j] * x[column[j]];
+
+		for (unsigned int i = 0; i < nr; i++)
+			for (unsigned int j = rowStart[i]; j < rowEnd(i) && column[j] < i; j++)
+				b[column[j]] += values[j] * x[i];
+		break;
+	case UPPER_TRANGULAR:
+		assert(0); /*TODO*/
+		break;
+	}
 }
 
-void CholmodSparseMatrix::multiplySymm(CholmodVector &x, CholmodVector &b)
-{
-	for (unsigned int i = 0; i < nr; i++)
-		b[i] = 0;
-	for (unsigned int i = 0; i < nr; i++)
-		for (unsigned int j = rowStart[i]; j < rowEnd(i) && column[j] <= i; j++)
-			b[i] += values[j] * x[column[j]];
-
-	for (unsigned int i = 0; i < nr; i++)
-		// row i
-		for (unsigned int j = rowStart[i]; j < rowEnd(i) && column[j] < i; j++)
-			// column column[j]
-			b[column[j]] += values[j] * x[i];
-
-}
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::transposeMultiply(CholmodVector &x, CholmodVector &b)
 {
 	for (unsigned int i = 0; i < nc; i++)
 		b[i] = 0;
 	for (unsigned int i = 0; i < nr; i++)
-		// row i
 		for (unsigned int j = rowStart[i]; j < rowEnd(i); j++)
-			// column column[j]
 			b[column[j]] += values[j] * x[i];
 }
 
@@ -270,6 +287,7 @@ void CholmodSparseMatrix::copy(CholmodSparseMatrix& m)
 	memcpy(column, m.column, numNonzero * sizeof(int));
 	curLocation = m.curLocation;
 	lastR = m.lastR;
+	type = m.type;
 }
 
 /******************************************************************************************************************************/
@@ -351,8 +369,8 @@ void CholmodSparseMatrix::display(const char* var, FILE* out) const
 
 void CholmodSparseMatrix::getCholmodMatrix(cholmod_sparse& matrix)
 {
-	rowStart = (unsigned int*) ((((realloc(rowStart, (nr + 1) * sizeof(int))))));
 	rowStart[nr] = numNonzero;
+
 	matrix.nrow = numCols(); // P is row-major, so cholmod thinks it's P*
 	matrix.ncol = numRows();
 	matrix.nzmax = numNonzero;
@@ -360,11 +378,22 @@ void CholmodSparseMatrix::getCholmodMatrix(cholmod_sparse& matrix)
 	matrix.i = column;
 	matrix.x = values;
 	matrix.z = NULL;
-	matrix.stype = 0;
 	matrix.itype = CHOLMOD_INT;
 	matrix.xtype = CHOLMOD_REAL;
 	matrix.dtype = CHOLMOD_DOUBLE;
 	matrix.sorted = 1;
-	matrix.packed = TRUE;
+	matrix.packed = 1;
 	matrix.nz = NULL;
+
+	switch(type) {
+	case ASSYMETRIC:
+		matrix.stype = 0;
+		break;
+	case LOWER_TRIANGULAR:
+		matrix.stype = 1;
+		break;
+	case UPPER_TRANGULAR:
+		matrix.stype = -1;
+		break;
+	}
 }

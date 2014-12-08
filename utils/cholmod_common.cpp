@@ -7,13 +7,13 @@ static bool cholmod_common_initilaized = false;
 
 
 /******************************************************************************************************************************/
-static void cholmod_error_handler(int status, char *file, int line,  char *message)
+/*static void cholmod_error_handler(int status, char *file, int line,  char *message)
 {
     printf("CHOLMOD error status %d\n", status);
     printf("File: %s\n", file);
     printf("Line: %d\n", line);
     printf("Message: %s\n", message);
-}
+}*/
 
 /******************************************************************************************************************************/
 cholmod_common* cholmod_get_common()

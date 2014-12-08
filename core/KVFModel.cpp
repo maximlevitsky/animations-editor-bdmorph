@@ -38,7 +38,14 @@ KVFModel::KVFModel(MeshModel* model) :
 	lastLogSpiralTime(0),
 	MeshModel(*model),
 	L2(NULL),
-	L1(NULL)
+	L1(NULL),
+
+	P(CholmodSparseMatrix::ASSYMETRIC),
+	Pcopy(CholmodSparseMatrix::ASSYMETRIC),
+	P2(CholmodSparseMatrix::ASSYMETRIC),
+	dx2(CholmodSparseMatrix::ASSYMETRIC),
+	dy2(CholmodSparseMatrix::ASSYMETRIC),
+	stacked(CholmodSparseMatrix::ASSYMETRIC)
 {
 	faces = model->faces;
 	boundaryVertices = model->boundaryVertices;
@@ -50,6 +57,7 @@ KVFModel::KVFModel(MeshModel* model) :
     newPoints.resize(numVertices);
     counts.resize(numVertices);
 
+    P.reshape(numFaces*3, numFaces*4, 4*numFaces);
     P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
     dx2.reshape(numFaces, numVertices, 3*numFaces);
     dy2.reshape(numFaces, numVertices, 3*numFaces);
@@ -299,7 +307,6 @@ void KVFModel::applyVFLogSpiral()
 	double totalTime = lastVFCalcTime + lastLogSpiralTime;
 	double FPS = 1000.0 / (totalTime);
 	printf("KVF: Total solve time: %f msec (%f FPS)\n", totalTime, FPS);
-	printf("\n\n");
 
     historyAdd(disps);
 }
