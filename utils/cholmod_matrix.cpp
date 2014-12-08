@@ -4,6 +4,7 @@
 #include <ctime>
 #include <limits>
 #include <assert.h>
+#include <stdio.h>
 
 #define ABS(x) (((x)<0)?-(x):(x))
 
@@ -273,10 +274,77 @@ void CholmodSparseMatrix::copy(CholmodSparseMatrix& m)
 
 /******************************************************************************************************************************/
 
-void CholmodSparseMatrix::display() {
+void CholmodSparseMatrix::display(const char* var, FILE* out) const
+{
+	bool first = true;
+	int count = 0;
+	fprintf(out,"I = [");
+
 	for (unsigned int i = 0; i < nr; i++)
-		for (unsigned int k = rowStart[i]; k < rowEnd(i); k++)
-			qWarning("(%d,%d) %g", i, column[k], values[k]);
+	{
+		for (unsigned int k = rowStart[i]; k < rowEnd(i); k++) {
+			if (first) {
+				fprintf(out,"%d", i+1);
+				first = false;
+			} else
+				fprintf(out,", %d", i+1);
+
+			count++;
+			if (count == 30) {
+				fprintf(out, " ... \n");
+				count = 0;
+			}
+		}
+	}
+
+	fprintf(out,"];\n");
+	first = true;
+	count = 0;
+	fprintf(out,"J = [");
+
+	for (unsigned int i = 0; i < nr; i++)
+	{
+		for (unsigned int k = rowStart[i]; k < rowEnd(i); k++) {
+			if (first) {
+				fprintf(out,"%d", column[k]+1);
+				first = false;
+			} else
+				fprintf(out,", %d", column[k]+1);
+
+
+			count++;
+			if (count == 30) {
+				fprintf(out, " ... \n");
+				count = 0;
+			}
+		}
+}
+
+	fprintf(out,"];\n");
+	first = true;
+	count = 0;
+	fprintf(out,"S = [");
+
+
+	for (unsigned int i = 0; i < nr; i++)
+	{
+		for (unsigned int k = rowStart[i]; k < rowEnd(i); k++) {
+			if (first) {
+				fprintf(out,"%25.20e", values[k]);
+				first = false;
+			} else
+				fprintf(out,", %25.20e", values[k]);
+
+			count++;
+			if (count == 10) {
+				fprintf(out, " ... \n");
+				count = 0;
+			}
+		}
+	}
+
+	fprintf(out,"];\n");
+	fprintf(out,"%s = sparse(I,J,S,%d,%d);\n", var, numRows(), numCols());
 }
 
 /******************************************************************************************************************************/

@@ -41,10 +41,14 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/utils}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/maxim/Technion/kvf_debug/"/>
 									<listOptionValue builtIn="false" value="/usr/include/eigen3"/>
+									<listOptionValue builtIn="false" value="/usr/include/suitesparse"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1345561444" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1559177820" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
+								<option id="gnu.c.compiler.option.include.paths.260254260" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="/usr/include/suitesparse"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1537000948" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.151975254" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base"/>

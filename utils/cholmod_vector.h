@@ -3,6 +3,7 @@
 
 #include <cholmod.h>
 #include "cholmod_common.h"
+#include <stdio.h>
 
 
 class CholmodVector
@@ -47,6 +48,25 @@ public:
 	double& operator[] (int index)
 	{
 		return getValues()[index];
+	}
+
+
+	void display(const char* var, FILE* file)
+	{
+		double *values1 = getValues();
+
+		fprintf(file, "%s = [", var);
+		bool first = true;
+
+		for (unsigned int i = 0 ; i < size() ; i++) {
+			if (first) {
+				first = false;
+				fprintf(file, "%25.20e", values1[i]);
+			} else
+				fprintf(file, "; %25.20e", values1[i]);
+		}
+
+		fprintf(file, "];\n");
 	}
 
 	operator cholmod_dense*() { return values; }

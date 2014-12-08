@@ -5,14 +5,22 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 PROJECT(kvf2d)
 FIND_PACKAGE(Qt4 REQUIRED)
 FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(SUITESPARESE REQUIRED)
-FIND_PACKAGE(Eigen3 3.0.0 REQUIRED)
+#FIND_PACKAGE(SUITESPARESE REQUIRED)
+#FIND_PACKAGE(Eigen3 3.0.0 REQUIRED)
 
 SET(QT_USE_QTOPENGL TRUE)
 INCLUDE(${QT_USE_FILE})
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
+SET (SUITESPARSE_INCLUDE_DIRS /home/maxim/Technion/suitesparse/include)
+SET ( SUITESPARSE_LIBRARIES
+	/home/maxim/Technion/suitesparse/libcholmod.a
+	/home/maxim/Technion/suitesparse/libamd.a 
+	/home/maxim/Technion/suitesparse/libcolamd.a 
+	/home/maxim/Technion/suitesparse/libsuitesparseconfig.a
+	openblas lapack metis
+)
+
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ${SUITESPARSE_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(. ./GUI ./core ./utils ./GUI/widgets)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")

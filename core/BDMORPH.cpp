@@ -709,6 +709,16 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	{
 		calculate_grad_and_hessian(iteration);
 
+		//char filename[50];
+		//sprintf(filename, "matrix%d.m", iteration);
+		//FILE* matrix = fopen(filename, "w");
+		//EnergyHessian.display("HDOWN", matrix);
+		//fprintf(matrix, "Hf = HDOWN + tril(HDOWN, -1)';\n\n");
+		//EnergyGradient.display("Gf", matrix);
+		//fprintf(matrix, "\n\n");
+		//K.display("K", matrix);
+		//fprintf(matrix, "\n\n");
+
 		printf("BDMORPH: iteration %i : ||\u2207F||\u2082 = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
 				iteration, grad_norm, minAngle*2*(180.0/M_PI), maxAngle*2*(180.0/M_PI));
 		printf("BDMORPH: iteration %i : \u2207F and H(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
@@ -721,6 +731,11 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 		EnergyHessian.multiplySymm(K,NewtonRHS);
 		NewtonRHS.sub(EnergyGradient);
 
+		//NewtonRHS.display("NEWTONRHS", matrix);
+
+		//fprintf(matrix, "RHS = Hf * K - Gf;\n\n");
+
+
 		printf("BDMORPH: iteration %i : right side build time: %f msec\n", iteration, t2.measure_msec());
 
 		cholmod_sparse res;
@@ -729,14 +744,32 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 		if (!LL) LL = cholmod_analyze(&res, cholmod_get_common());
 		cholmod_factorize(&res, LL, cholmod_get_common());
+
+		if (cholmod_get_common()->status != 0) {
+			printf("BDMORPH: iteration %i : cholmod factorize failure\n", iteration);
+			return -1;
+		}
+
 		cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, NewtonRHS, cholmod_get_common());
+
+		if (cholmod_get_common()->status != 0) {
+			printf("BDMORPH: iteration %i : cholmod solve failure\n", iteration);
+			return -1;
+		}
+
 	    K.setData(Xcholmod);
+
+	    //K.display("NEWK", matrix);
+		//fclose(matrix);
+
 
 		printf("BDMORPH: iteration %i : solve time: %f msec\n", iteration, t2.measure_msec());
 	}
 
-	if (iteration == NEWTON_MAX_ITERATIONS)
+	if (iteration == NEWTON_MAX_ITERATIONS) {
 		printf ("BDMORPH: algorithm doesn't seem to converge, giving up\n");
+		return -1;
+	}
 
 
 	/* Setup position of first vertex and direction of first edge */

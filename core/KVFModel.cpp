@@ -220,7 +220,7 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
     Xx = (double*)Xcholmod2->x;
 
-    printf("KVF: Dirichlet time: %f msec\n", t.measure_msec());
+    printf("KVF: Dirichlet solve time: %f msec\n", t.measure_msec());
 
 	for (unsigned int i = 0; i < numVertices; i++)
 		vf[i] = Vector2D<double>(Xx[i],Xx[i+numVertices]);

@@ -28,7 +28,7 @@ void cholmod_initialize()
 	if (!cholmod_common_initilaized) {
 			cholmod_common_initilaized = true;
 			cholmod_start(&common);
-			common.error_handler = cholmod_error_handler;
+			//common.error_handler = cholmod_error_handler;
 			common.final_asis = 1;
 			common.supernodal = CHOLMOD_SIMPLICIAL;
 	}

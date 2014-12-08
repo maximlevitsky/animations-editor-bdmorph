@@ -10,6 +10,7 @@
 #include <QThreadPool>
 #include <iostream>
 #include <map>
+#include <stdio.h>
 #include <cholmod.h>
 
 class ParallelMatrixMultiplier;
@@ -67,11 +68,11 @@ public:
 	CholmodSparseMatrix& operator =(const CholmodSparseMatrix& m);
 
 	/********************************************************************/
-    int numRows() {return nr;}
-    int numCols() {return nc;}
+    int numRows() const {return nr;}
+    int numCols() const {return nc;}
 
 	/********************************************************************/
-	void display();
+	void display(const char* var, FILE* out) const;
 
 	void getCholmodMatrix(cholmod_sparse& matrix);
 private:
