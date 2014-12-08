@@ -39,6 +39,7 @@ KVFModel::KVFModel(MeshModel* model) :
 	MeshModel(*model),
 	L2(NULL),
 	L1(NULL),
+	lastDispsSize(0),
 
 	P(CholmodSparseMatrix::ASSYMETRIC),
 	Pcopy(CholmodSparseMatrix::ASSYMETRIC),
@@ -93,6 +94,11 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 
     if (allDisplacements.size() <= 1)
     	return;
+
+    if (allDisplacements.size() != lastDispsSize) {
+    	cholmod_free_factor(&L1, cholmod_get_common());
+    	lastDispsSize = allDisplacements.size();
+    }
 
     /************************************************/
     /* BUILD P matrix */

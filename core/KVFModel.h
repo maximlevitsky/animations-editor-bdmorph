@@ -67,6 +67,7 @@ public:
 private:
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
+	unsigned int lastDispsSize;
 	std::vector<Point2> initialVertexes;
 	double alpha1;
 
