@@ -202,14 +202,13 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     CholmodVector rhsMove(Pcopy.numRows());
 
     Pcopy.multiply(boundaryRHS, rhsMove);
-    for (int i = 0; i < Pcopy.numRows(); i++)
+    for (unsigned int i = 0; i < rhsMove.size(); i++)
         rhsMove[i] *= -1;
 
     Pcopy.zeroOutColumns(*boundaryVertices, 0);
     Pcopy.zeroOutColumns(*boundaryVertices, numVertices);
 
-    CholmodVector B2(Pcopy.numCols());
-    Pcopy.transposeMultiply(rhsMove,B2);
+    Pcopy.transposeMultiply(rhsMove,B);
 
     std::vector<int> constrained;
     for (std::set<int>::iterator it = boundaryVertices->begin(); it != boundaryVertices->end(); ++it)
@@ -217,8 +216,8 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
         int bv = *it;
         constrained.push_back(*it);
         constrained.push_back(*it+numVertices);
-        B2[bv] 			   += Xx[bv];
-        B2[bv+numVertices] += Xx[bv+numVertices];
+        B[bv] 			  += Xx[bv];
+        B[bv+numVertices] += Xx[bv+numVertices];
     }
 
     Pcopy.addConstraint(constrained,1);
@@ -231,7 +230,7 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     Pcopy.getCholmodMatrix(cSparse);
     if (!L2) L2 = cholmod_analyze(&cSparse, cm);
     cholmod_factorize(&cSparse, L2, cm);
-    cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B2, cm);
+    cholmod_dense *Xcholmod2 = cholmod_solve(CHOLMOD_A, L2, B, cm);
     Xx = (double*)Xcholmod2->x;
 
     printf("KVF: Dirichlet solve time: %f msec\n", t.measure_msec());

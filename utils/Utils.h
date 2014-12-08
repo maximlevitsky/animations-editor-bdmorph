@@ -293,7 +293,7 @@ static inline bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3)
 
 static inline void debug_printf(const char* string, ...)
 {
-#ifdef __DEBUG__
+#ifdef __DEBUG_VERBOSE__
 	va_list list;
 	va_start(list,string);
 	vprintf(string,list);

@@ -41,9 +41,8 @@ public:
 	BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& boundary_vertexes);
 
 	/* Mesh helpers */
-	Vertex getNeighbourVertex(Vertex v) { return aNeighbour[v];}
 	Vertex getNeighbourVertex(Vertex v1, Vertex v2);
-	void getNeighbourVertices(Vertex v1, std::vector<Vertex>& result);
+	void getNeighbourVertices(Vertex v1, std::set<Vertex>& result);
 
 	/* Main phase */
 	VertexK allocate_K(Vertex vertex);
@@ -51,14 +50,14 @@ public:
 	int compute_edge_len(Edge e);
 	TmpMemAdddress compute_angle(Vertex p0, Vertex p1, Vertex p2);
 
-	int processVertexForNewtonIteration(Vertex v0, int neigh_count,
+	int process_vertex(Vertex v0, int neigh_count,
 		std::vector<TmpMemAdddress> &inner_angles,
 		std::map<Vertex, std::pair<TmpMemAdddress,TmpMemAdddress> > &outer_angles);
 
 	/* Extraction phase */
 	TmpMemAdddress compute_squared_edge_len(Edge& e);
 	TmpMemAdddress load_vertex_position(Vertex vertex);
-	void layoutVertex(Edge r0, Edge r1, Edge d, Vertex p0, Vertex p1,Vertex p2);
+	void layout_vertex(Edge r0, Edge r1, Edge d, Vertex p0, Vertex p1,Vertex p2);
 
 
 	/* output */
@@ -68,10 +67,10 @@ public:
 	std::set<Vertex>& boundary_vertexes_set;
 
 	/* For each edge, stores the third vertex that makes up the face, counter clockwise */
-	std::map<OrderedEdge, Vertex> neighbours;
+	std::map<OrderedEdge, Vertex> edgeNeighbour;
 
 	/* Stores for each vertex one of its neighbors */
-	std::map<Vertex,Vertex> aNeighbour;
+	std::multimap<Vertex,Vertex> vertexNeighbours;
 
 
 	/* information on K array - we will have here all the vertexes excluding boundary ones */
@@ -136,7 +135,12 @@ private:
 	void calculate_grad_and_hessian(int iteration);
 	void calculate_new_vertex_positions();
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
+
+	virtual void render(double wireframeTrans);
 	cholmod_factor *LL;
+
+	std::set<Vertex> visitedVertices, mappedVertices;
+
 };
 
 

@@ -1,5 +1,6 @@
 
 #undef __DEBUG__
+#undef __DEBUG_VERBOSE__
 
 #include <assert.h>
 #include <vector>
@@ -7,8 +8,10 @@
 #include <algorithm>
 #include <math.h>
 #include <cholmod.h>
+#include <iterator>
 #include "Utils.h"
 #include "BDMORPH.h"
+#include <QtOpenGL>
 
 #define END_ITERATION_VALUE 1e-10
 #define NEWTON_MAX_ITERATIONS 20
@@ -58,61 +61,39 @@ BDMORPH_BUILDER::BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& bou
 		for (auto iter = faces.begin() ; iter != faces.end() ; iter++)
 		{
 			Face& face = *iter;
-			neighbours.insert(make_pair(OrderedEdge(face[0],face[1]),face[2]));
-			neighbours.insert(make_pair(OrderedEdge(face[1],face[2]),face[0]));
-			neighbours.insert(make_pair(OrderedEdge(face[2],face[0]),face[1]));
+			edgeNeighbour.insert(make_pair(OrderedEdge(face[0],face[1]),face[2]));
+			edgeNeighbour.insert(make_pair(OrderedEdge(face[1],face[2]),face[0]));
+			edgeNeighbour.insert(make_pair(OrderedEdge(face[2],face[0]),face[1]));
 
-			aNeighbour[face[0]] = face[1];
-			aNeighbour[face[1]] = face[2];
-			aNeighbour[face[2]] = face[0];
+			vertexNeighbours.insert(std::make_pair(face[0], face[1]));
+			vertexNeighbours.insert(std::make_pair(face[1], face[0]));
+
+			vertexNeighbours.insert(std::make_pair(face[1], face[2]));
+			vertexNeighbours.insert(std::make_pair(face[2], face[1]));
+
+			vertexNeighbours.insert(std::make_pair(face[2], face[0]));
+			vertexNeighbours.insert(std::make_pair(face[0], face[2]));
 		}
 }
 
 /*****************************************************************************************************/
 Vertex BDMORPH_BUILDER::getNeighbourVertex(Vertex v1, Vertex v2)
 {
-	auto iter = neighbours.find(OrderedEdge(v1, v2));
-	if (iter != neighbours.end())
+	auto iter = edgeNeighbour.find(OrderedEdge(v1, v2));
+	if (iter != edgeNeighbour.end())
 		return iter->second;
 	return -1;
 }
 
 /*****************************************************************************************************/
 
-void BDMORPH_BUILDER::getNeighbourVertices(Vertex v0, std::vector<Vertex>& result)
+void BDMORPH_BUILDER::getNeighbourVertices(Vertex v0, std::set<Vertex>& result)
 {
-	result.clear();
-	Vertex v_start = getNeighbourVertex(v0);
-	Vertex v1 = v_start;
+	auto iter1 = vertexNeighbours.lower_bound(v0);
+	auto iter2 = vertexNeighbours.upper_bound(v0);
 
-	if (boundary_vertexes_set.count(v0) == 0)
-	{
-		do {
-			result.push_back(v1);
-			v1 = getNeighbourVertex(v0, v1);
-
-			if (v1 == -1) {
-				printf("Mesh has inconsistent faces\n");
-				abort();
-			}
-
-		} while ( v1 != v_start);
-	}
-	else {
-
-		/* find first vertex in topological half circle*/
-		while (1) {
-			Vertex v_prev = getNeighbourVertex(v1,v0);
-			if (v_prev == -1)
-				break;
-			v1 = v_prev;
-		}
-
-		while (v1 != -1) {
-			result.push_back(v1);
-			v1 = getNeighbourVertex(v0, v1);
-		}
-	}
+	for (auto iter = iter1 ; iter != iter2 ; iter++)
+		result.insert(iter->second);
 }
 
 /*****************************************************************************************************/
@@ -177,7 +158,7 @@ TmpMemAdddress BDMORPH_BUILDER::compute_angle(Vertex p0, Vertex p1, Vertex p2)
 }
 
 /*****************************************************************************************************/
-int BDMORPH_BUILDER::processVertexForNewtonIteration(Vertex v0, int neighbourCount,
+int BDMORPH_BUILDER::process_vertex(Vertex v0, int neighbourCount,
 		std::vector<TmpMemAdddress> &inner_angles,
 		std::map<Vertex, std::pair<TmpMemAdddress,TmpMemAdddress> > &outer_angles)
 {
@@ -285,7 +266,7 @@ TmpMemAdddress BDMORPH_BUILDER::load_vertex_position(Vertex vertex)
 }
 
 /*****************************************************************************************************/
-void BDMORPH_BUILDER::layoutVertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex p1, Vertex p2)
+void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex p1, Vertex p2)
 {
 	TmpMemAdddress p0_pos = load_vertex_position(p0);
 	TmpMemAdddress p1_pos = load_vertex_position(p1);
@@ -313,7 +294,6 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 {
 	TimeMeasurment t;
 
-	std::set<Vertex> visitedVertices, mappedVertices;
 	std::deque<Vertex> vertexQueue;
 	int hessEntries = 0;
 
@@ -323,11 +303,32 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	/* Find good enough start vertex*/
 	Point2 center = getActualBBox().center();
 	Vertex p0 = getClosestVertex(center, true);
-	Vertex p1 = builder.getNeighbourVertex(p0);
+
+	if (p0 == -1)
+	{
+		printf("BRMORPH: WARNING: Center of mesh is empty space - picking first non boundary edge\n");
+
+		for (unsigned int i = 0 ; i < numVertices ; i++) {
+			if (boundaryVertices->count(i) == 0) {
+				p0 = i;
+			}
+		}
+	}
+
+	if (p0 == -1) {
+		printf("BRMORPH: ERROR: All vertexes are boundary can't support this\n");
+		exit(-1);
+	}
+
+	/* And one of its neigbours */
+	std::set<Vertex> neighbours;
+	builder.getNeighbourVertices(p0, neighbours);
+	assert(!neighbours.empty());
+	Vertex p1 = *neighbours.begin();
 
 	e0 = OrderedEdge(p0,p1);
 
-	printf("+++++ Initial edge: %d,%d\n", e0.v0,e0.v1);
+	printf("BRMORPH: Initial edge: %d,%d\n", e0.v0,e0.v1);
 
 	/* ================Pre allocate all K's=========== */
 	vertexQueue.push_back(e0.v0);
@@ -338,16 +339,16 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 		vertexQueue.pop_front();
 		builder.allocate_K(v0);
 
-		std::vector<Vertex> neighbourVertices;
+		std::set<Vertex> neighbourVertices;
 		builder.getNeighbourVertices(v0, neighbourVertices);
-		for (unsigned int  i = 0 ; i < neighbourVertices.size() ; i++)
+		for (auto iter = neighbourVertices.begin() ; iter != neighbourVertices.end() ; iter++)
 		{
-					Vertex v1 = neighbourVertices[i];
-					if (visitedVertices.count(v1) == 0)
-					{
-						vertexQueue.push_back(v1);
-						visitedVertices.insert(v1);
-					}
+			Vertex v1 = *iter;
+			if (visitedVertices.count(v1) == 0)
+			{
+				vertexQueue.push_back(v1);
+				visitedVertices.insert(v1);
+			}
 		}
 
 	}
@@ -360,12 +361,10 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	vertexQueue.push_back(e0.v0);
 	visitedVertices.insert(e0.v0);
 
-	/* ================Put information about initial triangle=========== */
-
 	Vertex v2 = builder.getNeighbourVertex(e0.v0,e0.v1);
 	builder.compute_edge_len(Edge(e0.v1,v2));
 	builder.compute_edge_len(Edge(v2,e0.v0));
-	builder.layoutVertex(Edge(e0.v0,e0.v1),Edge(e0.v1,v2),Edge(v2,e0.v0), e0.v0, e0.v1, v2);
+	builder.layout_vertex(Edge(e0.v0,e0.v1),Edge(e0.v1,v2),Edge(v2,e0.v0), e0.v0, e0.v1, v2);
 
 	mappedVertices.insert(e0.v0);
 	mappedVertices.insert(e0.v1);
@@ -380,97 +379,100 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 		vertexQueue.pop_front();
 
 		bool boundaryVertex = boundaryVertices->count(v0) != 0;
-		Vertex v1_start = builder.getNeighbourVertex(v0);
 
 		/* These sets hold all relevant into to finally emit the COMPUTE_VERTEX_INFO command */
 		std::vector<TmpMemAdddress>  inner_angles;
 		std::map<Vertex, std::pair<TmpMemAdddress,TmpMemAdddress> > outer_angles;
 
 		/* +++++++++++++++++++++Loop on neighbors to collect info +++++++++++++++++++++++++ */
-		Vertex map_start = -1;
-
-		std::vector<Vertex> neighbourVertices;
+		std::set<Vertex> neighbourVertices;
 		builder.getNeighbourVertices(v0, neighbourVertices);
 
 		assert(neighbourVertices.size() > 1);
 
-		for (unsigned int  i = 0 ; i < neighbourVertices.size() ; i++)
-		{
-			Vertex v1 = neighbourVertices[i];
-			Vertex v2 = (i == neighbourVertices.size() - 1) ? neighbourVertices[0] : neighbourVertices[i+1];
 
-			/* add the neighbor to BFS queue only if its not-boundary vertex (rule 1) and not visited yet */
+		for (auto iter = neighbourVertices.begin();  iter != neighbourVertices.end() ; iter++)
+		{
+			Vertex v1 = *iter;
+
 			if (visitedVertices.count(v1) == 0)
 			{
 				vertexQueue.push_back(v1);
 				visitedVertices.insert(v1);
 			}
 
-			/* one of vertices must be mapped */
-			if (mappedVertices.count(v1) != 0 && map_start == -1)
-				map_start = v1;
-
 			if (!boundaryVertex) {
 				/* Calculate the edges for newton iteration */
-				inner_angles.push_back(builder.compute_angle(v2,v0,v1));
 
 				Vertex a = builder.getNeighbourVertex(v0,v1);
 				Vertex b = builder.getNeighbourVertex(v1,v0);
 
+				inner_angles.push_back(builder.compute_angle(v1,v0,a));
 				outer_angles[v1].first = builder.compute_angle(v0,b,v1);
 				outer_angles[v1].second = builder.compute_angle(v0,a,v1);
 			}
+
 		}
 
 		if (!boundaryVertex) {
 			/* and finally emit command to compute the vertex */
 			hessEntries +=
-				builder.processVertexForNewtonIteration(v0,neighbourVertices.size(),inner_angles,outer_angles);
+				builder.process_vertex(v0,neighbourVertices.size(),inner_angles,outer_angles);
 		}
 
 		/* +++++++++++++++++++++Loop on neighbors to map them +++++++++++++++++++++++++ */
-		assert(map_start != -1);
+		std::set<Vertex> mappedNeighbours;
+		std::set<Vertex> unmappedNeighbours;
 
-		v1_start = map_start;
-		Vertex v1 = v1_start;
-		Vertex v2 = builder.getNeighbourVertex(v0,v1);
-
-		while(v2 != -1)
+		for (auto iter = neighbourVertices.begin() ; iter != neighbourVertices.end() ; ++iter)
 		{
-			if (mappedVertices.count(v2) == 0) {
-				builder.layoutVertex(Edge(v0,v1),Edge(v1,v2),Edge(v2,v0), v0, v1, v2);
-				mappedVertices.insert(v2);
-			}
-
-			v1 = v2;
-			v2 = builder.getNeighbourVertex(v0,v1);
-			if (v2 == v1_start)
-				break;
+			if (mappedVertices.count(*iter))
+				mappedNeighbours.insert(*iter);
+			else
+				unmappedNeighbours.insert(*iter);
 		}
+		assert(!mappedNeighbours.empty());
 
-		/* ++++++++++++++++Loop on neighbors to map them (backward) ++++++++++++++++++++ */
-
-		if (boundaryVertex)
+		while (!unmappedNeighbours.empty())
 		{
-			v1 = v1_start;
-			v2 = builder.getNeighbourVertex(v1,v0);
+			std::set<Vertex> newMappedVertexes;
+			for (auto iter = mappedNeighbours.begin() ; iter != mappedNeighbours.end() ; iter++) {
 
-			while(v2 != -1)
-			{
-				if (mappedVertices.count(v2) == 0) {
-					builder.layoutVertex(Edge(v1,v0),Edge(v0,v2),Edge(v2,v1), v1, v0, v2);
-					mappedVertices.insert(v2);
+				Vertex v1 = *iter;
+				Vertex v2 = builder.getNeighbourVertex(v0,v1);
+
+				if (v2 != -1 && mappedNeighbours.count(v2) == 0)
+				{
+					builder.layout_vertex(Edge(v0,v1),Edge(v1,v2),Edge(v2,v0), v0, v1, v2);
+					newMappedVertexes.insert(v2);
+					unmappedNeighbours.erase(v2);
 				}
 
-				v1 = v2;
 				v2 = builder.getNeighbourVertex(v1,v0);
+				if (v2 != -1 && mappedNeighbours.count(v2) == 0)
+				{
+					builder.layout_vertex(Edge(v1,v0),Edge(v0,v2),Edge(v2,v1), v1, v0, v2);
+					newMappedVertexes.insert(v2);
+					unmappedNeighbours.erase(v2);
+				}
 			}
+
+			if (newMappedVertexes.size() == 0) {
+				printf("WARNING: not good connected mesh\n");
+				break;
+			}
+
+			mappedNeighbours.insert(newMappedVertexes.begin(),newMappedVertexes.end());
 		}
+
+		mappedVertices.insert(mappedNeighbours.begin(), mappedNeighbours.end());
 	}
 
 
-	if((visitedVertices.size() != numVertices) || (mappedVertices.size() != numVertices))
-		printf("WARNING: didn't cover all mesh - probably not-connected or has bridges\n");
+	if((visitedVertices.size() != numVertices) || (mappedVertices.size() != numVertices)) {
+		printf("BRMORPH: WARNING: didn't cover all mesh - probably not-connected or has bridges\n");
+		printf("BRMORPH: Covered %d vertexes and mapped %d vertexes\n", (int)visitedVertices.size(), (int)mappedVertices.size());
+	}
 
 	/*==============================================================*/
 	/* Allocate the arrays used for the real thing */
@@ -494,16 +496,16 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	iteration_cmd_stream = builder.iteration_stream.get_stream();
 	extract_solution_cmd_stream = builder.extract_stream.get_stream();
 
-	printf("BDMORPH initialization time:  %f msec\n", t.measure_msec());
-	printf("K count: %d\n", kCount);
-	printf("Stream sizes: %dK %dK %dK\n",
+	printf("BRMORPH: initialization time:  %f msec\n", t.measure_msec());
+	printf("BRMORPH: K count: %d\n", kCount);
+	printf("BRMORPH: Stream sizes: %dK %dK %dK\n",
 			init_cmd_stream->getSize()/1024,
 			iteration_cmd_stream->getSize()/1024,
 			extract_solution_cmd_stream->getSize()/1024);
 
-	printf("TMP memory size: %dK\n", (int)(tempMemSize * sizeof(double) / 1024));
-	printf("L memory size: %dK\n", (int)(edgeCount * sizeof(double) / 1024));
-	printf("Hessian non zero entries: %d\n", hessEntries);
+	printf("BRMORPH: TMP memory size: %dK\n", (int)(tempMemSize * sizeof(double) / 1024));
+	printf("BRMORPH: L memory size: %dK\n", (int)(edgeCount * sizeof(double) / 1024));
+	printf("BRMORPH: Hessian non zero entries: %d\n\n", hessEntries);
 
 }
 /*****************************************************************************************************/
@@ -711,16 +713,6 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	{
 		calculate_grad_and_hessian(iteration);
 
-		//char filename[50];
-		//sprintf(filename, "matrix%d.m", iteration);
-		//FILE* matrix = fopen(filename, "w");
-		//EnergyHessian.display("HDOWN", matrix);
-		//fprintf(matrix, "Hf = HDOWN + tril(HDOWN, -1)';\n\n");
-		//EnergyGradient.display("Gf", matrix);
-		//fprintf(matrix, "\n\n");
-		//K.display("K", matrix);
-		//fprintf(matrix, "\n\n");
-
 		printf("BDMORPH: iteration %i : ||\u2207F||\u2082 = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
 				iteration, grad_norm, minAngle*2*(180.0/M_PI), maxAngle*2*(180.0/M_PI));
 		printf("BDMORPH: iteration %i : \u2207F and H(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
@@ -732,11 +724,6 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 		EnergyHessian.multiply(K,NewtonRHS);
 		NewtonRHS.sub(EnergyGradient);
-
-		//NewtonRHS.display("NEWTONRHS", matrix);
-
-		//fprintf(matrix, "RHS = Hf * K - Gf;\n\n");
-
 
 		printf("BDMORPH: iteration %i : right side build time: %f msec\n", iteration, t2.measure_msec());
 
@@ -753,16 +740,32 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 		cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, NewtonRHS, cholmod_get_common());
 
+#ifdef __DEBUG__
+		char filename[50];
+		sprintf(filename, "iteration%d.m", iteration);
+		FILE* file = fopen(filename, "w");
+		EnergyHessian.display("H", file);
+		fprintf(file, "Hf = H + tril(H, -1)';\n\n");
+		EnergyGradient.display("Gf", file);
+		fprintf(file, "\n\n");
+		K.display("K", file);
+		fprintf(file, "\n\n");
+		NewtonRHS.display("NEWTONRHS", file);
+		fprintf(file, "RHS = Hf * K - Gf;\n\n");
+		fclose (file);
+#endif
+
+		K.setData(Xcholmod);
+
+#ifdef __DEBUG__
+	    K.display("NEWK", file);
+		fclose(file);
+#endif
+
 		if (cholmod_get_common()->status != 0) {
 			printf("BDMORPH: iteration %i : cholmod solve failure\n", iteration);
 			return -1;
 		}
-
-	    K.setData(Xcholmod);
-
-	    //K.display("NEWK", matrix);
-		//fclose(matrix);
-
 
 		printf("BDMORPH: iteration %i : solve time: %f msec\n", iteration, t2.measure_msec());
 	}
@@ -771,7 +774,6 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 		printf ("BDMORPH: algorithm doesn't seem to converge, giving up\n");
 		return -1;
 	}
-
 
 	/* Setup position of first vertex and direction of first edge */
 	Vector2 e0_direction1 = (a->vertices[e0.v1] - a->vertices[e0.v0]).normalize();
@@ -790,3 +792,30 @@ int BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
 	return iteration;
 }
+
+
+void BDMORPHModel::render(double wireframeTrans)
+{
+	MeshModel::render(wireframeTrans);
+
+	/* DEBUG code */
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+
+	double ratio = getWidth() * 0.001;
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glColor3f(0,1,0);
+	renderVertex(e0.v0, ratio);
+	renderVertex(e0.v1, ratio);
+
+	glColor3f(1,0,0);
+
+	for (unsigned int i = 0 ; i < numVertices ; i++)
+		if (mappedVertices.count(i) == 0)
+			renderVertex(i, ratio);
+
+
+	glPopAttrib();
+
+}
+
