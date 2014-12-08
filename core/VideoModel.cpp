@@ -3,7 +3,7 @@
 #include <assert.h>
 
 /******************************************************************************************************************************/
-VideoModel::VideoModel(std::string filename) : MeshModel(filename)
+VideoModel::VideoModel(std::string filename) : MeshModel(filename), pFrame(*this)
 {
 	/* create one keyframe */
 	keyframes.push_back(new VideoKeyFrame(this));

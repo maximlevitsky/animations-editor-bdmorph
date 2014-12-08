@@ -367,27 +367,34 @@ void AnimationPanel::onTimeSliderMoved(int newValue)
 	if (!videoModel)
 		return;
 
-	VideoKeyFrame* newSelectedFrame = videoModel->getLastKeyframeBeforeTime(newValue);
-	if (!newSelectedFrame) return;
+	VideoKeyFrame* prevFrame = videoModel->getLastKeyframeBeforeTime(newValue);
+	if (!prevFrame) return;
 
 	int currentIndex = lstKeyFrames->currentRow();
-	int newIndex = videoModel->getKeyFrameIndex(newSelectedFrame);
-
-	if (currentIndex == newIndex)
-		return;
-
-	lstKeyFrames->setCurrentRow(newIndex);
+	int newIndex = videoModel->getKeyFrameIndex(prevFrame);
+	//if (currentIndex != newIndex) {
+	//	lstKeyFrames->setCurrentRow(newIndex);
+	//}
 
 	VideoKeyFrame* nextFrame = videoModel->getKeyframeByIndex(newIndex+1);
 
 	if (nextFrame == NULL)
 	{
-		emit frameSelectionChanged(newSelectedFrame);
+		//emit frameSelectionChanged(prevFrame);
 	} else
 	{
+		int currTimeMsec = videoModel->getKeyFrameTimeMsec(prevFrame);
+		int nextTimeMsec = videoModel->getKeyFrameTimeMsec(nextFrame);
+
+		double t = newValue - currTimeMsec;
+		t /= (nextTimeMsec-currTimeMsec);
+
+		videoModel->pFrame.interpolate_frame(prevFrame,nextFrame,t);
+
+
 		/* TODO: we won't emit this on this frame but we will apply BDMORPH and tell main view to show its output */
-		/* Apply BDMORPH on newSelectedFrame,nextFrame*/
-		emit frameSelectionChanged(newSelectedFrame);
+		/* Apply BDMORPH on prevFrame,nextFrame*/
+		emit frameSelectionChanged(&videoModel->pFrame);
 	}
 }
 

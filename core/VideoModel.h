@@ -5,8 +5,7 @@
 #include <vector>
 #include <string>
 #include "KVFModel.h"
-
-class BDMORPHModel;
+#include "BDMORPH.h"
 
 /****************************************************************************/
 class VideoKeyFrame : public KVFModel
@@ -40,8 +39,11 @@ public:
 	int getKeyFrameTimeMsec(VideoKeyFrame* frame);
 	int getTotalTime();
 
+	BDMORPHModel pFrame;
+
 private:
 	std::vector<VideoKeyFrame*> keyframes;
+
 };
 
 #endif /* VIDEOMODEL_H_ */
