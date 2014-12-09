@@ -55,6 +55,7 @@ public slots:
 signals:
 	void modelEdited(KVFModel* model);
 	void selectionChanged(int selectedVertex, int selectedFace);
+	void FPSUpdated(double msec);
 
 private:
     /* transformations*/

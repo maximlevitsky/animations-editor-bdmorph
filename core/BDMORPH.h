@@ -100,7 +100,7 @@ public:
 	BDMORPHModel(MeshModel& orig);
 	~BDMORPHModel();
 
-	int interpolate_frame(MeshModel *a, MeshModel* b, double t);
+	double interpolate_frame(MeshModel *a, MeshModel* b, double t);
 private:
 
 	OrderedEdge e0;

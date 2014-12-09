@@ -394,6 +394,7 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 				editModel->applyVFLogSpiral();
 
 			emit modelEdited(editModel);
+			emit FPSUpdated(editModel->lastLogSpiralTime+editModel->lastVFCalcTime);
 		}
 	}
 
@@ -505,6 +506,7 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 			editModel->applyVFLogSpiral();
 
 		emit modelEdited(editModel);
+		emit FPSUpdated(editModel->lastLogSpiralTime+editModel->lastVFCalcTime);
     	repaint();
 
     	double msec = t.measure_msec();

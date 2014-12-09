@@ -24,7 +24,6 @@ public:
 	virtual ~MainWindow();
 
 	void setStatusBarStatistics(int vertexCount, int facesCount);
-	void setStatusBarFPS(double msec);
 	void clearStatusBar();
 
 public slots:
@@ -44,8 +43,8 @@ public slots:
 	void onAbout();
 
 	void onEditorSelectionChanged(int selectedVertex, int selectedFace);
-	void onEditorModelEdited(KVFModel* model);
 	void onInterpolationTest();
+	void onFPSUpdated(double msec);
 
 signals:
 	void videoModelLoaded(VideoModel* model);
@@ -67,8 +66,6 @@ private:
 	GLuint textureRef;
 
 	ThumbnailRenderer* thumbnailRender;
-
-	BDMORPHModel* testModel;
 };
 
 #endif

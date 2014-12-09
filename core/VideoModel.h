@@ -12,7 +12,7 @@ class VideoKeyFrame : public KVFModel
 {
 public:
 
-	VideoKeyFrame(MeshModel* m) : KVFModel(m), duration(1000) {}
+	VideoKeyFrame(MeshModel* m) : KVFModel(m), duration(200) {}
 	int duration;
 };
 

@@ -17,7 +17,7 @@
 #include "BDMORPH.h"
 
 /*****************************************************************************************************/
-MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL), testModel(NULL)
+MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL)
 {
 	setupUi(this);
 
@@ -96,18 +96,16 @@ MainWindow::MainWindow() : model(NULL), currentFrameModel(NULL), testModel(NULL)
 	connect_(this, textureChanged(GLuint), animationPanel, onTextureChanged(GLuint));
 
 	/* we listen to main scene for edit events */
-	connect_(mainScene, modelEdited(KVFModel*), this, onEditorModelEdited(KVFModel*));
 	connect_(mainScene, selectionChanged(int,int), this, onEditorSelectionChanged(int,int));
+	connect_(mainScene, FPSUpdated(double), this, onFPSUpdated(double));
+	connect_(animationPanel, FPSUpdated(double), this, onFPSUpdated(double));
 
-	/* we listen on keyframe switches */
-	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
 	connect_(animationPanel, frameSelectionChanged(MeshModel*), this, onAnimationpanelNewFrameSelected(MeshModel*));
-
 	connect_(animationPanel, animationStarted(), sidePanel, onAnimationStarted());
 	connect_(animationPanel, animationStopped(), sidePanel, onAnimationStopped());
 	connect_(animationPanel, animationStarted(), mainScene, onAnimationStarted());
 	connect_(animationPanel, animationStopped(), mainScene, onAnimationStopped());
-
+	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
 
 	/* --------------------------------------------------------------------------------*/
 	/* setup menu bar*/
@@ -158,7 +156,6 @@ MainWindow::~MainWindow()
 	delete mainScene;
 	delete animationPanel;
 	delete sidePanel;
-	delete testModel;
 }
 
 /*****************************************************************************************************/
@@ -173,35 +170,6 @@ void MainWindow::setStatusBarStatistics(int vertexCount, int facesCount)
 
 	lblVertexCount->show();
 	lblFacesCount->show();
-}
-
-void MainWindow::onEditorSelectionChanged(int selectedVertex, int selectedFace)
-{
-	QString str;
-
-	if (selectedVertex != -1) {
-		lblSelectedVertex->show();
-		str.sprintf("Vertex: %d", selectedVertex);
-		lblSelectedVertex->setText(str);
-	} else
-		lblSelectedVertex->hide();
-
-	if (selectedFace != -1) {
-		lblSelectedFace->show();
-		str.sprintf("Face: %d", selectedFace);
-		lblSelectedFace->setText(str);
-	} else
-		lblSelectedFace->hide();
-
-}
-
-/*****************************************************************************************************/
-void MainWindow::setStatusBarFPS(double msec)
-{
-	QString str;
-	str.sprintf("%4.2f FPS", 1000.0/msec);
-	lblFPS->setText(str);
-	lblFPS->show();
 }
 
 /*****************************************************************************************************/
@@ -224,17 +192,16 @@ void MainWindow::loadModel()
     emit frameSwitched(NULL);
     emit videoModelLoaded(NULL);
     delete model;
-    delete testModel;
     resetTexture();
+    clearStatusBar();
 
     /* load new model */
     model = new VideoModel(filename.toStdString());
     emit videoModelLoaded(model);
-    emit frameSwitched(model->getKeyframeByIndex(0));
+    emit frameSwitched(model->getKeyframeByIndex(1));
 
     /* set these statistics - will only change when loading new model */
     setStatusBarStatistics(model->getNumVertices(), model->getNumFaces());
-    testModel  = new BDMORPHModel(*model);
 }
 
 /*****************************************************************************************************/
@@ -276,6 +243,26 @@ void MainWindow::chooseTexture()
 }
 
 /*****************************************************************************************************/
+void MainWindow::onEditorSelectionChanged(int selectedVertex, int selectedFace)
+{
+	QString str;
+
+	if (selectedVertex != -1) {
+		lblSelectedVertex->show();
+		str.sprintf("Vertex: %d", selectedVertex);
+		lblSelectedVertex->setText(str);
+	} else
+		lblSelectedVertex->hide();
+
+	if (selectedFace != -1) {
+		lblSelectedFace->show();
+		str.sprintf("Face: %d", selectedFace);
+		lblSelectedFace->setText(str);
+	} else
+		lblSelectedFace->hide();
+
+}
+/*****************************************************************************************************/
 void MainWindow::resetTexture()
 {
 	QPixmap texture = QPixmap(16,16);
@@ -285,13 +272,17 @@ void MainWindow::resetTexture()
 }
 
 /*****************************************************************************************************/
-void MainWindow::onEditorModelEdited(KVFModel* model)
+void MainWindow::onFPSUpdated(double msec)
 {
-	if (!model) return;
+	QString str;
 
-	/* called each time user edits model in the editor */
-	if (model->lastVFCalcTime)
-		setStatusBarFPS(model->lastVFCalcTime);
+	if (msec >0 ) {
+		str.sprintf("%4.2f FPS", 1000.0/msec);
+		lblFPS->setText(str);
+		lblFPS->show();
+	} else {
+		lblFPS->setText("FAILURE");
+	}
 }
 
 /*****************************************************************************************************/
@@ -340,9 +331,11 @@ void MainWindow::onAbout()
 	/* TODO*/
 }
 
+/*****************************************************************************************************/
 
 void MainWindow::onInterpolationTest()
 {
+    BDMORPHModel*testModel  = new BDMORPHModel(*model);
 	testModel->interpolate_frame(model,currentFrameModel,0.5);
 	emit frameSwitched(testModel);
 }

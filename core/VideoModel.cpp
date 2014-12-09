@@ -7,6 +7,7 @@ VideoModel::VideoModel(std::string filename) : MeshModel(filename), pFrame(*this
 {
 	/* create one keyframe */
 	keyframes.push_back(new VideoKeyFrame(this));
+	keyframes.push_back(new VideoKeyFrame(this));
 }
 
 /******************************************************************************************************************************/
@@ -27,8 +28,15 @@ int VideoModel::count()
 int VideoModel::getTotalTime()
 {
 	int retval = 0;
-	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+	int last_time = 0;
+
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++) {
 		retval += (*iter)->duration;
+		last_time = (*iter)->duration;
+	}
+
+	/* TODO: HACK!!*/
+	retval -= last_time;
 	return retval;
 }
 

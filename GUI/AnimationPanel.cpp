@@ -15,6 +15,8 @@
 #include "ThumbnailRenderer.h"
 #include "Utils.h"
 
+#define INTEREVAL (1000/60)
+
 QString printTime(int time)
 {
 	int fraction = (time % 1000);
@@ -33,36 +35,38 @@ QString printTime(int time)
 AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), videoModel(NULL), renderer(NULL), timeEditItem(-1),animationRunning(false)
 {
 	setupUi(this);
+	plusIcon = QIcon(":/AnimationPanel/add.png");
 
 	QAction *cloneAction        = new QAction("Clone frame...", lstKeyFrames);
 	QAction *deleteFramesAction = new QAction("Delete frame",   lstKeyFrames);
 	QAction *changeTimeAction   = new QAction("Change time...", lstKeyFrames);
-
 	lstKeyFrames->addAction(cloneAction);
 	lstKeyFrames->addAction(deleteFramesAction);
 	lstKeyFrames->addAction(changeTimeAction);
 	lstKeyFrames->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+	/* Keyframes list */
 	connect_(lstKeyFrames, currentRowChanged (int), this, onCurrentListItemChanged(int));
-
+	connect_(lstKeyFrames, itemDoubleClicked(QListWidgetItem *), this, onCloneKeyFrame());
 	connect_(cloneAction, triggered(), this, onCloneKeyFrame());
 	connect_(changeTimeAction, triggered(), this, onKeyframeChangeTime());
 	connect_(deleteFramesAction, triggered(), this, onDeleteKeyframe());
 
-	connect_(lstKeyFrames, itemDoubleClicked(QListWidgetItem *), this, onLstitemDoubleClicked ());
-
-	plusIcon = QIcon(":/AnimationPanel/add.png");
-
+	/* Time edit */
 	timeEdit = new QLineEdit(lstKeyFrames);
 	timeEdit->setInputMask("00:00.000");
 	timeEdit->setAlignment(Qt::AlignCenter);
 	timeEdit->hide();
-
 	connect_(timeEdit, editingFinished (), this, onTimeTextFinished());
+
+	/* Slider*/
 	connect_(sliderAnimationTime, sliderMoved (int), this, onTimeSliderMoved(int));
 
+	/* Animation timer */
 	animationTimer = new QTimer(this);
 	connect_(animationTimer, timeout (), this, onAnimationTimer());
+
+	/* Play/pause buttons */
 	connect_(btnAnimationPlay, clicked(bool), this, onPlayPauseButtonPressed());
 	connect_(btnBackward, clicked(bool), this, onBackwardButton());
 }
@@ -73,8 +77,9 @@ void AnimationPanel::onVideoModelLoaded(VideoModel* model)
 	videoModel = model;
 	lstKeyFrames->clear();
 
-	if (videoModel)
+	if (videoModel) {
 		updateItems(0);
+	}
 }
 
 /******************************************************************************************************************************/
@@ -132,13 +137,19 @@ void AnimationPanel::onCloneKeyFrame()
 		return;
 
 	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
-	if (currentKeyFrame == NULL)
-		return;
+	if (currentKeyFrame == NULL) {
+		if (videoModel->count())
+			currentKeyFrame = videoModel->getKeyframeByIndex(videoModel->count()-1);
+		else
+			return;
+	}
 
-	int currentIndex = lstKeyFrames->currentRow();
+	int currentIndex = videoModel->getKeyFrameIndex(currentKeyFrame);
 	videoModel->forkFrame(currentKeyFrame);
 	updateItems(currentIndex+1);
 	updateTimeSlider();
+
+	emit frameSelectionChanged(getSelectedKeyframe());
 }
 
 /******************************************************************************************************************************/
@@ -169,8 +180,7 @@ void AnimationPanel::onDeleteKeyframe()
 	emit frameSelectionChanged(currentKeyFrame);
 
 	if (currentKeyFrame && currentIndex == videoModel->count() - 1)
-		currentKeyFrame->duration = 1000;
-
+		currentKeyFrame->duration = 200;
 }
 /******************************************************************************************************************************/
 
@@ -203,31 +213,120 @@ void AnimationPanel::onKeyframeChangeTime()
 	timeEditItem = currentIndex;
 }
 /******************************************************************************************************************************/
-
-void AnimationPanel::onLstitemDoubleClicked ()
+void AnimationPanel::onTimeTextFinished()
 {
+	timeEdit->hide();
+
 	if (animationRunning)
 		return;
 
-	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
+	VideoKeyFrame* prevFrame = videoModel->getKeyframeByIndex(timeEditItem-1);
+	if (!prevFrame)
+		return;
 
-	if (currentKeyFrame == NULL)
-	{
-		if (videoModel->count())
-			currentKeyFrame = videoModel->getKeyframeByIndex(videoModel->count()-1);
-		else
-			return;
+	QString time = timeEdit->text();
+
+	QStringList tmp = time.split('.');
+	QString fraction = tmp[1];
+
+	tmp = tmp[0].split(':');
+	QString minutes = tmp[0];
+	QString seconds = tmp[1];
+
+	int result = minutes.toInt() * 60;
+	result += seconds.toInt();
+	result *= 1000;
+	result += fraction.toInt();
+
+	int currentFrameTime = videoModel->getKeyFrameTimeMsec(prevFrame) + prevFrame->duration;
+	int diff = result - currentFrameTime;
+	int newDuration = prevFrame->duration + diff;
+
+	prevFrame->duration = std::max(1, newDuration);
+	updateItems(timeEditItem);
+	timeEditItem = -1;
+	updateTimeSlider();
+}
+/******************************************************************************************************************************/
+
+void AnimationPanel::onPlayPauseButtonPressed()
+{
+	if (animationRunning) {
+		animationTimer->stop();
+		btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));
+		lstKeyFrames->setDisabled(false);
+		sliderAnimationTime->setDisabled(false);
+		emit animationStopped();
+	}else {
+		emit animationStarted();
+		lstKeyFrames->setDisabled(true);
+		sliderAnimationTime->setDisabled(true);
+		animationTimer->setInterval(INTEREVAL);
+		animationTimer->setSingleShot(false);
+		animationTimer->start();
+		btnAnimationPlay->setIcon(QIcon(":/icons/pause.png"));
 	}
 
-	VideoKeyFrame* newFrame = videoModel->forkFrame(currentKeyFrame);
-	newFrame->duration = 1000;
-	updateItems(videoModel->getKeyFrameIndex(newFrame));
-	emit frameSelectionChanged(getSelectedKeyframe());
-	updateTimeSlider();
+	animationRunning = !animationRunning;
 }
 
 /******************************************************************************************************************************/
 
+void AnimationPanel::onBackwardButton()
+{
+	sliderAnimationTime->setSliderPosition(0);
+	onTimeSliderMoved(0);
+}
+
+/******************************************************************************************************************************/
+void AnimationPanel::onTimeSliderMoved(int newValue)
+{
+	if (!videoModel)
+		return;
+
+	VideoKeyFrame* prevFrame = videoModel->getLastKeyframeBeforeTime(newValue);
+	if (!prevFrame) return;
+	int newIndex = videoModel->getKeyFrameIndex(prevFrame);
+
+	VideoKeyFrame* nextFrame = videoModel->getKeyframeByIndex(newIndex+1);
+
+	if (nextFrame != NULL)
+	{
+		int currTimeMsec = videoModel->getKeyFrameTimeMsec(prevFrame);
+		int nextTimeMsec = videoModel->getKeyFrameTimeMsec(nextFrame);
+
+		double t = newValue - currTimeMsec;
+		t /= (nextTimeMsec-currTimeMsec);
+
+		{
+			double time = videoModel->pFrame.interpolate_frame(prevFrame,nextFrame,t);
+			emit frameSelectionChanged(&videoModel->pFrame);
+			emit FPSUpdated(time);
+		}
+	}
+}
+/******************************************************************************************************************************/
+
+void AnimationPanel::onAnimationTimer()
+{
+	int pos = sliderAnimationTime->sliderPosition()+INTEREVAL;
+
+	if (pos > sliderAnimationTime->maximum()) {
+
+		if (btnRepeat->isChecked())
+			sliderAnimationTime->setSliderPosition(0);
+		else {
+			btnAnimationPlay->click();
+		}
+	}
+	else
+		sliderAnimationTime->setSliderPosition(pos);
+
+	onTimeSliderMoved(pos);
+
+}
+
+/******************************************************************************************************************************/
 void AnimationPanel::updateItems(int startItem)
 {
 	if (!videoModel)
@@ -303,43 +402,6 @@ VideoKeyFrame* AnimationPanel::getSelectedKeyframe()
 }
 
 /******************************************************************************************************************************/
-void AnimationPanel::onTimeTextFinished()
-{
-	timeEdit->hide();
-
-	if (animationRunning)
-		return;
-
-	VideoKeyFrame* prevFrame = videoModel->getKeyframeByIndex(timeEditItem-1);
-	if (!prevFrame)
-		return;
-
-	QString time = timeEdit->text();
-
-	QStringList tmp = time.split('.');
-	QString fraction = tmp[1];
-
-	tmp = tmp[0].split(':');
-	QString minutes = tmp[0];
-	QString seconds = tmp[1];
-
-	int result = minutes.toInt() * 60;
-	result += seconds.toInt();
-	result *= 1000;
-	result += fraction.toInt();
-
-	int currentFrameTime = videoModel->getKeyFrameTimeMsec(prevFrame) + prevFrame->duration;
-	int diff = result - currentFrameTime;
-	int newDuration = prevFrame->duration + diff;
-
-	prevFrame->duration = std::max(1, newDuration);
-	updateItems(timeEditItem);
-	timeEditItem = -1;
-	updateTimeSlider();
-}
-
-/******************************************************************************************************************************/
-
 void AnimationPanel::updateTimeSlider()
 {
 	if (!videoModel)
@@ -361,92 +423,3 @@ void AnimationPanel::updateTimeSlider()
 }
 /******************************************************************************************************************************/
 
-
-void AnimationPanel::onTimeSliderMoved(int newValue)
-{
-	if (!videoModel)
-		return;
-
-	VideoKeyFrame* prevFrame = videoModel->getLastKeyframeBeforeTime(newValue);
-	if (!prevFrame) return;
-
-	int currentIndex = lstKeyFrames->currentRow();
-	int newIndex = videoModel->getKeyFrameIndex(prevFrame);
-	//if (currentIndex != newIndex) {
-	//	lstKeyFrames->setCurrentRow(newIndex);
-	//}
-
-	VideoKeyFrame* nextFrame = videoModel->getKeyframeByIndex(newIndex+1);
-
-	if (nextFrame == NULL)
-	{
-		//emit frameSelectionChanged(prevFrame);
-	} else
-	{
-		int currTimeMsec = videoModel->getKeyFrameTimeMsec(prevFrame);
-		int nextTimeMsec = videoModel->getKeyFrameTimeMsec(nextFrame);
-
-		double t = newValue - currTimeMsec;
-		t /= (nextTimeMsec-currTimeMsec);
-
-		videoModel->pFrame.interpolate_frame(prevFrame,nextFrame,t);
-
-
-		/* TODO: we won't emit this on this frame but we will apply BDMORPH and tell main view to show its output */
-		/* Apply BDMORPH on prevFrame,nextFrame*/
-		emit frameSelectionChanged(&videoModel->pFrame);
-	}
-}
-
-/******************************************************************************************************************************/
-
-#define INTEREVAL (1000/60)
-void AnimationPanel::onPlayPauseButtonPressed()
-{
-	if (animationRunning) {
-		animationTimer->stop();
-		btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));
-		lstKeyFrames->setDisabled(false);
-		sliderAnimationTime->setDisabled(false);
-		emit animationStopped();
-	}else {
-		emit animationStarted();
-		lstKeyFrames->setDisabled(true);
-		sliderAnimationTime->setDisabled(true);
-		animationTimer->setInterval(INTEREVAL);
-		animationTimer->setSingleShot(false);
-		animationTimer->start();
-		btnAnimationPlay->setIcon(QIcon(":/icons/pause.png"));
-	}
-
-	animationRunning = !animationRunning;
-}
-
-/******************************************************************************************************************************/
-
-void AnimationPanel::onAnimationTimer()
-{
-	int pos = sliderAnimationTime->sliderPosition()+INTEREVAL;
-
-	if (pos > sliderAnimationTime->maximum()) {
-
-		if (btnRepeat->isChecked())
-			sliderAnimationTime->setSliderPosition(0);
-		else {
-			btnAnimationPlay->click();
-		}
-	}
-	else
-		sliderAnimationTime->setSliderPosition(pos);
-
-	onTimeSliderMoved(pos);
-
-}
-
-/******************************************************************************************************************************/
-
-void AnimationPanel::onBackwardButton()
-{
-	sliderAnimationTime->setSliderPosition(0);
-	onTimeSliderMoved(0);
-}

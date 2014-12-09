@@ -31,7 +31,6 @@ public slots:
 	void onCloneKeyFrame();
 	void onDeleteKeyframe();
 	void onKeyframeChangeTime();
-	void onLstitemDoubleClicked ();
 
 	void onTimeTextFinished();
 	void onTimeSliderMoved(int newValue);
@@ -45,6 +44,7 @@ signals:
 	void frameSelectionChanged(MeshModel* model);
 	void animationStarted();
 	void animationStopped();
+	void FPSUpdated(double msec);
 
 private:
 	VideoModel* videoModel;
