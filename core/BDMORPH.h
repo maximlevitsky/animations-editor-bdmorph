@@ -15,6 +15,23 @@
 
 using std::make_pair;
 
+
+class TmpMemory {
+public:
+	double* memory;
+	uint16_t ptr;
+	int maxsize;
+
+	void addVar(double value) {
+		memory[ptr++] = value;
+	}
+
+	double& operator[] (int address) {
+		assert (address < maxsize);
+		return memory[address];
+	}
+};
+
 /*****************************************************************************************************/
 enum command
 {
@@ -128,7 +145,8 @@ private:
 	CmdStream *init_cmd_stream;
 	CmdStream *iteration_cmd_stream;
 	CmdStream *extract_solution_cmd_stream;
-	double* temp_data;	/* array to hold temporary data for newton iteration*/
+
+	TmpMemory mem;
 
 private:
 	void calculate_initial_lengths(MeshModel *a, MeshModel* b, double t);

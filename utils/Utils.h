@@ -246,12 +246,12 @@ public:
 		return retval;
 	}
 
-	uint16_t getSize() { return (uint16_t)nextVarAddress; }
+	int getSize() { return nextVarAddress; }
 
 	bool validAddress(TmpMemAdddress address)
 	{
 		assert(address <= nextVarAddress);
-		return nextVarAddress - address < 0x7FFF;
+		return (nextVarAddress - address) < 0xEFFF;
 	}
 private:
 	TmpMemAdddress nextVarAddress;

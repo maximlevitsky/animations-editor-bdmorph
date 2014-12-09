@@ -154,7 +154,7 @@ TmpMemAdddress BDMORPH_BUILDER::compute_angle(Vertex p0, Vertex p1, Vertex p2)
 		angle_tmpbuf_len_variables[a] = address;
 		return address;
 	}
-	return (uint16_t) (iter->second);
+	return (iter->second);
 }
 
 /*****************************************************************************************************/
@@ -205,8 +205,8 @@ int BDMORPH_BUILDER::process_vertex(Vertex v0, int neighbourCount,
 	for (auto iter = outer_anglesK.begin() ; iter != outer_anglesK.end() ; iter++)
 	{
 		debug_printf("    K%i ", iter->first);
-		iteration_stream.push_word((uint16_t)iter->second.first);
-		iteration_stream.push_word((uint16_t)iter->second.second);
+		iteration_stream.push_word(iter->second.first);
+		iteration_stream.push_word(iter->second.second);
 		iteration_stream.push_dword(iter->first);
 		debug_printf("(A T%i, A T%i)\n", iter->second.first, iter->second.second);
 	}
@@ -217,8 +217,8 @@ int BDMORPH_BUILDER::process_vertex(Vertex v0, int neighbourCount,
 	for (auto iter = outerAnglesOther.begin() ; iter != outerAnglesOther.end() ; iter++)
 	{
 		debug_printf("    (A T%i, A T%i)\n", iter->first, iter->second);
-		iteration_stream.push_word((uint16_t)iter->first);
-		iteration_stream.push_word((uint16_t)iter->second);
+		iteration_stream.push_word(iter->first);
+		iteration_stream.push_word(iter->second);
 	}
 
 	debug_printf("\n");
@@ -262,7 +262,7 @@ TmpMemAdddress BDMORPH_BUILDER::load_vertex_position(Vertex vertex)
 		vertex_position_tmpbuf_locations[vertex] = address;
 		return address;
 	}
-	return (uint16_t)iter->second;
+	return iter->second;
 }
 
 /*****************************************************************************************************/
@@ -289,7 +289,7 @@ void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex 
 
 /*****************************************************************************************************/
 BDMORPHModel::BDMORPHModel(MeshModel &orig) :
-		MeshModel(orig), L(NULL), L0(NULL), temp_data(NULL) , LL(NULL),
+		MeshModel(orig), L(NULL), L0(NULL), LL(NULL),
 		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR)
 {
 	TimeMeasurment t;
@@ -487,7 +487,10 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	EnergyHessian.reshape(kCount,kCount, hessEntries);
 
 	int tempMemSize = std::max(builder.mainMemoryAllocator.getSize(),builder.finalizeStepMemoryAllocator.getSize());
-	temp_data = new double_t[tempMemSize];
+
+	mem.maxsize = std::min(tempMemSize, 0x10000);
+	mem.memory = new double[mem.maxsize];
+	mem.ptr = 0;
 
 	L0 = new double[edgeCount];
 	L = new double[edgeCount];
@@ -517,7 +520,7 @@ BDMORPHModel::~BDMORPHModel()
 	delete init_cmd_stream;
 	delete iteration_cmd_stream;
 	delete extract_solution_cmd_stream;
-	delete temp_data;
+	delete [] mem.memory;
 	cholmod_free_factor(&LL, cholmod_get_common());
 }
 
@@ -552,9 +555,9 @@ void BDMORPHModel::calculate_initial_lengths(MeshModel *a, MeshModel* b, double 
 /*****************************************************************************************************/
 void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 {
-	uint16_t tmp_idx = 0; /* this is uint16_t on purpose to overflow when reaches maximum value*/
 	int edge_num = 0;
 	CmdStream commands(*iteration_cmd_stream);
+	TmpMemory mymem = mem;
 
 	minAngle = std::numeric_limits<double>::max();
 	maxAngle = std::numeric_limits<double>::min();
@@ -587,8 +590,7 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 
 			double tangent = calculate_tan_half_angle(a,b,c);
 
-			temp_data[tmp_idx] = tangent;
-			tmp_idx++;
+			mymem.addVar(tangent);
 			break;
 
 		} case COMPUTE_VERTEX_INFO: {
@@ -605,7 +607,7 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 
 			for (int i = 0 ; i < neigh_count ; i++) {
 
-				double value = temp_data[commands.word()];
+				double value = mymem[commands.word()];
 				assert(value >= 0);
 
 				double angle = atan(value);
@@ -622,8 +624,8 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 
 			for (int i = 0 ; i < neigh_count ; i++)
 			{
-				double twice_cot1 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
-				double twice_cot2 = twice_cot_from_tan_half_angle(temp_data[commands.word()]);
+				double twice_cot1 = twice_cot_from_tan_half_angle(mymem[commands.word()]);
+				double twice_cot2 = twice_cot_from_tan_half_angle(mymem[commands.word()]);
 				double value = (twice_cot1 + twice_cot2)/8.0;
 				cotan_sum += value;
 
@@ -643,7 +645,7 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 void BDMORPHModel::calculate_new_vertex_positions()
 {
 	CmdStream cmd(*extract_solution_cmd_stream);
-	uint16_t tmp_idx = 0;
+	TmpMemory mymem = mem;
 
 	while(!cmd.ended())
 	{
@@ -654,7 +656,7 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			assert(L_location >= 0 && L_location < edgeCount);
 
 			double len = L[L_location];
-			temp_data[tmp_idx++] = len * len;
+			mymem.addVar(len * len);
 			break;
 		}
 		case LOAD_VERTEX_POSITION:
@@ -663,14 +665,14 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			assert(v >=0 && (unsigned int)v < numVertices);
 
 			Point2& p = vertices[v];
-			temp_data[tmp_idx++] = p.x;
-			temp_data[tmp_idx++] = p.y;
+			mymem.addVar(p.x);
+			mymem.addVar(p.y);
 			break;
 		}
 		case COMPUTE_VERTEX:
 		{
-			Point2* p0 = (Point2*)&temp_data[cmd.word()];
-			Point2* p1 = (Point2*)&temp_data[cmd.word()];
+			Point2* p0 = (Point2*)&(mymem[cmd.word()]);
+			Point2* p1 = (Point2*)&(mymem[cmd.word()]);
 
 			Vertex v2 = cmd.dword();
 			assert(v2 >= 0 && (unsigned int)v2 < numVertices);
@@ -678,8 +680,8 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			Point2& p2 = vertices[v2];
 
 			double d   = p0->distanceSquared(*p1);
-			double r0d = temp_data[cmd.word()] / d;
-			double r1d = temp_data[cmd.word()] / d;
+			double r0d = mymem[cmd.word()] / d;
+			double r1d = mymem[cmd.word()] / d;
 
 			double ad = 0.5 * ( r0d - r1d) + 0.5;
 			double hd = sqrt(r0d-ad*ad);
@@ -689,8 +691,8 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			p2.x = p0->x + ad * dx - hd * dy;
 			p2.y = p0->y + ad * dy + hd * dx;
 
-			temp_data[tmp_idx++] = p2.x;
-			temp_data[tmp_idx++] = p2.y;
+			mymem.addVar(p2.x);
+			mymem.addVar(p2.y);
 			break;
 		}}
 	}
