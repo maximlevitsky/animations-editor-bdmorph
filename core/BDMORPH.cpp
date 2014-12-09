@@ -590,6 +590,9 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 
 			double tangent = calculate_tan_half_angle(a,b,c);
 
+			if (tangent < minAngle) minAngle = tangent;
+			if (tangent > maxAngle) maxAngle = tangent;
+
 			mymem.addVar(tangent);
 			break;
 
@@ -611,8 +614,6 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 				assert(value >= 0);
 
 				double angle = atan(value);
-				if (angle < minAngle) minAngle = angle;
-				if (angle > maxAngle) maxAngle = angle;
 				grad_value -= angle;
 			}
 
@@ -639,6 +640,8 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 		}}
 	}
 	grad_norm = sqrt(grad_norm);
+	minAngle = atan(minAngle);
+	maxAngle = atan(maxAngle);
 }
 
 /*****************************************************************************************************/
