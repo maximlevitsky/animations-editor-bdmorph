@@ -14,7 +14,7 @@
 #include <QtOpenGL>
 
 #define END_ITERATION_VALUE 1e-10
-#define NEWTON_MAX_ITERATIONS 20
+#define NEWTON_MAX_ITERATIONS 200
 
 /*****************************************************************************************************/
 static double inline calculate_tan_half_angle(double a,double b,double c)

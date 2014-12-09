@@ -15,31 +15,36 @@ public:
 
 	CholmodVector() : values(NULL), cm(cholmod_get_common()){}
 
-	void resize(unsigned int newSize) {
+	void resize(unsigned int newSize)
+	{
 		cholmod_free_dense(&values,cm);
 		values = cholmod_zeros(newSize, 1, CHOLMOD_REAL, cm);
 	}
 
-	unsigned int size() { return values->nrow; }
+	unsigned int size() const
+	{
+		return values->nrow;
+	}
 
-	void setData(cholmod_dense* new_values) {
+	void setData(cholmod_dense* new_values)
+	{
 		cholmod_free_dense(&values, cm);
 		values = new_values;
 	}
 
-	void add(CholmodVector &other)
+	void add(const CholmodVector &other)
 	{
 		double *values1 = getValues();
-		double *values2 = other.getValues();
+		const double *values2 = other.getValues();
 
 		for (unsigned int i = 0 ;  i < size() ;i++)
 			values1[i] += values2[i];
 	}
 
-	void sub(CholmodVector &other)
+	void sub(const CholmodVector &other)
 	{
 		double *values1 = getValues();
-		double *values2 = other.getValues();
+		const double *values2 = other.getValues();
 
 		for (unsigned int i = 0 ;  i < size() ;i++)
 			values1[i] = values1[i] - values2[i];
@@ -48,6 +53,22 @@ public:
 	double& operator[] (int index)
 	{
 		return getValues()[index];
+	}
+
+	const double& operator[] (int index) const
+	{
+		return getValues()[index];
+	}
+
+	CholmodVector operator*(const double other) const
+	{
+		const double *values1 = getValues();
+		CholmodVector result(size());
+
+		for (unsigned int i = 0 ; i < size() ; i++)
+			result[i] = values1[i] * other;
+
+		return result;
 	}
 
 
@@ -70,7 +91,9 @@ public:
 	}
 
 	operator cholmod_dense*() { return values; }
+
 	double* getValues()  { return (double*)values->x; }
+	const double* getValues() const  { return (double*)values->x; }
 
 	~CholmodVector() { cholmod_free_dense(&values,cm); }
 public:
