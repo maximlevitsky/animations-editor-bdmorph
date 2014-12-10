@@ -27,8 +27,10 @@ public:
     int getFaceUnderPoint(Point2 point);
 
 	/* rendering */
-    virtual void render(double wireframeTrans);
-	void renderVertex(unsigned int v, double scale);
+    virtual void renderFaces();
+    virtual void renderWireframe();
+
+    void renderVertex(unsigned int v, double scale);
 	void renderFace(unsigned int f);
 
 	/* save and load code */

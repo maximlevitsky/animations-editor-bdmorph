@@ -72,26 +72,20 @@ private:
 	double alpha1;
 
     /* vector field of last transformation  */
-    std::vector<Vector2> vf;
-    std::vector<Vector2> vfOrig;
+    Vector2 *vf;
+    Vector2 *vfOrig;
     std::set<DisplacedVertex> disps;
 
-    /* P matrix and its temp data */
-    CholmodSparseMatrix P;
-    CholmodSparseMatrix Pcopy;
-    CholmodSparseMatrix P2;
-    CholmodSparseMatrix dx2;
-    CholmodSparseMatrix dy2;
-    CholmodSparseMatrix stacked;
+    /* P matrix */
+    CholmodSparseMatrix P, Pcopy;
 
     /* pre-factor*/
-    cholmod_factor *L1;
-    cholmod_factor *L2;
+    cholmod_factor *L1, *L2;
 
     std::vector<Point2> newPoints;
     std::vector<double> counts;
 
-	void renderVF_common(std::vector<Vector2> &VF);
+	void renderVF_common(Vector2* VF);
 
 	/*undo stuff*/
     vertexList undoVertices[UNDOSIZE];

@@ -55,7 +55,7 @@ QImage ThumbnailRenderer::renderThumbnail(MeshModel* model)
     /* Setup texture */
     glEnable(GL_TEXTURE_2D);
 
-    model->render(0);
+    model->renderFaces();
 	return fbo->toImage();
 }
 

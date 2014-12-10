@@ -42,26 +42,18 @@ KVFModel::KVFModel(MeshModel* model) :
 	lastDispsSize(0),
 
 	P(CholmodSparseMatrix::ASSYMETRIC),
-	Pcopy(CholmodSparseMatrix::ASSYMETRIC),
-	P2(CholmodSparseMatrix::ASSYMETRIC),
-	dx2(CholmodSparseMatrix::ASSYMETRIC),
-	dy2(CholmodSparseMatrix::ASSYMETRIC),
-	stacked(CholmodSparseMatrix::ASSYMETRIC)
+	Pcopy(CholmodSparseMatrix::ASSYMETRIC)
 {
 	faces = model->faces;
 	boundaryVertices = model->boundaryVertices;
 	vertices = model->vertices;
 	initialVertexes = model->vertices;
 
-	vf.resize(numVertices);
-	vfOrig.resize(numVertices);
-    newPoints.resize(numVertices);
-    counts.resize(numVertices);
+	vf = new Point2[numVertices];
+	vfOrig = new Point2[numVertices];
 
-    P.reshape(numFaces*3, numFaces*4, 4*numFaces);
-    P2.reshape(numFaces*3, numFaces*4, 4*numFaces);
-    dx2.reshape(numFaces, numVertices, 3*numFaces);
-    dy2.reshape(numFaces, numVertices, 3*numFaces);
+	newPoints.resize(numVertices);
+    counts.resize(numVertices);
 
 	historyReset();
 
@@ -78,6 +70,8 @@ KVFModel::~KVFModel()
 {
 	cholmod_free_factor(&L2, cholmod_get_common());
 	cholmod_free_factor(&L1, cholmod_get_common());
+	delete [] vf;
+	delete [] vfOrig;
 }
 
 /*****************************************************************************************************/
@@ -103,9 +97,8 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
     /************************************************/
     /* BUILD P matrix */
 
-    P2.startMatrixFill();
-    dx2.startMatrixFill();
-    dy2.startMatrixFill();
+    P.startMatrixFill();
+    P.reshape(3*numFaces,2*numVertices,12*numFaces);
 
     for (unsigned int f = 0; f < numFaces; f++)
     {
@@ -113,10 +106,9 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
         int j = (*faces)[f][1];
         int k = (*faces)[f][2];
 
-        int temp;
-        if (i > j) { temp = i; i = j; j = temp; }
-        if (i > k) { temp = i; i = k; k = temp; }
-        if (j > k) { temp = j; j = k; k = temp; }
+        if (i > j) { std::swap(i,j); }
+        if (i > k) { std::swap(i,k); }
+        if (j > k) { std::swap(j,k); }
 
         Vector2 d1 = vertices[i] - vertices[k];
         Vector2 d2 = vertices[j] - vertices[i];
@@ -126,39 +118,33 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
         Vector2 c1(-d1[1]/area,d1[0]/area);
         Vector2 c2(-d2[1]/area,d2[0]/area);
 
-        dx2.addElement(f,i, -c1[0] - c2[0]);
-        dx2.addElement(f,j, c1[0]);
-        dx2.addElement(f,k, c2[0]);
+        double gix = -c1[0] - c2[0], gjx = c1[0], gkx = c2[0];
+        double giy = -c1[1] - c2[1], gjy = c1[1], gky = c2[1];
 
-        dy2.addElement(f,i, -c1[1] - c2[1]);
-        dy2.addElement(f,j, c1[1]);
-        dy2.addElement(f,k, c2[1]);
+        P.addElement(3*f+0,i,gix*2);
+        P.addElement(3*f+0,j,gjx*2);
+        P.addElement(3*f+0,k,gkx*2);
 
-        P2.addElement(3*f+0, f,            2);
-        P2.addElement(3*f+1, f+1*numFaces, SQRT_2);
-        P2.addElement(3*f+1, f+2*numFaces, SQRT_2);
-        P2.addElement(3*f+2, f+3*numFaces, 2);
+        P.addElement(3*f+1,i,giy*SQRT_2);
+        P.addElement(3*f+1,j,gjy*SQRT_2);
+        P.addElement(3*f+1,k,gky*SQRT_2);
+
+        P.addElement(3*f+1,i+numVertices,gix*SQRT_2);
+        P.addElement(3*f+1,j+numVertices,gjx*SQRT_2);
+        P.addElement(3*f+1,k+numVertices,gkx*SQRT_2);
+
+        P.addElement(3*f+2,i+numVertices,giy*2);
+        P.addElement(3*f+2,j+numVertices,gjy*2);
+        P.addElement(3*f+2,k+numVertices,gky*2);
     }
-
-    printf("KVF: P components construct time: %f msec\n", t.measure_msec());
-
-    unsigned int colShift[4] = 		{0,       0,     numVertices, numVertices };
-    CholmodSparseMatrix *list[4] =  {&dx2,    &dy2,  &dx2,        &dy2        };
-    stacked.stack(list, 4, colShift);
-
-    printf("KVF: P Stack build time: %f msec\n", t.measure_msec());
-
-    P2.multiply(stacked, P);
-
-    printf("KVF: P Multiply time: %f msec\n", t.measure_msec());
 
     Pcopy.copy(P);
 
-    printf("KVF: P copy time: %f msec\n", t.measure_msec());
+    printf("KVF: P construct time: %f msec\n", t.measure_msec());
 
     /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
-    CholmodVector B = CholmodVector(P.numCols());
+    CholmodVector B = CholmodVector(2*numVertices);
     std::vector<int> indices2;
 
     double alpha = alpha1 / (2*allDisplacements.size()) * P.infinityNorm();
@@ -293,13 +279,10 @@ void KVFModel::applyVFLogSpiral()
             Point2 result1 = spiral.evaluate(l1,1);
             Point2 result2 = spiral.evaluate(l2,1);
 
-            // compute cotangent weights
-            double cotangent = 1;// / tan(angle);
-
-            counts[e1] += cotangent;
-            counts[e2] += cotangent;
-            newPoints[e1] += result1*cotangent;
-            newPoints[e2] += result2*cotangent;
+            counts[e1]++;
+            counts[e2]++;
+            newPoints[e1] += result1;
+            newPoints[e2] += result2;
         }
     }
 
@@ -350,7 +333,7 @@ void KVFModel::renderVF()
     glPopAttrib();
 }
 /*****************************************************************************************************/
-void KVFModel::renderVF_common(std::vector<Vector2> &VF)
+void KVFModel::renderVF_common(Vector2* VF)
 {
 	#define VF_SCALE 1
 

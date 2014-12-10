@@ -13,7 +13,7 @@
 #include "BDMORPH.h"
 #include <QtOpenGL>
 
-#define END_ITERATION_VALUE 1e-10
+#define END_ITERATION_VALUE 4e-13
 #define NEWTON_MAX_ITERATIONS 200
 
 /*****************************************************************************************************/
@@ -248,53 +248,31 @@ TmpMemAdddress BDMORPH_BUILDER::compute_squared_edge_len(Edge& e)
 }
 
 /*****************************************************************************************************/
-TmpMemAdddress BDMORPH_BUILDER::load_vertex_position(Vertex vertex)
-{
-	auto iter = vertex_position_tmpbuf_locations.find(vertex);
-	if (iter == vertex_position_tmpbuf_locations.end() || !finalizeStepMemoryAllocator.validAddress(iter->second))
-	{
-		extract_stream.push_byte(LOAD_VERTEX_POSITION);
-		extract_stream.push_dword(vertex);
-
-		TmpMemAdddress address = finalizeStepMemoryAllocator.getNewVar(2);
-		debug_printf("++++ Loading vertex position for vertex %i to mem[%i]\n", vertex, address);
-
-		vertex_position_tmpbuf_locations[vertex] = address;
-		return address;
-	}
-	return iter->second;
-}
-
-/*****************************************************************************************************/
 void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex p1, Vertex p2)
 {
-	TmpMemAdddress p0_pos = load_vertex_position(p0);
-	TmpMemAdddress p1_pos = load_vertex_position(p1);
 	TmpMemAdddress r0_pos = compute_squared_edge_len(r0);
 	TmpMemAdddress r1_pos = compute_squared_edge_len(r1);
 
 	extract_stream.push_byte(COMPUTE_VERTEX);
-	extract_stream.push_word(p0_pos);
-	extract_stream.push_word(p1_pos);
+	extract_stream.push_dword(p0);
+	extract_stream.push_dword(p1);
 	extract_stream.push_dword(p2);
 	extract_stream.push_word(r0_pos);
 	extract_stream.push_word(r1_pos);
 
-	TmpMemAdddress address = finalizeStepMemoryAllocator.getNewVar(2);
-	debug_printf("++++ Computing vertex position for vertex %i to T%i\n", p2, address);
-	debug_printf("   Using vertexes T%i,T%i and distances: d at T%i, r0 at T%i and r1 at T%i\n", p0,p1,d,r0,r1);
-
-	vertex_position_tmpbuf_locations[p2] = address;
+	debug_printf("++++ Computing vertex position for vertex V%i\n", p2);
+	debug_printf("   Using vertexes V%i,V%i and distances: d at T%i, r0 at T%i and r1 at T%i\n", p0,p1,d,r0,r1);
 }
 
 /*****************************************************************************************************/
 BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 		MeshModel(orig), L(NULL), L0(NULL), LL(NULL),
-		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR)
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL)
 {
 	TimeMeasurment t;
 
 	std::deque<Vertex> vertexQueue;
+	std::set<Vertex> visitedVertices, mappedVertices;
 	int hessEntries = 0;
 
 	BDMORPH_BUILDER builder(*faces,*boundaryVertices);
@@ -370,6 +348,7 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	mappedVertices.insert(e0.v1);
 	mappedVertices.insert(v2);
 
+
 	/*==============================================================*/
 	/* Main Loop */
 	std::vector<Face> neighFaces;
@@ -441,7 +420,7 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 				Vertex v1 = *iter;
 				Vertex v2 = builder.getNeighbourVertex(v0,v1);
 
-				if (v2 != -1 && mappedNeighbours.count(v2) == 0)
+				if (v2 != -1 && mappedNeighbours.count(v2) == 0 && newMappedVertexes.count(v2) == 0)
 				{
 					builder.layout_vertex(Edge(v0,v1),Edge(v1,v2),Edge(v2,v0), v0, v1, v2);
 					newMappedVertexes.insert(v2);
@@ -449,7 +428,7 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 				}
 
 				v2 = builder.getNeighbourVertex(v1,v0);
-				if (v2 != -1 && mappedNeighbours.count(v2) == 0)
+				if (v2 != -1 && mappedNeighbours.count(v2) == 0 && newMappedVertexes.count(v2) == 0)
 				{
 					builder.layout_vertex(Edge(v1,v0),Edge(v0,v2),Edge(v2,v1), v1, v0, v2);
 					newMappedVertexes.insert(v2);
@@ -509,7 +488,6 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	printf("BRMORPH: TMP memory size: %dK\n", (int)(tempMemSize * sizeof(double) / 1024));
 	printf("BRMORPH: L memory size: %dK\n", (int)(edgeCount * sizeof(double) / 1024));
 	printf("BRMORPH: Hessian non zero entries: %d\n\n", hessEntries);
-
 }
 /*****************************************************************************************************/
 
@@ -650,6 +628,12 @@ void BDMORPHModel::calculate_new_vertex_positions()
 	CmdStream cmd(*extract_solution_cmd_stream);
 	TmpMemory mymem = mem;
 
+	#ifdef __DEBUG__
+	std::set<Vertex> mappedVertices;
+	mappedVertices.insert(e0.v0);
+	mappedVertices.insert(e0.v1);
+	#endif
+
 	while(!cmd.ended())
 	{
 		switch (cmd.byte()) {
@@ -662,20 +646,18 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			mymem.addVar(len * len);
 			break;
 		}
-		case LOAD_VERTEX_POSITION:
-		{
-			Vertex v = cmd.dword();
-			assert(v >=0 && (unsigned int)v < numVertices);
-
-			Point2& p = vertices[v];
-			mymem.addVar(p.x);
-			mymem.addVar(p.y);
-			break;
-		}
 		case COMPUTE_VERTEX:
 		{
-			Point2* p0 = (Point2*)&(mymem[cmd.word()]);
-			Point2* p1 = (Point2*)&(mymem[cmd.word()]);
+			Vertex v0 = cmd.dword();
+			Vertex v1 = cmd.dword();
+
+			#ifdef __DEBUG__
+			assert(mappedVertices.count(v0));
+			assert(mappedVertices.count(v1));
+			#endif
+
+			Point2* p0 = &vertices[v0];
+			Point2* p1 = &vertices[v1];
 
 			Vertex v2 = cmd.dword();
 			assert(v2 >= 0 && (unsigned int)v2 < numVertices);
@@ -694,8 +676,10 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			p2.x = p0->x + ad * dx - hd * dy;
 			p2.y = p0->y + ad * dy + hd * dx;
 
-			mymem.addVar(p2.x);
-			mymem.addVar(p2.y);
+			#ifdef __DEBUG__
+			assert(mappedVertices.insert(v2).second);
+			#endif
+
 			break;
 		}}
 	}
@@ -705,6 +689,8 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 {
 	TimeMeasurment t1,t2;
 	int iteration = 0;
+
+	modela = a;
 
 	/* Calculate the interpolated metric */
 	calculate_initial_lengths(a,b,t);
@@ -745,7 +731,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 		cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, NewtonRHS, cholmod_get_common());
 
-#ifdef __DEBUG__
+		#ifdef __DEBUG__
 		char filename[50];
 		sprintf(filename, "iteration%d.m", iteration);
 		FILE* file = fopen(filename, "w");
@@ -758,14 +744,14 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 		NewtonRHS.display("NEWTONRHS", file);
 		fprintf(file, "RHS = Hf * K - Gf;\n\n");
 		fclose (file);
-#endif
+		#endif
 
 		K.setData(Xcholmod);
 
-#ifdef __DEBUG__
+		#ifdef __DEBUG__
 	    K.display("NEWK", file);
 		fclose(file);
-#endif
+		#endif
 
 		if (cholmod_get_common()->status != 0) {
 			printf("BDMORPH: iteration %i : cholmod solve failure\n", iteration);
@@ -799,12 +785,17 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 }
 
 
-void BDMORPHModel::render(double wireframeTrans)
+void BDMORPHModel::renderWireframe()
 {
-	MeshModel::render(wireframeTrans);
+	MeshModel::renderWireframe();
 
 	/* DEBUG code */
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+
+	if (modela) {
+		glColor4f(1,0,0,0.2);
+		modela->renderWireframe();
+	}
 
 	double ratio = getWidth() * 0.001;
 
@@ -812,14 +803,6 @@ void BDMORPHModel::render(double wireframeTrans)
 	glColor3f(0,1,0);
 	renderVertex(e0.v0, ratio);
 	renderVertex(e0.v1, ratio);
-
-	glColor3f(1,0,0);
-
-	for (unsigned int i = 0 ; i < numVertices ; i++)
-		if (mappedVertices.count(i) == 0)
-			renderVertex(i, ratio);
-
-
 	glPopAttrib();
 
 }

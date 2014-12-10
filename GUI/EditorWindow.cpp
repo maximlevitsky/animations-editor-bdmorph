@@ -255,10 +255,12 @@ void EditorWindow::paintGL()
     glLoadIdentity();
     glOrtho(centerX - neededWidth/2  , centerX + neededWidth/2, centerY - neededHeight/2 , centerY + neededHeight/2, 0, 1);
 
-    //glBindTexture(GL_TEXTURE_2D, textureRef);
-
 	/* render the model*/
-	renderModel->render((double)wireframeTransparency/100);
+	renderModel->renderFaces();
+	if (wireframeTransparency) {
+		glColor4f(0,0,0,(double)wireframeTransparency/100.0);
+		renderModel->renderWireframe();
+	}
 
 	/* render selected vertices */
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

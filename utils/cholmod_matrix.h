@@ -53,8 +53,9 @@ public:
 	CholmodSparseMatrix& operator =(const CholmodSparseMatrix& m);
 
 	/********************************************************************/
-    int numRows() const {return nr;}
-    int numCols() const {return nc;}
+    unsigned int numRows() const {return nr;}
+    unsigned int numCols() const {return nc;}
+    unsigned int getCapacity() const { return capacity;}
 
 	/********************************************************************/
 	void display(const char* var, FILE* out) const;
@@ -66,7 +67,6 @@ private:
     unsigned int numNonzero;
     unsigned int nc;
     unsigned int nr;
-    unsigned int capacity;
     double *values;
     unsigned int *rowStart;
     unsigned int *column;
@@ -75,6 +75,10 @@ private:
     int lastR;
 
     Type type;
+
+    unsigned int capacity;
+    unsigned int rowCapacity;
+
 };
 /******************************************************************************************************************************/
 

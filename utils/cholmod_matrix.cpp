@@ -12,7 +12,7 @@
 
 /******************************************************************************************************************************/
 CholmodSparseMatrix::CholmodSparseMatrix(CholmodSparseMatrix::Type type)
-    : nr(0), nc(0), numNonzero(0), values(NULL), rowStart(NULL), column(NULL), type(type), capacity(0)
+    : nr(0), nc(0), numNonzero(0), values(NULL), rowStart(NULL), column(NULL), type(type), capacity(0),rowCapacity(0)
 {}
 
 CholmodSparseMatrix::CholmodSparseMatrix(CholmodSparseMatrix::Type type, int r, int c, int nz)
@@ -38,7 +38,11 @@ void CholmodSparseMatrix::reshape(unsigned int r, unsigned int c, unsigned int c
 		if (type != ASSYMETRIC)
 			assert(r == c);
 
-		rowStart = (unsigned int*) (realloc(rowStart, (r+1) * sizeof(unsigned int)));
+		if (r > rowCapacity) {
+			rowStart = (unsigned int*) (realloc(rowStart, (r+1) * sizeof(unsigned int)));
+			rowCapacity = r;
+		}
+
 		nr = r;
 		nc = c;
 	}
@@ -48,7 +52,7 @@ void CholmodSparseMatrix::reshape(unsigned int r, unsigned int c, unsigned int c
 /******************************************************************************************************************************/
 void CholmodSparseMatrix::setCapacity(unsigned int c)
 {
-	if (capacity == c)
+	if (capacity >= c)
 		return;
 
 	capacity = c;

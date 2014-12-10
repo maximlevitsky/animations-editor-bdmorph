@@ -44,7 +44,6 @@ enum command
 	/* compute data for an vertex for next newton iteration*/
 	COMPUTE_VERTEX_INFO,
 
-	LOAD_VERTEX_POSITION,
 	LOAD_LENGTH_SQUARED,
 	COMPUTE_VERTEX,
 };
@@ -73,7 +72,6 @@ public:
 
 	/* Extraction phase */
 	TmpMemAdddress compute_squared_edge_len(Edge& e);
-	TmpMemAdddress load_vertex_position(Vertex vertex);
 	void layout_vertex(Edge r0, Edge r1, Edge d, Vertex p0, Vertex p1,Vertex p2);
 
 
@@ -102,7 +100,6 @@ public:
 
 	/* state for layout algorithm */
 	std::map<Edge,TmpMemAdddress> sqr_len_tmpbuf_locations;
-	std::map<Vertex,TmpMemAdddress> vertex_position_tmpbuf_locations;
 	TmpMemAllocator finalizeStepMemoryAllocator;
 
 	CmdStreamBuilder iteration_stream;
@@ -154,10 +151,9 @@ private:
 	void calculate_new_vertex_positions();
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
 
-	virtual void render(double wireframeTrans);
+	virtual void renderWireframe();
 	cholmod_factor *LL;
-
-	std::set<Vertex> visitedVertices, mappedVertices;
+	MeshModel *modela;
 
 };
 

@@ -335,8 +335,7 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
-    BDMORPHModel*testModel  = new BDMORPHModel(*model);
-	testModel->interpolate_frame(model,currentFrameModel,0.5);
-	emit frameSwitched(testModel);
+	model->pFrame.interpolate_frame(model,currentFrameModel,0.5);
+	emit frameSwitched(&model->pFrame);
 }
 

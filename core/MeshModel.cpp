@@ -197,30 +197,29 @@ void MeshModel::loadFromFile(std::string & filename)
 }
 
 /******************************************************************************************************************************/
-void MeshModel::render(double wireframeTrans)
+void MeshModel::renderFaces()
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-
-	glColor3f(1,1,1);
 	glEnable(GL_TEXTURE_2D);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // GL_LINE
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FRONT_AND_BACK);
 
 	for (unsigned int i = 0; i < numFaces; i++)
 		renderFace(i);
 
-	if (wireframeTrans)
-	{
-		glDisable(GL_TEXTURE_2D);
-		glColor4f(0,0,0,wireframeTrans);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glLineWidth(1.5);
+	glPopAttrib();
+}
 
-		glBegin(GL_TRIANGLES);
-		for (unsigned int i = 0; i < numFaces; i++)
-			renderFace(i);
-		glEnd();
-	}
+void MeshModel::renderWireframe()
+{
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+	glDisable(GL_TEXTURE_2D);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glLineWidth(1.5);
 
+	glBegin(GL_TRIANGLES);
+	for (unsigned int i = 0; i < numFaces; i++)
+		renderFace(i);
+	glEnd();
 	glPopAttrib();
 }
 
