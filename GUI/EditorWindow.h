@@ -59,8 +59,8 @@ signals:
 
 private:
     /* transformations*/
-    void zoom(double factor) {modelWidth *= factor;}
-    void move(QPointF direction) {modelLocation += direction;}
+	void zoom(double factor);
+	void move(QPointF direction);
     void moveLeft() {move(QPointF(-10,0));}
     void moveRight() {move(QPointF(10,0));}
     void moveUp() {move(QPointF(0,10));}
@@ -112,5 +112,4 @@ private:
     bool showSelection;
 
 };
-
 #endif // DEFORMATIONSCENE_H

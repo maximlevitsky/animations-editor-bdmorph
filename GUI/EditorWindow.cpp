@@ -537,8 +537,30 @@ void EditorWindow::wheelEvent(QWheelEvent *event)
 	if (disableEdit)
 		return;
 
+	QPointF pos = event->pos();
+	pos.setY(height()-pos.y()-1);
+
+	Point2 posBefore = screenToModel(pos);
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
+	Point2 posAfter = screenToModel(pos);
+
+	Vector2 diff = (posAfter-posBefore) * (modelWidth / renderModel->getWidth());
+	QPointF m = QPointF(diff.x,diff.y);
+	move(m);
+
 	update();
+}
+
+/******************************************************************************************************************************/
+void EditorWindow::zoom(double factor)
+{
+	modelWidth *= factor;
+}
+
+/******************************************************************************************************************************/
+void EditorWindow::move(QPointF direction)
+{
+	modelLocation += direction;
 }
 
 /******************************************************************************************************************************/
