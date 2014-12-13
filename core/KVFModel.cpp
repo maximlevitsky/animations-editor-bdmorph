@@ -46,7 +46,6 @@ KVFModel::KVFModel(MeshModel* model) :
 {
 	faces = model->faces;
 	boundaryVertices = model->boundaryVertices;
-	vertices = model->vertices;
 	initialVertexes = model->vertices;
 
 	vf = new Point2[numVertices];
@@ -310,17 +309,11 @@ void KVFModel::applyVF()
 }
 
 /*****************************************************************************************************/
-void KVFModel::resetDeformations()
-{
-	historyReset();
-	vertices = initialVertexes;
-}
-/*****************************************************************************************************/
 void KVFModel::renderVFOrig()
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glColor3f(0,0,1);
-	renderVF_common(vf);
+	renderVF_common(vfOrig);
     glPopAttrib();
 }
 
@@ -330,6 +323,18 @@ void KVFModel::renderVF()
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glColor3f(0,.5,0);
 	renderVF_common(vf);
+    glPopAttrib();
+}
+
+/*****************************************************************************************************/
+void KVFModel::renderOverlay(double scale)
+{
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+	glLineWidth(1.5);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glColor3f(1,1,0);
+	for (auto it = pinnedVertexes.begin(); it != pinnedVertexes.end(); it++)
+		renderVertex(*it, scale);
     glPopAttrib();
 }
 /*****************************************************************************************************/
@@ -356,71 +361,91 @@ void KVFModel::renderVF_common(Vector2* VF)
 /******************************************************************************************************************************/
 void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
 {
-	/* advance in undo vertex buffer one circular step and forget about redo*/
-	undoVerticesCount = std::min(UNDOSIZE, undoVerticesCount+1);
-	undoVerticesPosition = (undoVerticesPosition + 1) % UNDOSIZE;
-	undoVertices[undoVerticesPosition] = vertices;
-	redoVerticesCount = 0;
-
 	/* add item to undo log */
 	LogItem item;
 	item.alpha = alpha1;
 	item.pinnedVertexes = pinnedVertexes;
 	item.displacedVertexes = disps;
+	currentDeformLog.push_back(item);
+}
+/******************************************************************************************************************************/
+void KVFModel::historySnapshot()
+{
+	if (currentDeformLog.empty())
+		return;
 
-	undolog.push_back(item);
-	redolog.clear();
+	if (undo.size() >= UNDOSIZE)
+	{
+		UndoItem &toremove = *undo.begin();
+		UndoItem &last = *(undo.begin()+1);
+		toremove.actions.insert(toremove.actions.end(), last.actions.begin(),last.actions.end());
+		last.actions.swap(toremove.actions);
+		undo.pop_front();
+	}
+
+	UndoItem newItem;
+	newItem.vertices = vertices;
+	newItem.actions = currentDeformLog;
+	currentDeformLog.clear();
+
+	undo.push_back(newItem);
+	redo.clear();
 }
 
 /******************************************************************************************************************************/
 bool KVFModel::historyUndo()
 {
-	if (undoVerticesCount == 0)
+	if (undo.empty())
 		return false;
 
-	vertices = undoVertices[undoVerticesPosition--];
-	if (undoVerticesPosition <0) undoVerticesPosition = UNDOSIZE-1;
-	undoVerticesCount--;
-	redoVerticesCount++;
+	redo.push_front(undo.back());
+	undo.pop_back();
 
-	LogItem item = undolog.back();
-	undolog.pop_back();
-	redolog.push_front(item);
+	if (undo.empty()) {
+		vertices = initialVertexes;
+		return true;
+	}
 
-	alpha1 = item.alpha;
-	pinnedVertexes = item.pinnedVertexes;
+	UndoItem &top = undo.back();
+	LogItem &topLogItem = top.actions.back();
 
+	vertices = top.vertices;
+	alpha1 = topLogItem.alpha;
+	pinnedVertexes = topLogItem.pinnedVertexes;
 	return true;
 }
 /******************************************************************************************************************************/
 bool KVFModel::historyRedo()
 {
-	if (redoVerticesCount == 0)
+	if (redo.empty())
 		return false;
 
-	redoVerticesCount--;
-	undoVerticesCount++;
-	undoVerticesPosition = (undoVerticesPosition + 1) % UNDOSIZE;
-	vertices = undoVertices[undoVerticesPosition];
+	undo.push_back(redo.front());
+	redo.pop_front();
 
-	LogItem item = redolog.front();
-	redolog.pop_front();
-	undolog.push_back(item);
 
-	alpha1 = item.alpha;
-	pinnedVertexes = item.pinnedVertexes;
+	UndoItem &top = undo.back();
+	LogItem &topLogItem = top.actions.back();
 
+	vertices = top.vertices;
+	alpha1 = topLogItem.alpha;
+	pinnedVertexes = topLogItem.pinnedVertexes;
 	return true;
 }
 
 /******************************************************************************************************************************/
 void KVFModel::historySaveToFile(std::ofstream& outfile)
 {
-    outfile << undolog.size() << std::endl;
 
-    for (unsigned int i = 0; i < undolog.size(); i++)
+	std::vector<LogItem> wholeLog;
+	for (auto iter = undo.begin() ; iter != undo.end() ; iter++)
+		wholeLog.insert(wholeLog.end(), iter->actions.begin(),iter->actions.end());
+
+    outfile << wholeLog.size() << std::endl;
+
+    for (unsigned int i = 0; i < wholeLog.size(); i++)
     {
-    	LogItem &item = undolog[i];
+    	LogItem &item = wholeLog[i];
 
     	if (item.pinnedVertexes.size() == 0)
     		continue;
@@ -437,6 +462,7 @@ void KVFModel::historySaveToFile(std::ofstream& outfile)
         for (auto iter = item.displacedVertexes.begin(); iter != item.displacedVertexes.end() ; iter++)
         	outfile << iter->v << ' ' << iter->displacement[0] << ' ' << iter->displacement[1] << std::endl;
     }
+
 }
 /******************************************************************************************************************************/
 
@@ -474,34 +500,18 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
 
 void KVFModel::historyReset()
 {
-	undoVerticesPosition = 0;
-	redoVerticesCount = 0;
-	undoVerticesCount = 0;
-
-	undolog.clear();
-	redolog.clear();
+	undo.clear();
+	redo.clear();
+	vertices = initialVertexes;
 }
 
 /******************************************************************************************************************************/
-
 void KVFModel::setAlpha(double alpha)
 {
 	alpha1 = alpha;
 }
-/******************************************************************************************************************************/
-void KVFModel::pinVertex(Vertex v)
-{
-	pinnedVertexes.insert(v);
-	cholmod_free_factor(&L1, cholmod_get_common());
-}
-/******************************************************************************************************************************/
-void KVFModel::unPinVertex(Vertex v)
-{
-	pinnedVertexes.erase(v);
-	cholmod_free_factor(&L1, cholmod_get_common());
-}
-/******************************************************************************************************************************/
 
+/******************************************************************************************************************************/
 void KVFModel::togglePinVertex(Vertex v)
 {
 	if (pinnedVertexes.count(v))
@@ -511,6 +521,35 @@ void KVFModel::togglePinVertex(Vertex v)
 
 	cholmod_free_factor(&L1, cholmod_get_common());
 }
+
+/******************************************************************************************************************************/
+
+bool KVFModel::mousePressAction(Point2 pos, double radius)
+{
+    Vertex v = getClosestPin(pos,radius);
+    if (v == -1)
+    	v = getClosestVertex(pos);
+
+	togglePinVertex(v);
+	return true;
+}
+/******************************************************************************************************************************/
+
+Vertex KVFModel::getClosestPin(Point2 point, double radius)
+{
+	Vertex result = -1;
+	double distance = radius;
+
+	for (auto iter = pinnedVertexes.begin() ;iter != pinnedVertexes.end(); iter++) {
+		Point2 pinLocation = vertices[*iter];
+		if (point.distance(pinLocation) < distance)
+			result = *iter;
+	}
+
+	return result;
+}
+
+
 /******************************************************************************************************************************/
 void KVFModel::clearPins()
 {

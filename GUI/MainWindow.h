@@ -15,6 +15,7 @@ class MeshModel;
 class KVFModel;
 class QLabel;
 class BDMORPHModel;
+class OutlineModel;
 
 class MainWindow : public QMainWindow, public Ui_MainWindow
 {
@@ -27,10 +28,11 @@ public:
 	void clearStatusBar();
 
 public slots:
-	void loadModel();
-	void saveModel();
-    void chooseTexture();
-	void resetTexture();
+	void onLoadModel();
+	void onUnloadModel();
+	void onSaveModel();
+    void onChooseTexture();
+	void onResetTexture();
 
 	void onFrameSwitched(MeshModel* model);
 	void onAnimationpanelNewFrameSelected(MeshModel* model);
@@ -45,6 +47,9 @@ public slots:
 	void onEditorSelectionChanged(int selectedVertex, int selectedFace);
 	void onInterpolationTest();
 	void onFPSUpdated(double msec);
+
+	void onCreateOutlineModel();
+	void onMeshCreationRequest(int requestedDensity);
 
 signals:
 	void videoModelLoaded(VideoModel* model);
@@ -61,11 +66,15 @@ private:
 	QLabel* lblSelectedVertex;
 	QLabel* lblSelectedFace;
 
-	VideoModel* model;
+	VideoModel* videoModel;
 	MeshModel* currentFrameModel;
 	GLuint textureRef;
 
+	OutlineModel* outlineModel;
 	ThumbnailRenderer* thumbnailRender;
+	void setTexture(const QString file);
+
+	QPixmap texture;
 };
 
 #endif

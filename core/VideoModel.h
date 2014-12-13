@@ -20,7 +20,7 @@ public:
 class VideoModel : public MeshModel
 {
 public:
-	VideoModel(std::string filename);
+	VideoModel();
 	virtual ~VideoModel();
 
 	/* creates a new frame as a clone of existing frame*/
@@ -39,7 +39,9 @@ public:
 	int getKeyFrameTimeMsec(VideoKeyFrame* frame);
 	int getTotalTime();
 
-	BDMORPHModel pFrame;
+	BDMORPHModel *pFrame;
+
+	bool initialize();
 
 private:
 	std::vector<VideoKeyFrame*> keyframes;

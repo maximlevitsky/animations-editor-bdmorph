@@ -3,11 +3,20 @@
 #include <assert.h>
 
 /******************************************************************************************************************************/
-VideoModel::VideoModel(std::string filename) : MeshModel(filename), pFrame(*this)
+VideoModel::VideoModel() : pFrame(NULL)
+{}
+
+/******************************************************************************************************************************/
+bool VideoModel::initialize()
 {
-	/* create one keyframe */
+	pFrame = new BDMORPHModel(*this);
+	bool result = pFrame->initialize();
+	if (!result) return false;
+
 	keyframes.push_back(new VideoKeyFrame(this));
 	keyframes.push_back(new VideoKeyFrame(this));
+
+	return true;
 }
 
 /******************************************************************************************************************************/
@@ -17,6 +26,8 @@ VideoModel::~VideoModel()
 		delete *iter;
 		iter = keyframes.erase(iter);
 	}
+
+	delete pFrame;
 }
 /******************************************************************************************************************************/
 int VideoModel::count()

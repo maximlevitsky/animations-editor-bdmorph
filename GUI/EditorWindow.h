@@ -14,6 +14,7 @@
 class MeshModel;
 class KVFModel;
 class VideoModel;
+class OutlineModel;
 
 class EditorWindow : public QGLWidget
 {
@@ -24,24 +25,24 @@ public:
         
 public slots:
 	/* these slots are connected to side panel to manipulate the view*/
-	void undoModel();
-	void redoModel();
-	void reuseVF();
-    void resetPoints();
+	void onUndoModel();
+	void onRedoModel();
+	void onReuseVF();
+    void onResetPoints();
 
-	void drawVFModeChanged(bool m);
-	void drawOrigVFModeChanged(bool m);
-	void pinModeChanged(bool m);
-	void showSelectionChanged(bool m);
+	void onDrawVFModeChanged(bool m);
+	void onDrawOrigVFModeChanged(bool m);
+	void onPinModeChanged(bool m);
+	void onShowSelectionChanged(bool m);
 
-	void changeAlpha(int i);
-	void changeWireframe(int i);
+	void onChangeAlpha(int i);
+	void onChangeWireframe(int i);
 
-	void clearPins();
-    void saveLog();
-    void runLog();
+	void onClearPins();
+    void onSaveLog();
+    void onRunLog();
 
-    void resetTransform();
+    void onResetTransform();
     
     /* these slots are connected to bottom animation panel + main window */
     void onFrameSwitched(MeshModel* model);
@@ -53,7 +54,7 @@ public slots:
 	void onAnimationStopped();
 
 signals:
-	void modelEdited(KVFModel* model);
+	void modelEdited(MeshModel* model);
 	void selectionChanged(int selectedVertex, int selectedFace);
 	void FPSUpdated(double msec);
 
@@ -84,12 +85,13 @@ private:
 
 private:
 
-    KVFModel *editModel;
+    KVFModel *kvfModel;
+    OutlineModel* outlineModel;
     MeshModel* renderModel;
 
     /* Model state */
     QPointF modelLocation;
-    float modelWidth;
+    double modelWidth;
     std::vector<Vertex> selectedVertices;
     bool pinMode;
     bool multitouchMode;
@@ -110,6 +112,11 @@ private:
     bool drawVFOrig;
     bool disableEdit;
     bool showSelection;
+
+    bool mouseMoved;
+    bool mouseLeft;
+
+    double getRadius();
 
 };
 #endif // DEFORMATIONSCENE_H

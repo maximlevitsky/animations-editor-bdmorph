@@ -39,7 +39,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/GUI}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/GUI/widgets}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/utils}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/maxim/Technion/kvf_debug/"/>
 									<listOptionValue builtIn="false" value="/usr/include/eigen3"/>
 									<listOptionValue builtIn="false" value="/usr/include/suitesparse"/>
 								</option>

@@ -112,6 +112,7 @@ class BDMORPHModel : public MeshModel
 {
 public:
 	BDMORPHModel(MeshModel& orig);
+	bool initialize();
 	~BDMORPHModel();
 
 	double interpolate_frame(MeshModel *a, MeshModel* b, double t);
@@ -137,6 +138,8 @@ private:
 	int kCount;
 	int edgeCount;
 
+	bool initialized;
+
 private:
 	/* pre-computed command steams that will guide the steps of the algorithm*/
 	CmdStream *init_cmd_stream;
@@ -151,7 +154,7 @@ private:
 	void calculate_new_vertex_positions();
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
 
-	virtual void renderWireframe();
+	void renderOverlay(double scale);
 	cholmod_factor *LL;
 	MeshModel *modela;
 

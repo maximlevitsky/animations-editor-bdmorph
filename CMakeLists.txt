@@ -30,9 +30,10 @@ SET(kvf2d_SOURCES
 	GUI/widgets/ActionButton.cpp
 
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
-	core/BDMORPH.cpp
+	core/BDMORPH.cpp core/OutlineModel.cpp
 
 	utils/cholmod_matrix.cpp utils/cholmod_common.cpp utils/vector2d.cpp 
+	utils/triangle.c
 )
 
 SET(kvf2d_HEADERS GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h GUI/ThumbnailRenderer.h GUI/widgets/ActionButton.h)

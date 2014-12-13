@@ -13,8 +13,8 @@
 #include "BDMORPH.h"
 #include <QtOpenGL>
 
-#define END_ITERATION_VALUE 4e-13
-#define NEWTON_MAX_ITERATIONS 200
+#define END_ITERATION_VALUE 1e-10
+#define NEWTON_MAX_ITERATIONS 50
 
 /*****************************************************************************************************/
 static double inline calculate_tan_half_angle(double a,double b,double c)
@@ -267,10 +267,15 @@ void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex 
 /*****************************************************************************************************/
 BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 		MeshModel(orig), L(NULL), L0(NULL), LL(NULL),
-		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL)
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL), initialized(false)
 {
-	TimeMeasurment t;
+}
 
+/*****************************************************************************************************/
+bool BDMORPHModel::initialize()
+{
+	assert(!initialized);
+	TimeMeasurment t;
 	std::deque<Vertex> vertexQueue;
 	std::set<Vertex> visitedVertices, mappedVertices;
 	int hessEntries = 0;
@@ -295,12 +300,19 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 
 	if (p0 == -1) {
 		printf("BRMORPH: ERROR: All vertexes are boundary can't support this\n");
-		exit(-1);
+		return false;
 	}
 
 	/* And one of its neigbours */
 	std::set<Vertex> neighbours;
 	builder.getNeighbourVertices(p0, neighbours);
+
+	if (neighbours.empty())
+	{
+		printf("BRMORPH: ERROR: Initial vertex has no neighbors\n");
+		return false;
+	}
+
 	assert(!neighbours.empty());
 	Vertex p1 = *neighbours.begin();
 
@@ -331,7 +343,6 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 
 	}
 	visitedVertices.clear();
-	assert(builder.getK_count() == numVertices - boundaryVertices->size());
 
 	/* ================Put information about initial triangle=========== */
 
@@ -367,8 +378,10 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 		std::set<Vertex> neighbourVertices;
 		builder.getNeighbourVertices(v0, neighbourVertices);
 
-		assert(neighbourVertices.size() > 1);
-
+		if (neighbourVertices.size() <= 1) {
+			printf("BRMORPH: ERROR: Vertex %i has only %i neighbors - need more that one\n", v0, (int)neighbourVertices.size());
+			return false;
+		}
 
 		for (auto iter = neighbourVertices.begin();  iter != neighbourVertices.end() ; iter++)
 		{
@@ -437,7 +450,7 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 			}
 
 			if (newMappedVertexes.size() == 0) {
-				printf("WARNING: not good connected mesh\n");
+				printf("WARNING: BDMORPH: not good connected mesh\n");
 				break;
 			}
 
@@ -488,6 +501,8 @@ BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 	printf("BRMORPH: TMP memory size: %dK\n", (int)(tempMemSize * sizeof(double) / 1024));
 	printf("BRMORPH: L memory size: %dK\n", (int)(edgeCount * sizeof(double) / 1024));
 	printf("BRMORPH: Hessian non zero entries: %d\n\n", hessEntries);
+
+	return true;
 }
 /*****************************************************************************************************/
 
@@ -784,26 +799,21 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	return msec;
 }
 
-
-void BDMORPHModel::renderWireframe()
+/*****************************************************************************************************/
+void BDMORPHModel::renderOverlay(double scale)
 {
-	MeshModel::renderWireframe();
-
 	/* DEBUG code */
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 
-	if (modela) {
-		glColor4f(1,0,0,0.2);
-		modela->renderWireframe();
-	}
-
-	double ratio = getWidth() * 0.001;
+	//if (modela) {
+	//	glColor4f(1,0,0,0.2);
+	//	modela->renderWireframe();
+	//}
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glColor3f(0,1,0);
-	renderVertex(e0.v0, ratio);
-	renderVertex(e0.v1, ratio);
+	renderVertex(e0.v0, scale);
+	renderVertex(e0.v1, scale);
 	glPopAttrib();
-
 }
 

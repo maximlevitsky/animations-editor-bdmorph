@@ -8,14 +8,15 @@
 #include "vector2d.h"
 #include "Utils.h"
 
+class OutlineModel;
+
 /******************************************************************************************************************************/
 class MeshModel
 {
 public:
-    MeshModel(std::string &filename);
+	MeshModel();
     MeshModel(const MeshModel& other);
     virtual ~MeshModel();
-	void copyPositions(MeshModel& m);
 
     double getWidth() { return maxPoint.x - minPoint.x; }
     double getHeight() { return maxPoint.y - minPoint.y; }
@@ -23,22 +24,24 @@ public:
 
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
-    int getClosestVertex(Point2 point, bool onlyInnerVertex = false);
+    int getClosestVertex(Point2 point, bool onlyInnerVertex = false, double radius = std::numeric_limits<double>::max());
     int getFaceUnderPoint(Point2 point);
 
 	/* rendering */
     virtual void renderFaces();
     virtual void renderWireframe();
+    virtual void renderOverlay(double scale) {}
+
+    /* undo/redo */
+
+    virtual void historySnapshot() {}
+    virtual void historyReset() {}
+    virtual bool historyRedo() { return false;}
+    virtual bool historyUndo() { return false;}
+
 
     void renderVertex(unsigned int v, double scale);
 	void renderFace(unsigned int f);
-
-	/* save and load code */
-    void replacePoints(const QString &filename);
-    void saveVertices(std::ofstream& outfile, const QString &filename);
-	void saveTextureUVs(std::ofstream& outfile, const QString &filename);
-	void saveFaces(std::ofstream& outfile, const QString &filename);
-	void loadFromFile(std::string &filename);
 
 	/* common shared model information */
 	std::vector<Face> *faces;
@@ -49,12 +52,29 @@ public:
     Vector2 minPoint;
     Vector2 maxPoint;
 
+    Point2 center;
+
 	/* vertices - one per each model */
 	std::vector<Point2> vertices;
-protected:
-	 MeshModel();
+
+	bool  loadOBJ(std::ifstream& infile);
+	bool  loadOFF(std::ifstream& infile);
+	bool  saveOFF(std::ofstream& ofile);
+	bool  saveOBJ(std::ofstream& ofile);
+
+	virtual bool mousePressAction(Point2 pos, double radius) { return false;}
+	virtual bool mouseReleaseAction(Point2 pos, bool moved, double radius, bool rightButton) { return false;}
+	virtual bool moveAction(Point2 pos1, Point2 pos2, double radius)  { return false;}
+
+    virtual bool saveToFile(const std::string filename);
+    virtual bool loadFromFile(const std::string &filename);
+
+    bool hasTextureMapping() { return hasUV; }
+    void identityTexCoords();
+	bool updateMeshInfo();
 private:
-    bool loadedFromFile;
+    bool created;
+    bool hasUV;
 };
 
 /******************************************************************************************************************************/

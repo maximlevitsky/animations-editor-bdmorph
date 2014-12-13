@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>972</width>
-    <height>759</height>
+    <width>968</width>
+    <height>733</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,7 +28,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>972</width>
+     <width>968</width>
      <height>23</height>
     </rect>
    </property>
@@ -36,8 +36,10 @@
     <property name="title">
      <string>Model</string>
     </property>
+    <addaction name="actionNew_model"/>
     <addaction name="actionLoad_mesh"/>
     <addaction name="actionLoad_texture"/>
+    <addaction name="actionUnload_model"/>
     <addaction name="actionReset_texture"/>
     <addaction name="separator"/>
     <addaction name="actionSave_screenshot"/>
@@ -60,8 +62,6 @@
     <addaction name="actionRedo"/>
     <addaction name="separator"/>
     <addaction name="actionPin_edit_mode"/>
-    <addaction name="actionVF_orig_mode"/>
-    <addaction name="actionVF_mode"/>
     <addaction name="separator"/>
     <addaction name="actionReset_model"/>
     <addaction name="actionReset_pins"/>
@@ -84,6 +84,12 @@
     </property>
     <addaction name="actionSave_log"/>
     <addaction name="actionReplay_log"/>
+    <addaction name="separator"/>
+    <addaction name="action_show_orig_VF"/>
+    <addaction name="action_show_VF"/>
+    <addaction name="actionReapply_VF"/>
+    <addaction name="separator"/>
+    <addaction name="actionTest_animations"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -147,12 +153,12 @@
     <string>Pin edit mode</string>
    </property>
   </action>
-  <action name="actionVF_mode">
+  <action name="action_show_VF">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>VF mode</string>
+    <string>Show dirichlet VF</string>
    </property>
   </action>
   <action name="actionDeformation_mode">
@@ -249,17 +255,37 @@
     <string>Save screenshot</string>
    </property>
   </action>
-  <action name="actionVF_orig_mode">
+  <action name="action_show_orig_VF">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>VF orig mode</string>
+    <string>Show VF</string>
    </property>
   </action>
   <action name="actionRewind">
    <property name="text">
     <string>Rewind</string>
+   </property>
+  </action>
+  <action name="actionUnload_model">
+   <property name="text">
+    <string>Unload model</string>
+   </property>
+  </action>
+  <action name="actionNew_model">
+   <property name="text">
+    <string>New model</string>
+   </property>
+  </action>
+  <action name="actionTest_animations">
+   <property name="text">
+    <string>Test animations</string>
+   </property>
+  </action>
+  <action name="actionReapply_VF">
+   <property name="text">
+    <string>Reapply last VF</string>
    </property>
   </action>
  </widget>

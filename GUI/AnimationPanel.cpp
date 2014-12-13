@@ -91,7 +91,7 @@ void AnimationPanel::onTextureChanged(GLuint newtex)
 
 
 /******************************************************************************************************************************/
-void AnimationPanel::onFrameEdited(KVFModel* model)
+void AnimationPanel::onFrameEdited(MeshModel* model)
 {
 	if (!videoModel) return;
 
@@ -299,8 +299,8 @@ void AnimationPanel::onTimeSliderMoved(int newValue)
 		t /= (nextTimeMsec-currTimeMsec);
 
 		{
-			double time = videoModel->pFrame.interpolate_frame(prevFrame,nextFrame,t);
-			emit frameSelectionChanged(&videoModel->pFrame);
+			double time = videoModel->pFrame->interpolate_frame(prevFrame,nextFrame,t);
+			emit frameSelectionChanged(videoModel->pFrame);
 			emit FPSUpdated(time);
 		}
 	}
@@ -418,7 +418,7 @@ void AnimationPanel::updateTimeSlider()
 	sliderAnimationTime->setMinimum(0);
 	sliderAnimationTime->setMaximum(totalDuration);
 	sliderAnimationTime->setSliderPosition(current_time);
-	sliderAnimationTime->setTickInterval(totalDuration/20);
+	sliderAnimationTime->setTickPosition(QSlider::NoTicks);
 	sliderAnimationTime->setSingleStep(1);
 }
 /******************************************************************************************************************************/

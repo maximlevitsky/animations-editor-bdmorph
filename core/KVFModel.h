@@ -34,6 +34,15 @@ struct LogItem
 	std::set<DisplacedVertex> displacedVertexes;
 };
 
+struct UndoItem
+{
+	/* Vertices snapshot*/
+	std::vector<Point2> vertices;
+
+	/* AKVF deformations that are needed to apply to get to this state from previous state*/
+	std::vector<LogItem> actions;
+};
+
 class KVFModel : public MeshModel
 {
 public:
@@ -42,33 +51,34 @@ public:
 
 	/* deformation entry points*/
 	void setAlpha(double alpha);
-	void pinVertex(Vertex v);
-	void unPinVertex(Vertex v);
-	void togglePinVertex(Vertex v);
 	void clearPins();
 	const std::set<Vertex>& getPinnedVertexes() { return pinnedVertexes; }
 
 	void calculateVF(const std::set<DisplacedVertex> &displacements);
 	void applyVFLogSpiral();
 	void applyVF();
-	void resetDeformations();
 
 	/* rendering */
 	void renderVFOrig();
 	void renderVF();
 
-	/* undo and redo code*/
-	bool historyRedo();
-	bool historyUndo();
 	void historySaveToFile(std::ofstream& outfile);
 	void historyLoadFromFile(std::ifstream& infile);
-	void historyReset();
 
+	/* undo and redo code*/
+	void historySnapshot();
+    void historyReset();
+	bool historyRedo();
+	bool historyUndo();
+
+
+	bool mousePressAction(Point2 pos, double radius);
+	void renderOverlay(double scale);
 private:
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
 	unsigned int lastDispsSize;
-	std::vector<Point2> initialVertexes;
+
 	double alpha1;
 
     /* vector field of last transformation  */
@@ -87,17 +97,14 @@ private:
 
 	void renderVF_common(Vector2* VF);
 
-	/*undo stuff*/
-    vertexList undoVertices[UNDOSIZE];
-    int undoVerticesPosition;
-    int undoVerticesCount;
-    int redoVerticesCount;
-
-    std::deque<LogItem> undolog; /* stores log of all changes to mesh since creation of the model */
-    std::deque<LogItem> redolog; /* stores log of all changes to mesh since creation of the model */
-
-    vertexList undoBuffer[UNDOSIZE];
     void historyAdd(const std::set<DisplacedVertex> &disps);
+	Vertex getClosestPin(Point2 point, double radius);
+	void togglePinVertex(Vertex v);
+
+    std::vector<Point2> initialVertexes;
+    std::deque<UndoItem> undo;
+    std::deque<UndoItem> redo;
+    std::vector<LogItem> currentDeformLog;
 
 public:
     /* statistics */

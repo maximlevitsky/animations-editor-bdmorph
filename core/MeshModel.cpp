@@ -8,27 +8,26 @@
 #include <QtOpenGL>
 
 #include "MeshModel.h"
+#include "OutlineModel.h"
 #include "Utils.h"
 
 #define LINE_WIDTH 2
 
 /******************************************************************************************************************************/
 MeshModel::MeshModel() :
-		faces(NULL),
-		boundaryVertices(NULL),
-		texCoords(NULL),
-		loadedFromFile(false)
-{}
-
-/******************************************************************************************************************************/
-MeshModel::~MeshModel()
+		faces(new std::vector<Face>),
+		boundaryVertices(new std::set<Vertex>),
+		texCoords(new std::vector<Point2>),
+		created(true),
+		hasUV(false),
+		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
+				maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
+		numVertices(0), numFaces(0),
+		center(0,0)
 {
-	if (loadedFromFile)
-	{
-		delete faces;
-		delete boundaryVertices;
-		delete texCoords;
-	}
+	/* create new empty mesh model
+	 * Used for OutlineModel
+	 */
 }
 
 /******************************************************************************************************************************/
@@ -41,20 +40,74 @@ MeshModel::MeshModel(const MeshModel& other):
 		numVertices(other.numVertices),
 		numFaces(other.numFaces),
 		vertices(other.vertices),
-		loadedFromFile(false)
+		hasUV(other.hasUV),
+		created(false),
+		center(other.center)
 {
+	/* Create a mesh model from a copy
+	 * Here we assume that we are shallow copy
+	 */
 }
 /******************************************************************************************************************************/
 
-MeshModel::MeshModel(std::string &filename) :
-		faces(new std::vector<Face>),
-		boundaryVertices(new std::set<Vertex>),
-		texCoords(new std::vector<Point2>),
-		loadedFromFile(true),
-		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
-		maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min())
+bool MeshModel::loadFromFile(const std::string &filename)
 {
-	loadFromFile(filename);
+	bool result = false;
+
+	/* Load a mesh from file */
+
+	std::ifstream infile(filename);
+	if (ends_with(filename, "obj") || ends_with(filename, "OBJ"))
+		result = loadOBJ(infile);
+	else if (ends_with(filename, "off") || ends_with(filename, "OFF")) //handle off file
+		result = loadOFF(infile);
+
+	if (result == true) {
+		printf("model loaded: numVertices = %d, numFaces = %d", numVertices, numFaces);
+	}
+
+	return result;
+}
+
+bool MeshModel::saveToFile(const std::string filename)
+{
+    std::ofstream outfile(filename);
+
+    if (outfile.bad())
+    	return false;
+
+    if (ends_with(filename, "off") || ends_with(filename, "OFF"))
+		return saveOFF(outfile);
+    else if (ends_with(filename, "obj") || ends_with(filename, "OBJ"))
+		return saveOBJ(outfile);
+
+    return false;
+}
+
+/******************************************************************************************************************************/
+MeshModel::~MeshModel()
+{
+	if (created)
+	{
+		delete faces;
+		delete boundaryVertices;
+		delete texCoords;
+	}
+}
+
+/******************************************************************************************************************************/
+
+bool MeshModel::updateMeshInfo()
+{
+	if (numVertices == 0) {
+		printf("Loaded mesh has no vertices!\n");
+		return false;
+	}
+
+	if (numFaces == 0) {
+		printf("Loaded mesh has no faces!\n");
+		return false;
+	}
 
     for (unsigned int i = 0; i < numVertices; i++)
     {
@@ -62,28 +115,32 @@ MeshModel::MeshModel(std::string &filename) :
     	maxPoint = maxPoint.max(vertices[i]);
     }
 
-    Vector2 center = (minPoint+maxPoint)/2;
-    maxPoint -= center;
-    minPoint -= center;
-    for (unsigned int i = 0; i < numVertices; i++)
-    	vertices[i] -= center;
+    center = (minPoint+maxPoint)/2;
 
 	std::map< int , std::map<int,int> > edgeCount;
+	std::set<Vertex> normalVertices;
+
 	for (auto iter = faces->begin() ; iter != faces->end() ; iter++)
     {
-		//iter->makeClockWise(vertices);
-
         int a = iter->a();
         int b = iter->b();
         int c = iter->c();
-
         edgeCount[a][b]++;
         edgeCount[b][a]++;
         edgeCount[a][c]++;
         edgeCount[c][a]++;
         edgeCount[c][b]++;
         edgeCount[b][c]++;
+
+        normalVertices.insert(a);
+        normalVertices.insert(b);
+        normalVertices.insert(c);
     }
+
+	if (normalVertices.size() != numVertices) {
+		printf("Mesh has standalone vertices, aborting\n");
+		return false;
+	}
 
     for (auto iter = faces->begin() ; iter != faces->end() ; iter++)
     {
@@ -104,96 +161,8 @@ MeshModel::MeshModel(std::string &filename) :
             boundaryVertices->insert(c);
         }
     }
-}
 
-/******************************************************************************************************************************/
-void MeshModel::loadFromFile(std::string & filename)
-{
-	if (ends_with(filename, "obj") || ends_with(filename, "OBJ")) //handle obj file
-	{
-		numVertices = 0;
-		numFaces = 0;
-		std::ifstream infile(filename);
-		bool is_vt = false;
-		double x,y,z;
-		std::string a,b,c;
-
-		while (!infile.eof())
-		{
-			// get line
-			std::string curLine;
-			std::getline(infile, curLine);
-
-			// read type of the line
-			std::istringstream issLine(curLine);
-			std::string linetype;
-			issLine >> linetype;
-
-			if (linetype == "v")
-			{
-				numVertices++;
-				issLine >> x >> y >> z;
-				Point2 p(x,y);
-				vertices.push_back(p);
-				continue;
-			}
-			if (linetype == "vt")
-			{
-				is_vt = true;
-				issLine >> x >> y;
-				Point2 p(x,y);
-				texCoords->push_back(p);
-				continue;
-			}
-			if (linetype == "f")
-			{
-				numFaces++;
-				issLine >> a >> b >> c;
-				char* a_dup = strdup(a.c_str()); char* b_dup = strdup(b.c_str()); char* c_dup = strdup(c.c_str());
-				char* aa = strtok(a_dup,"/");
-				char* bb = strtok(b_dup,"/");
-				char* cc = strtok(c_dup,"/");
-				Face fa;
-				fa.f[0] = atoi(aa)-1; fa.f[1] = atoi(bb)-1; fa.f[2] = atoi(cc)-1;
-				faces->push_back(fa);
-				continue;
-			}
-			if (linetype == "#") continue;
-			if (linetype == "mtllib") continue;
-		}
-		qWarning("numVertices = %d, numFaces = %d", numVertices, numFaces);
-		if (is_vt == false)
-		{
-			texCoords->resize(numVertices);
-			for (unsigned int i = 0; i < numVertices; i++)
-			(*texCoords)[i] = vertices[i];
-		}
-	}
-
-    if (ends_with(filename, "off") || ends_with(filename, "OFF")) //handle off file
-	{
-    	std::ifstream infile(filename);
-    	std::string temp;
-		infile >> temp;
-
-		infile >> numVertices >> numFaces >> temp;
-
-		qWarning("Mesh:  %d vertices, %d faces", numVertices, numFaces);
-
-		vertices.resize(numVertices);
-		double z;
-		for (unsigned int i = 0; i < numVertices; i++)
-			infile >> vertices[i].x >> vertices[i].y >> z;
-
-		texCoords->resize(numVertices);
-		for (unsigned int i = 0; i < numVertices; i++)
-			(*texCoords)[i] = vertices[i];
-
-		int three;
-		faces->resize(numFaces);
-		for (unsigned int i = 0; i < numFaces; i++)
-			infile >> three >> (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
-	}
+    return true;
 }
 
 /******************************************************************************************************************************/
@@ -201,13 +170,15 @@ void MeshModel::renderFaces()
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glEnable(GL_TEXTURE_2D);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FRONT_AND_BACK);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	for (unsigned int i = 0; i < numFaces; i++)
 		renderFace(i);
 
 	glPopAttrib();
 }
+
+/******************************************************************************************************************************/
 
 void MeshModel::renderWireframe()
 {
@@ -229,6 +200,7 @@ void MeshModel::renderVertex(unsigned int v, double scale)
 	#define VERTEX_SIZE 3
 	glPushAttrib(GL_LINE_BIT);
     glLineWidth(1);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     Point2D<double> p = vertices[v];
 
@@ -263,14 +235,14 @@ void MeshModel::renderFace(unsigned int fnum)
 }
 
 /******************************************************************************************************************************/
-int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex)
+int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex, double radius)
 {
     int closest = -1;
-    double closestDistance = std::numeric_limits<double>::max();
+    double closestDistance = radius;
 
     for (unsigned int i = 0; i < numVertices; i++)
     {
-        double distance = vertices[i].distanceSquared(point);
+        double distance = vertices[i].distance(point);
         if (distance < closestDistance)
         {
         	if (onlyInnerVertex && boundaryVertices->count(i))
@@ -299,50 +271,134 @@ BBOX MeshModel::getActualBBox()
 {
 	return BBOX(vertices);
 }
+
 /******************************************************************************************************************************/
-void MeshModel::copyPositions(MeshModel& m)
+bool  MeshModel::loadOFF(std::ifstream& infile)
+{
+	std::string temp;
+	infile >> temp;
+	infile >> numVertices >> numFaces >> temp;
+
+	if (infile.eof())
+		return false;
+
+	vertices.resize(numVertices);
+	double z;
+	for (unsigned int i = 0; i < numVertices; i++) {
+		if (infile.eof()) return false;
+		infile >> vertices[i].x >> vertices[i].y >> z;
+	}
+
+
+	int three;
+	faces->resize(numFaces);
+	for (unsigned int i = 0; i < numFaces; i++) {
+		if (infile.eof()) return false;
+		infile >> three >> (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
+	}
+
+	identityTexCoords();
+	hasUV = false;
+	return updateMeshInfo();
+}
+
+/******************************************************************************************************************************/
+bool  MeshModel::saveOFF(std::ofstream& ofile)
+{
+	ofile << "OFF\n";
+	ofile << numVertices << ' ' << numFaces << " 0\n"; // don't bother counting edges
+
+	for (unsigned int i = 0; i < numVertices; i++)
+		ofile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
+
+	for (unsigned int i = 0; i < numFaces; i++)
+		ofile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
+
+	return true;
+}
+
+/******************************************************************************************************************************/
+bool  MeshModel::loadOBJ(std::ifstream& infile)
+{
+	numVertices = 0;
+	numFaces = 0;
+	double x,y,z;
+	std::string a,b,c;
+
+	while (!infile.eof())
+	{
+		// get line
+		std::string curLine;
+		std::getline(infile, curLine);
+
+		// read type of the line
+		std::istringstream issLine(curLine);
+		std::string linetype;
+		issLine >> linetype;
+
+		if (linetype == "v")
+		{
+			numVertices++;
+			issLine >> x >> y >> z;
+			Point2 p(x,y);
+			vertices.push_back(p);
+			continue;
+		}
+		if (linetype == "vt")
+		{
+			hasUV = true;
+			issLine >> x >> y;
+			Point2 p(x,y);
+			texCoords->push_back(p);
+			continue;
+		}
+		if (linetype == "f")
+		{
+			numFaces++;
+			issLine >> a >> b >> c;
+			char* a_dup = strdup(a.c_str()); char* b_dup = strdup(b.c_str()); char* c_dup = strdup(c.c_str());
+			char* aa = strtok(a_dup,"/");
+			char* bb = strtok(b_dup,"/");
+			char* cc = strtok(c_dup,"/");
+			Face fa;
+			fa.f[0] = atoi(aa)-1; fa.f[1] = atoi(bb)-1; fa.f[2] = atoi(cc)-1;
+			faces->push_back(fa);
+			continue;
+		}
+		if (linetype == "#") continue;
+		if (linetype == "mtllib") continue;
+	}
+
+	if (hasUV == false)
+		identityTexCoords();
+
+	return updateMeshInfo();
+
+}
+/******************************************************************************************************************************/
+bool  MeshModel::saveOBJ(std::ofstream& ofile)
 {
 	for (unsigned int i = 0; i < numVertices; i++)
-		vertices[i] = m.vertices[i];
-}
-/******************************************************************************************************************************/
-void MeshModel::saveTextureUVs(std::ofstream& outfile, const QString &filename)
-{
-	if (filename.endsWith("obj"))
-	{
+		ofile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
+
+	if (hasUV) {
 		for (unsigned int i = 0; i < numVertices; i++)
-			outfile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
-	}
-}
-/******************************************************************************************************************************/
-void MeshModel::saveFaces(std::ofstream& outfile, const QString &filename)
-{
-	if (filename.endsWith("off"))
-	{
-		for (unsigned int i = 0; i < numFaces; i++)
-			outfile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
+			ofile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
 	}
 
-	if (filename.endsWith("obj"))
-	{
-		for (unsigned int i = 0; i < numFaces; i++)
-			outfile << "f " << (*faces)[i][0]+1 << '/' << (*faces)[i][0]+1 << ' ' <<
-			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' << (*faces)[i][2]+1 << '/' << (*faces)[i][2]+1 << std::endl;
-	}
+	for (unsigned int i = 0; i < numFaces; i++)
+		ofile << "f " <<
+			(*faces)[i][0]+1 << '/' << (*faces)[i][0]+1 << ' ' <<
+			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' <<
+			(*faces)[i][2]+1 << '/' << (*faces)[i][2]+1 << std::endl;
+
+	return true;
+}
+
+void MeshModel::identityTexCoords()
+{
+	texCoords->resize(numVertices);
+	for (unsigned int i = 0; i < numVertices; i++)
+	(*texCoords)[i] = vertices[i];
 
 }
-/******************************************************************************************************************************/
-void MeshModel::saveVertices(std::ofstream& outfile, const QString &filename)
-{
-	if (filename.endsWith("off"))
-	{
-		for (unsigned int i = 0; i < numVertices; i++)
-			outfile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
-	}
-	if (filename.endsWith("obj"))
-	{
-		for (unsigned int i = 0; i < numVertices; i++)
-			outfile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
-	}
-}
-/******************************************************************************************************************************/

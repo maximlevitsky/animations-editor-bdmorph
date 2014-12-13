@@ -22,7 +22,7 @@ public:
 public slots:
 	/* Notifications from outside */
 	void onFrameSwitched(MeshModel* model);
-	void onFrameEdited(KVFModel* model);
+	void onFrameEdited(MeshModel* model);
 	void onVideoModelLoaded(VideoModel* model);
 	void onTextureChanged(GLuint texture);
 
