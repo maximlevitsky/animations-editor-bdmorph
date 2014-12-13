@@ -133,7 +133,7 @@ void AnimationPanel::onCurrentListItemChanged(int currentRow )
 
 void AnimationPanel::onCloneKeyFrame()
 {
-	if (animationRunning)
+	if (animationRunning || !videoModel)
 		return;
 
 	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
@@ -251,6 +251,9 @@ void AnimationPanel::onTimeTextFinished()
 
 void AnimationPanel::onPlayPauseButtonPressed()
 {
+	if (!videoModel)
+		return;
+
 	if (animationRunning) {
 		animationTimer->stop();
 		btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));

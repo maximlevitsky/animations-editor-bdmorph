@@ -41,27 +41,33 @@ EditorWindow::EditorWindow(QWidget* parent) :
 /******************************************************************************************************************************/
 void  EditorWindow::onResetPoints()
 {
-	if (disableEdit) return;
+	if (disableEdit || !renderModel) return;
 	renderModel->historyReset();
 	emit modelEdited(renderModel);
 	repaint();
+
+	/* TODO: updat alpha in GUI */
 }
 /******************************************************************************************************************************/
 void EditorWindow::onUndoModel()
 {
-	if (disableEdit) return;
+	if (disableEdit || !renderModel) return;
 	renderModel->historyUndo();
 	repaint();
 	emit modelEdited(renderModel);
+
+	/* TODO: updat alpha in GUI */
 }
 
 /******************************************************************************************************************************/
 void EditorWindow::onRedoModel()
 {
-	if (disableEdit) return;
+	if (disableEdit || !renderModel) return;
 	renderModel->historyRedo();
 	repaint();
 	emit modelEdited(renderModel);
+
+	/* TODO: updat alpha in GUI */
 }
 
 /******************************************************************************************************************************/
@@ -87,6 +93,8 @@ void EditorWindow::onRunLog()
 
     int numSteps;
     infile >> numSteps;
+
+    /* TODO: rework and update alpha in GIU*/
 
     for (int step = 0; step < numSteps; step++)
     {

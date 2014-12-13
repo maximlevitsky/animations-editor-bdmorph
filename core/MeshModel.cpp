@@ -57,13 +57,16 @@ bool MeshModel::loadFromFile(const std::string &filename)
 	/* Load a mesh from file */
 
 	std::ifstream infile(filename);
+	if (infile.bad())
+		return false;
+
 	if (ends_with(filename, "obj") || ends_with(filename, "OBJ"))
 		result = loadOBJ(infile);
 	else if (ends_with(filename, "off") || ends_with(filename, "OFF")) //handle off file
 		result = loadOFF(infile);
 
 	if (result == true) {
-		printf("model loaded: numVertices = %d, numFaces = %d", numVertices, numFaces);
+		printf("model loaded: numVertices = %d, numFaces = %d\n", numVertices, numFaces);
 	}
 
 	return result;

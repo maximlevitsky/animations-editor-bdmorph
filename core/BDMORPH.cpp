@@ -267,8 +267,23 @@ void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex 
 /*****************************************************************************************************/
 BDMORPHModel::BDMORPHModel(MeshModel &orig) :
 		MeshModel(orig), L(NULL), L0(NULL), LL(NULL),
-		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL), initialized(false)
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL), initialized(false),
+		init_cmd_stream(NULL),iteration_cmd_stream(NULL),extract_solution_cmd_stream(NULL)
 {
+	mem.memory = NULL;
+}
+
+/*****************************************************************************************************/
+
+BDMORPHModel::~BDMORPHModel()
+{
+	delete [] L0;
+	delete [] L;
+	delete init_cmd_stream;
+	delete iteration_cmd_stream;
+	delete extract_solution_cmd_stream;
+	delete [] mem.memory;
+	cholmod_free_factor(&LL, cholmod_get_common());
 }
 
 /*****************************************************************************************************/
@@ -505,19 +520,6 @@ bool BDMORPHModel::initialize()
 	return true;
 }
 /*****************************************************************************************************/
-
-BDMORPHModel::~BDMORPHModel()
-{
-	delete [] L0;
-	delete [] L;
-	delete init_cmd_stream;
-	delete iteration_cmd_stream;
-	delete extract_solution_cmd_stream;
-	delete [] mem.memory;
-	cholmod_free_factor(&LL, cholmod_get_common());
-}
-
-/*****************************************************************************************************/
 void BDMORPHModel::calculate_initial_lengths(MeshModel *a, MeshModel* b, double t)
 {
 	CmdStream commands(*init_cmd_stream);
@@ -706,6 +708,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	int iteration = 0;
 
 	modela = a;
+	modelb = b;
 
 	/* Calculate the interpolated metric */
 	calculate_initial_lengths(a,b,t);

@@ -157,6 +157,7 @@ private:
 	void renderOverlay(double scale);
 	cholmod_factor *LL;
 	MeshModel *modela;
+	MeshModel *modelb;
 
 };
 

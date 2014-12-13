@@ -191,7 +191,7 @@ void MainWindow::clearStatusBar()
 /*****************************************************************************************************/
 void MainWindow::onLoadModel()
 {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Choose model"), QString(), QLatin1String("*.off *.obj"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("Choose model"), QString(), QLatin1String("*.off *.obj *.poly"));
     if (filename == "") return;
 
     QFileInfo fileinfo(filename);
@@ -204,28 +204,50 @@ void MainWindow::onLoadModel()
     onUnloadModel();
     onResetTexture();
 
-    /* load new model */
-    videoModel = new VideoModel();
-
-    bool result = videoModel->loadFromFile(filename.toStdString());
-    if (result == false) {
-    	QMessageBox::warning(this, "Error", "Can't load mesh");
-    	delete videoModel;
-    	videoModel = NULL;
-    	return;
-    }
-
-    result = videoModel->initialize();
-    if (result == false)
+    if (filename.endsWith(".poly"))
     {
-    	QMessageBox::warning(this, "Error", "Problem initializing animations");
-    	delete videoModel;
-    	videoModel = NULL;
-    	return;
-    }
+    	if (outlineModel)
+    		delete outlineModel;
+    	outlineModel = new OutlineModel();
 
-    emit videoModelLoaded(videoModel);
-    emit frameSwitched(videoModel->getKeyframeByIndex(1));
+    	bool result = outlineModel->loadFromFile(filename.toStdString());
+
+    	if (!result) {
+    		delete outlineModel;
+    		outlineModel = NULL;
+    		return;
+    	}
+
+    	emit frameSwitched(outlineModel);
+    	mainScene->onResetTransform();
+    } else
+    {
+		/* load new model */
+		videoModel = new VideoModel();
+
+		bool result = videoModel->loadFromFile(filename.toStdString());
+		if (result == false) {
+			QMessageBox::warning(this, "Error", "Can't load mesh");
+			delete videoModel;
+			videoModel = NULL;
+			return;
+		}
+
+		result = videoModel->initialize();
+		if (result == false)
+		{
+			QMessageBox::warning(this, "Error", "Problem initializing animations");
+			delete videoModel;
+			videoModel = NULL;
+			return;
+		}
+
+		emit videoModelLoaded(videoModel);
+		emit frameSwitched(videoModel->getKeyframeByIndex(1));
+
+	    /* set these statistics - will only change when loading new model */
+	    setStatusBarStatistics(videoModel->getNumVertices(), videoModel->getNumFaces());
+    }
 
 
     /* Try to load texture */
@@ -235,10 +257,6 @@ void MainWindow::onLoadModel()
     fileinfo.setFile(fileNameNoExt + ".png");
     if (fileinfo.exists())
     	setTexture(fileNameNoExt + ".png");
-
-
-    /* set these statistics - will only change when loading new model */
-    setStatusBarStatistics(videoModel->getNumVertices(), videoModel->getNumFaces());
 }
 
 /*****************************************************************************************************/

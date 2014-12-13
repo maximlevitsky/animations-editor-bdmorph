@@ -9,6 +9,13 @@ extern "C" {
 
 /******************************************************************************************************************************/
 
+void eatTokens(std::ifstream &ifile, int count)
+{
+	std::string dummy;
+	for (int i =0 ; i < count ;i++)
+		ifile >> dummy;
+}
+
 OutlineModel::OutlineModel() : selectedVertex(-1)
 {
 	minPoint.x = 0;
@@ -175,7 +182,7 @@ void OutlineModel::deleteVertex(Vertex v)
 		vertices.pop_back();
 	} else {
 		deletedVertexes.insert(v);
-		vertices[v] = Point2(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
+		vertices[v] = Point2(-1000, -1000);
 	}
 
 	for (auto iter = edges.begin() ; iter != edges.end();)
@@ -345,6 +352,58 @@ bool OutlineModel::createMesh(MeshModel *output,int triangleCount)
 /******************************************************************************************************************************/
 bool OutlineModel::loadFromFile(const std::string &filename)
 {
+	std::ifstream ifile(filename);
+	if (ifile.bad())
+		return false;
+
+	if (!ends_with(filename, "poly"))
+		return false;
+
+	int dimision, attribNum, markerNum;
+	ifile >> numVertices >> dimision >> attribNum >> markerNum;
+	vertices.reserve(numVertices);
+
+	for (unsigned int i = 0 ; i < numVertices ;i++)
+	{
+		unsigned int v;
+		double x, y;
+		ifile >> v >> x >> y;
+		eatTokens(ifile, attribNum+markerNum);
+
+		if (v>= vertices.size()) {
+			vertices.resize(v+1);
+		}
+
+		vertices[v] = Point2(x,y);
+	}
+
+	unsigned int edgesCount;
+	ifile >> edgesCount >> markerNum;
+
+	for (unsigned int i = 0 ; i < edgesCount ;i++) {
+		int e;
+		int a,b;
+
+		ifile >> e >> a >> b;
+		eatTokens(ifile, markerNum);
+		edges.insert(Edge(a,b));
+	}
+
+	unsigned int holesCount;
+	ifile >> holesCount;
+
+	for (unsigned int i = 0 ; i < holesCount ;i++)
+	{
+		unsigned int v;
+		double x, y;
+		ifile >> v >> x >> y;
+
+		if (v>= vertices.size())
+			vertices.resize(v+1);
+		vertices[v] = Point2(x,y);
+	}
+
+	numVertices = vertices.size();
 	/* TODO */
-	return false;
+	return true;
 }
