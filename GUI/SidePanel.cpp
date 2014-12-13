@@ -18,14 +18,16 @@ SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent)
 
 void SidePanel::onAnimationStarted()
 {
-	this->setEnabled(false);
+	this->frameLoad->setEnabled(false);
+	btnConvertToKeyframe->setEnabled(false);
 }
 
 /******************************************************************************************************************************/
 
 void SidePanel::onAnimationStopped()
 {
-	this->setEnabled(true);
+	this->frameLoad->setEnabled(true);
+	btnConvertToKeyframe->setEnabled(true);
 }
 
 /******************************************************************************************************************************/
@@ -33,12 +35,13 @@ void SidePanel::onAnimationStopped()
 void SidePanel::onFrameSwitched(MeshModel* model)
 {
 	bool isKVFModel = dynamic_cast<KVFModel*>(model) != NULL;
-	//bool isBDMORPH = dynamic_cast<BDMORPHModel*>(model) != NULL;
+	bool isBDMORPH = dynamic_cast<BDMORPHModel*>(model) != NULL;
 	bool isOutlineModel = dynamic_cast<OutlineModel*>(model) != NULL;
 
 	setUpdatesEnabled(false);
 	frameOutline->setVisible(isOutlineModel);
 	frameKVF->setVisible(isKVFModel);
+	frameBDMorph->setVisible(isBDMORPH);
 	frameEdit->setVisible(isOutlineModel||isKVFModel);
 	frameWireframe->setVisible(model != NULL);
 	setUpdatesEnabled(true);

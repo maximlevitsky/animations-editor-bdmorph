@@ -111,7 +111,8 @@ public:
 class BDMORPHModel : public MeshModel
 {
 public:
-	BDMORPHModel(MeshModel& orig);
+	BDMORPHModel(BDMORPHModel* orig);
+	BDMORPHModel(MeshModel* orig);
 	bool initialize();
 	~BDMORPHModel();
 
@@ -137,7 +138,6 @@ private:
 
 	int kCount;
 	int edgeCount;
-
 	bool initialized;
 
 private:
@@ -145,7 +145,6 @@ private:
 	CmdStream *init_cmd_stream;
 	CmdStream *iteration_cmd_stream;
 	CmdStream *extract_solution_cmd_stream;
-
 	TmpMemory mem;
 
 private:

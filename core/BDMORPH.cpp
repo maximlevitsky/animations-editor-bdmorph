@@ -265,12 +265,23 @@ void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex 
 }
 
 /*****************************************************************************************************/
-BDMORPHModel::BDMORPHModel(MeshModel &orig) :
-		MeshModel(orig), L(NULL), L0(NULL), LL(NULL),
+BDMORPHModel::BDMORPHModel(MeshModel *orig) :
+		MeshModel(*orig), L(NULL), L0(NULL), LL(NULL),
 		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL), initialized(false),
 		init_cmd_stream(NULL),iteration_cmd_stream(NULL),extract_solution_cmd_stream(NULL)
 {
 	mem.memory = NULL;
+}
+
+BDMORPHModel::BDMORPHModel(BDMORPHModel* orig) :
+		MeshModel(*orig), LL(NULL),
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL), initialized(false),
+		init_cmd_stream(orig->init_cmd_stream),
+		iteration_cmd_stream(orig->iteration_cmd_stream),
+		extract_solution_cmd_stream(orig->extract_solution_cmd_stream)
+{
+	L = new double[orig->edgeCount];
+	L0 = new double[orig->edgeCount];
 }
 
 /*****************************************************************************************************/

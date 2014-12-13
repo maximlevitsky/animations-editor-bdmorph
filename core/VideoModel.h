@@ -39,7 +39,11 @@ public:
 	int getKeyFrameTimeMsec(VideoKeyFrame* frame);
 	int getTotalTime();
 
+	/* master frame */
 	BDMORPHModel *pFrame;
+
+	/* frames for interpolation, share some data with master frame */
+	BDMORPHModel* frames[5];
 
 	bool initialize();
 

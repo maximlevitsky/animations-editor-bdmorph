@@ -194,6 +194,9 @@ void EditorWindow::onFrameSwitched(MeshModel* model)
 	renderModel = model;
 	kvfModel = dynamic_cast<KVFModel*>(model);
 	outlineModel = dynamic_cast<OutlineModel*>(model);
+
+	if (outlineModel)
+		onResetTransform();
 	repaint();
 }
 
@@ -572,13 +575,14 @@ void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
 {
     setCursor(Qt::ArrowCursor);
     selectedVertices.clear();
-    renderModel->historySnapshot();
+    mouseMoved = false;
+    if (!renderModel)
+    	return;
 
+    renderModel->historySnapshot();
     QPointF curPos = event->pos();
     curPos.setY(height()-curPos.y()-1);
-
     renderModel->mouseReleaseAction(screenToModel(curPos),mouseMoved, getRadius(), !mouseLeft);
-    mouseMoved = false;
     update();
 }
 

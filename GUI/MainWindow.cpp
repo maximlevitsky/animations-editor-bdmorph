@@ -23,28 +23,13 @@ MainWindow::MainWindow() : videoModel(NULL), currentFrameModel(NULL), outlineMod
 	setupUi(this);
 
 	/* setup GL view */
-	mainScene = new EditorWindow(this);
-	setCentralWidget(mainScene);
+	editorWindow = new EditorWindow(this);
+	setCentralWidget(editorWindow);
 
 	/* setup side panel */
 	sidePanel = new SidePanel(this);
-	connect_(sidePanel->btnLoadModel, clicked(),this, onLoadModel());
-	connect_(sidePanel->btnResetTexture, clicked(),this, onResetTexture());
-	connect_(sidePanel->btnLoadTexture, clicked(),this, onChooseTexture());
-	connect_(sidePanel->btnNewModel, clicked(), this, onCreateOutlineModel());
-	connect_(sidePanel->btnSaveModel, clicked(), this, onSaveModel());
-	connect_(sidePanel->btnUnloadModel, clicked(), this, onUnloadModel());
 
-	connect_(sidePanel->btnResetMesh, clicked(), mainScene, onResetPoints());
-	connect_(sidePanel->btnResetPins, clicked(),mainScene, onClearPins());
-	connect_(sidePanel->btnResetTransform, clicked(),mainScene, onResetTransform());
-	connect_(sidePanel->btnUndo, clicked(),mainScene, onUndoModel());
-	connect_(sidePanel->btnRedo, clicked(),mainScene, onRedoModel());
 
-	connect_(sidePanel->chkPinMode, clicked(bool), mainScene, onPinModeChanged(bool));
-	connect_(sidePanel->chkShowSelection, clicked(bool), mainScene, onShowSelectionChanged(bool));
-	connect_(sidePanel->sliderWireframeTransparency, valueChanged(int), mainScene, onChangeWireframe(int));
-	connect_(sidePanel->sliderAlpha, valueChanged(int), mainScene, onChangeAlpha(int));
 	sidePanel->sliderAlpha->setValue(5);
 	addDockWidget(Qt::RightDockWidgetArea, sidePanel);
 
@@ -76,81 +61,99 @@ MainWindow::MainWindow() : videoModel(NULL), currentFrameModel(NULL), outlineMod
 	statusBar()->addPermanentWidget(lblSelectedFace);
 	statusBar()->addPermanentWidget(lblFPS);
 
-
-	thumbnailRender = new ThumbnailRenderer(NULL, mainScene);
+	thumbnailRender = new ThumbnailRenderer(NULL, editorWindow);
 	animationPanel->setThumbailRenderer(thumbnailRender);
 
-	/* main scene will listen on model loads and keyframes switches*/
-	connect_(this, videoModelLoaded(VideoModel*), mainScene, onVideoModelLoaded(VideoModel*));
-	connect_(this, frameSwitched(MeshModel*), mainScene, onFrameSwitched(MeshModel*));
-	connect_(this, textureChanged(GLuint), mainScene, onTextureChanged(GLuint));
-
+	/* --------------------------------------------------------------------------------*/
+	/* editor window will listen on ECO90 FM */
+	connect_(this, videoModelLoaded(VideoModel*), 			editorWindow, onVideoModelLoaded(VideoModel*));
+	connect_(this, frameSwitched(MeshModel*), 				editorWindow, onFrameSwitched(MeshModel*));
+	connect_(this, textureChanged(GLuint), 					editorWindow, onTextureChanged(GLuint));
+	connect_(&animationPanel->animationThread, started(),
+															editorWindow, onAnimationStarted());
+	connect_(&animationPanel->animationThread, finished(),
+															editorWindow, onAnimationStopped());
+	connect_(sidePanel->btnResetMesh, clicked(), 			editorWindow, onResetPoints());
+	connect_(sidePanel->btnResetPins, clicked(),			editorWindow, onClearPins());
+	connect_(sidePanel->btnResetTransform, clicked(),		editorWindow, onResetTransform());
+	connect_(sidePanel->btnUndo, clicked(),					editorWindow, onUndoModel());
+	connect_(sidePanel->btnRedo, clicked(),					editorWindow, onRedoModel());
+	connect_(sidePanel->chkPinMode, clicked(bool), 			editorWindow, onPinModeChanged(bool));
+	connect_(sidePanel->chkShowSelection, clicked(bool), 	editorWindow, onShowSelectionChanged(bool));
+	connect_(sidePanel->sliderWireframeTransparency, valueChanged(int),
+															editorWindow, onChangeWireframe(int));
+	connect_(sidePanel->sliderAlpha, valueChanged(int), 	editorWindow, onChangeAlpha(int));
+	connect_(actionUndo, triggered(), 						editorWindow, onUndoModel());
+	connect_(actionRedo, triggered(), 						editorWindow, onRedoModel());
+	connect_(actionReset_model, triggered(), 				editorWindow, onResetPoints());
+	connect_(actionReset_pins, triggered(), 				editorWindow, onClearPins());
+	connect_(actionReplay_log, triggered(), 				editorWindow, onRunLog());
+	connect_(actionSave_log, triggered(), 					editorWindow, onSaveLog());
+	connect_(action_show_VF, toggled(bool), 				editorWindow, onDrawVFModeChanged(bool));
+	connect_(action_show_orig_VF, toggled(bool), 			editorWindow, onDrawOrigVFModeChanged(bool));
+	connect_(actionReapply_VF,triggered(), 					editorWindow, onReuseVF());
+	/* --------------------------------------------------------------------------------*/
 	/* Animation panel will listen to 88.0FM....*/
-	connect_(this, videoModelLoaded(VideoModel*), animationPanel, onVideoModelLoaded(VideoModel*));
-	connect_(this, frameSwitched(MeshModel*), animationPanel, onFrameSwitched(MeshModel*));
-	connect_(mainScene, modelEdited(MeshModel*), animationPanel, onFrameEdited(MeshModel*));
-	connect_(this, textureChanged(GLuint), thumbnailRender, onTextureChanged(GLuint));
-	connect_(this, textureChanged(GLuint), animationPanel, onTextureChanged(GLuint));
+	connect_(this, videoModelLoaded(VideoModel*), 			animationPanel, onVideoModelLoaded(VideoModel*));
+	connect_(this, frameSwitched(MeshModel*), 				animationPanel, onFrameSwitched(MeshModel*));
+	connect_(this, textureChanged(GLuint), 					thumbnailRender, onTextureChanged(GLuint));
+	connect_(this, textureChanged(GLuint), 					animationPanel, onTextureChanged(GLuint));
 
-	/* Side panel will listen to Radius 100 FM*/
-	connect_(animationPanel, animationStarted(), sidePanel, onAnimationStarted());
-	connect_(animationPanel, animationStopped(), sidePanel, onAnimationStopped());
-	connect_(this, frameSwitched(MeshModel*), sidePanel, onFrameSwitched(MeshModel*));
-
-	/* we listen to main scene for edit events */
-	connect_(mainScene, selectionChanged(int,int), this, onEditorSelectionChanged(int,int));
-	connect_(mainScene, FPSUpdated(double), this, onFPSUpdated(double));
-	connect_(animationPanel, FPSUpdated(double), this, onFPSUpdated(double));
-	connect_(animationPanel, frameSelectionChanged(MeshModel*), this, onAnimationpanelNewFrameSelected(MeshModel*));
-	connect_(animationPanel, animationStarted(), mainScene, onAnimationStarted());
-	connect_(animationPanel, animationStopped(), mainScene, onAnimationStopped());
-	connect_(sidePanel, meshCreationRequest(int), this, onMeshCreationRequest(int));
-
-	connect_(this, frameSwitched(MeshModel*), this, onFrameSwitched(MeshModel*));
+	connect_(editorWindow, modelEdited(MeshModel*), 		animationPanel, onFrameEdited(MeshModel*));
+	connect_(actionNew_keyframe, triggered(), 				animationPanel, onCloneKeyFramePressed());
+	connect_(actionDelete_keyframe, triggered(), 			animationPanel, onDeleteKeyframe());
+	connect_(actionPlay, triggered(), 						animationPanel, onPlayPauseButtonPressed());
+	connect_(actionRewind, triggered(), 					animationPanel, onBackwardButton());
+	connect_(&animationPanel->animationThread, started(),   animationPanel, onAnimationStarted());
+	connect_(&animationPanel->animationThread, finished(),  animationPanel, onAnimationStopped());
 
 	/* --------------------------------------------------------------------------------*/
-	/* setup menu bar*/
-	connect_(actionLoad_mesh, triggered(), this, onLoadModel());
-	connect_(actionNew_model, triggered(), this, onCreateOutlineModel());
-	connect_(actionUnload_model, triggered(), this, onUnloadModel());
-	connect_(actionLoad_texture, triggered(), this, onChooseTexture());
-	connect_(actionReset_texture, triggered(), this, onResetTexture());
-	connect_(actionSave_screenshot, triggered(), this, onSaveScreenShot());
-	connect_(actionSave_model, triggered(), this, onSaveModel());
-	connect_(actionExit, triggered(), this, close());
+	/* Side panel will listen to Radius 100 FM*/
+	connect_(this, frameSwitched(MeshModel*), 				sidePanel, onFrameSwitched(MeshModel*));
+	connect_(&animationPanel->animationThread, started(),
+															sidePanel, onAnimationStarted());
+	connect_(&animationPanel->animationThread, finished(),
+															sidePanel, onAnimationStopped());
+	/* --------------------------------------------------------------------------------*/
+	/* we listen to everyone  */
+	connect_(editorWindow, selectionChanged(int,int), 		this, onEditorSelectionChanged(int,int));
+	connect_(editorWindow, FPSUpdated(double), 				this, onFPSUpdated(double));
+	connect_(animationPanel, FPSUpdated(double), 			this, onFPSUpdated(double));
+	connect_(sidePanel, meshCreationRequest(int), 			this, onMeshCreationRequest(int));
+	connect_(animationPanel, frameSwitched(MeshModel*),		this, onFrameSwitchListener(MeshModel*));
+	connect_(sidePanel->btnLoadModel, clicked(),			this, onLoadModel());
+	connect_(sidePanel->btnResetTexture, clicked(),			this, onResetTexture());
+	connect_(sidePanel->btnLoadTexture, clicked(),			this, onChooseTexture());
+	connect_(sidePanel->btnNewModel, clicked(), 			this, onCreateOutlineModel());
+	connect_(sidePanel->btnSaveModel, clicked(), 			this, onSaveModel());
+	connect_(sidePanel->btnUnloadModel, clicked(), 			this, onUnloadModel());
+	connect_(actionNew_model, triggered(), 					this, onCreateOutlineModel());
+	connect_(actionLoad_mesh, triggered(), 					this, onLoadModel());
+	connect_(actionSave_model, triggered(), 				this, onSaveModel());
+	connect_(actionUnload_model, triggered(), 				this, onUnloadModel());
+	connect_(actionLoad_texture, triggered(), 				this, onChooseTexture());
+	connect_(actionReset_texture, triggered(), 				this, onResetTexture());
+	connect_(actionSave_screenshot, triggered(), 			this, onSaveScreenShot());
+	connect_(actionSide_panel, toggled(bool), 				this, onSidePanelMenuShowHide(bool));
+	connect_(actionAnimation_panel, toggled(bool), 			this, onAnimationPanelMenuShowHide(bool));
+	connect_(actionAbout, triggered(),						this, onAbout());
+	connect_(actionExit, triggered(), 						this, close());
+	connect_(actionTest_animations, triggered(), 			this, onInterpolationTest());
+	/* --------------------------------------------------------------------------------*/
+	/* We listen to ourselves */
+	connect_(this, frameSwitched(MeshModel*), 				this, onFrameSwitched(MeshModel*));
+	connect_(this, videoModelLoaded(VideoModel*), 			this, onVideoModelLoaded(VideoModel*));
 
-	connect_(actionUndo, triggered(), mainScene, onUndoModel());
-	connect_(actionRedo, triggered(), mainScene, onRedoModel());
-
-	sidePanel->chkPinMode->setAction(actionPin_edit_mode);
-	connect_(actionReset_model, triggered(), mainScene,onResetPoints());
-	connect_(actionReset_pins, triggered(), mainScene,onClearPins());
-
-	connect_(actionSide_panel, toggled(bool), this,onSidePanelMenuShowHide(bool));
-	connect_(actionAnimation_panel, toggled(bool), this,onAnimationPanelMenuShowHide(bool));
-
-	connect_(actionNew_keyframe, triggered(), animationPanel,onCloneKeyFrame());
-	connect_(actionDelete_keyframe, triggered(), animationPanel,onDeleteKeyframe());
-
-	connect_(actionPlay, triggered(), animationPanel,onPlayPauseButtonPressed());
+	/* --------------------------------------------------------------------------------*/
 	animationPanel->btnRepeat->setAction(actionLoop);
-	connect_(actionRewind, triggered(), animationPanel,onBackwardButton());
-
-
-	/* debug menu*/
-	connect_(actionReplay_log, triggered(), mainScene,onRunLog());
-	connect_(actionSave_log, triggered(), mainScene,onSaveLog());
-	connect_(action_show_VF, toggled(bool), mainScene, onDrawVFModeChanged(bool));
-	connect_(action_show_orig_VF, toggled(bool), mainScene, onDrawOrigVFModeChanged(bool));
-	connect_(actionReapply_VF,triggered(), mainScene,onReuseVF());
-	connect_(actionTest_animations, triggered(), this, onInterpolationTest());
-
-	connect_(actionAbout, triggered(),this,onAbout());
-
+	sidePanel->chkPinMode->setAction(actionPin_edit_mode);
 	actionSide_panel->setChecked(true);
 	actionAnimation_panel->setChecked(true);
+
+	/* --------------------------------------------------------------------------------*/
 	clearStatusBar();
 	emit frameSwitched(NULL);
+	emit videoModelLoaded(NULL);
 	show();
 }
 
@@ -159,7 +162,7 @@ MainWindow::~MainWindow()
 {
 	delete videoModel;
 	delete thumbnailRender;
-	delete mainScene;
+	delete editorWindow;
 	delete animationPanel;
 	delete sidePanel;
 }
@@ -217,9 +220,8 @@ void MainWindow::onLoadModel()
     		outlineModel = NULL;
     		return;
     	}
-
+		emit videoModelLoaded(NULL);
     	emit frameSwitched(outlineModel);
-    	mainScene->onResetTransform();
     } else
     {
 		/* load new model */
@@ -241,12 +243,8 @@ void MainWindow::onLoadModel()
 			videoModel = NULL;
 			return;
 		}
-
 		emit videoModelLoaded(videoModel);
 		emit frameSwitched(videoModel->getKeyframeByIndex(1));
-
-	    /* set these statistics - will only change when loading new model */
-	    setStatusBarStatistics(videoModel->getNumVertices(), videoModel->getNumFaces());
     }
 
 
@@ -276,7 +274,6 @@ void MainWindow::onCreateOutlineModel()
 
 	emit frameSwitched(outlineModel);
     setTexture(filename);
-	mainScene->onResetTransform();
 }
 
 /*****************************************************************************************************/
@@ -334,7 +331,7 @@ void MainWindow::onResetTexture()
 {
 	QPixmap texture = QPixmap(16,16);
 	texture.fill(QColor(200,200,255));
-	textureRef = mainScene->bindTexture(texture);
+	textureRef = editorWindow->bindTexture(texture);
 	emit textureChanged(textureRef);
 }
 
@@ -353,7 +350,7 @@ void MainWindow::onFPSUpdated(double msec)
 }
 
 /*****************************************************************************************************/
-void MainWindow::onAnimationpanelNewFrameSelected(MeshModel* model)
+void MainWindow::onFrameSwitchListener(MeshModel* model)
 {
 	emit frameSwitched(model);
 }
@@ -366,11 +363,13 @@ void MainWindow::onFrameSwitched(MeshModel* model)
 	bool isKVFModel = dynamic_cast<KVFModel*>(model) != NULL;
 	bool isBDMORPH = dynamic_cast<BDMORPHModel*>(model) != NULL;
 	//bool isOutlineModel = dynamic_cast<OutlineModel*>(model) != NULL;
-
-	animationPanel->setVisible(isKVFModel||isBDMORPH);
 	actionAnimation_panel->setVisible(isKVFModel||isBDMORPH);
 }
 
+void MainWindow::onVideoModelLoaded(VideoModel* model)
+{
+	animationPanel->setVisible(model != NULL);
+}
 /*****************************************************************************************************/
 void MainWindow::onSidePanelMenuShowHide(bool checked)
 {
@@ -437,9 +436,9 @@ void MainWindow::setTexture(QString filename)
 		painter.eraseRect(0,0,size,size);
 		painter.drawPixmap(x,y,texture);
 
-		textureRef = mainScene->bindTexture(scaledTexture,GL_TEXTURE_2D);
+		textureRef = editorWindow->bindTexture(scaledTexture,GL_TEXTURE_2D);
 	} else
-		textureRef = mainScene->bindTexture(texture,GL_TEXTURE_2D);
+		textureRef = editorWindow->bindTexture(texture,GL_TEXTURE_2D);
 
 	emit textureChanged(textureRef);
 }

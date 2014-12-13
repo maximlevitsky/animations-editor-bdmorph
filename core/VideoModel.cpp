@@ -9,7 +9,7 @@ VideoModel::VideoModel() : pFrame(NULL)
 /******************************************************************************************************************************/
 bool VideoModel::initialize()
 {
-	pFrame = new BDMORPHModel(*this);
+	pFrame = new BDMORPHModel(this);
 	bool result = pFrame->initialize();
 	if (!result) return false;
 

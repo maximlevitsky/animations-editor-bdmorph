@@ -35,7 +35,8 @@ public slots:
 	void onResetTexture();
 
 	void onFrameSwitched(MeshModel* model);
-	void onAnimationpanelNewFrameSelected(MeshModel* model);
+	void onVideoModelLoaded(VideoModel* model);
+	void onFrameSwitchListener(MeshModel* model);
 
 	void onSidePanelMenuShowHide(bool checked);
 	void onAnimationPanelMenuShowHide(bool checked);
@@ -58,7 +59,7 @@ signals:
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;
-	EditorWindow *mainScene;
+	EditorWindow *editorWindow;
 
 	QLabel* lblVertexCount;
 	QLabel* lblFacesCount;

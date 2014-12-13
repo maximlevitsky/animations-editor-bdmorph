@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QAction>
 #include <QPixmap>
+#include <QThread>
 #include <stdio.h>
 
 #include "AnimationPanel.h"
@@ -32,7 +33,9 @@ QString printTime(int time)
 
 
 /******************************************************************************************************************************/
-AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), videoModel(NULL), renderer(NULL), timeEditItem(-1),animationRunning(false)
+AnimationPanel::AnimationPanel(QWidget* parent) :
+		QDockWidget(parent), videoModel(NULL), renderer(NULL), timeEditItem(-1),animationRunning(false),
+		currentRenderedModel(NULL)
 {
 	setupUi(this);
 	plusIcon = QIcon(":/AnimationPanel/add.png");
@@ -40,43 +43,41 @@ AnimationPanel::AnimationPanel(QWidget* parent) : QDockWidget(parent), videoMode
 	QAction *cloneAction        = new QAction("Clone frame...", lstKeyFrames);
 	QAction *deleteFramesAction = new QAction("Delete frame",   lstKeyFrames);
 	QAction *changeTimeAction   = new QAction("Change time...", lstKeyFrames);
+
 	lstKeyFrames->addAction(cloneAction);
 	lstKeyFrames->addAction(deleteFramesAction);
 	lstKeyFrames->addAction(changeTimeAction);
 	lstKeyFrames->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+	/* Play/pause buttons */
+	connect_(btnAnimationPlay, clicked(bool), 				this, onPlayPauseButtonPressed());
+	connect_(btnBackward, clicked(bool), 					this, onBackwardButton());
+	connect_(btnRepeat, clicked(bool),						this, onRepeatButtonClicked(bool));
+
+	/* Slider*/
+	connect_(sliderAnimationTime, sliderMoved (int), 		this, onTimeSliderMoved(int));
+
 	/* Keyframes list */
-	connect_(lstKeyFrames, currentRowChanged (int), this, onCurrentListItemChanged(int));
-	connect_(lstKeyFrames, itemDoubleClicked(QListWidgetItem *), this, onCloneKeyFrame());
-	connect_(cloneAction, triggered(), this, onCloneKeyFrame());
-	connect_(changeTimeAction, triggered(), this, onKeyframeChangeTime());
-	connect_(deleteFramesAction, triggered(), this, onDeleteKeyframe());
+	connect_(lstKeyFrames, itemClicked(QListWidgetItem*), 	this, onItemClicked(QListWidgetItem*));
+	connect_(cloneAction, triggered(), 						this, onCloneKeyFramePressed());
+	connect_(changeTimeAction, triggered(), 				this, onKeyframeChangeTime());
+	connect_(deleteFramesAction, triggered(), 				this, onDeleteKeyframe());
 
 	/* Time edit */
 	timeEdit = new QLineEdit(lstKeyFrames);
 	timeEdit->setInputMask("00:00.000");
 	timeEdit->setAlignment(Qt::AlignCenter);
 	timeEdit->hide();
-	connect_(timeEdit, editingFinished (), this, onTimeTextFinished());
-
-	/* Slider*/
-	connect_(sliderAnimationTime, sliderMoved (int), this, onTimeSliderMoved(int));
-
-	/* Animation timer */
-	animationTimer = new QTimer(this);
-	connect_(animationTimer, timeout (), this, onAnimationTimer());
-
-	/* Play/pause buttons */
-	connect_(btnAnimationPlay, clicked(bool), this, onPlayPauseButtonPressed());
-	connect_(btnBackward, clicked(bool), this, onBackwardButton());
+	connect_(timeEdit, editingFinished (), 					this, onTimeTextFinished());
 }
 
+/******************************************************************************************************************************/
+/* EXTERNAL EVENTS */
 /******************************************************************************************************************************/
 void AnimationPanel::onVideoModelLoaded(VideoModel* model)
 {
 	videoModel = model;
 	lstKeyFrames->clear();
-
 	if (videoModel) {
 		updateItems(0);
 	}
@@ -89,7 +90,6 @@ void AnimationPanel::onTextureChanged(GLuint newtex)
 	updateItems(0);
 }
 
-
 /******************************************************************************************************************************/
 void AnimationPanel::onFrameEdited(MeshModel* model)
 {
@@ -98,10 +98,10 @@ void AnimationPanel::onFrameEdited(MeshModel* model)
 	VideoKeyFrame* frame = dynamic_cast<VideoKeyFrame*>(model);
 	if (!frame) return;
 
-	int id = videoModel->getKeyFrameIndex(frame);
-	if (id == -1)
-		return;
-	updateListItem(id);
+	int index = videoModel->getKeyFrameIndex(frame);
+	if (index == -1) return;
+
+	updateListItem(index);
 	lstKeyFrames->repaint();
 }
 
@@ -111,83 +111,125 @@ void AnimationPanel::onFrameSwitched(MeshModel* model)
 	if (!videoModel)
 		return;
 
+	currentRenderedModel = model;
+
 	VideoKeyFrame* keyFrame = dynamic_cast<VideoKeyFrame*>(model);
-	if (!keyFrame) {
-		return;
-	}
+	if (!keyFrame) return;
 
 	int index = videoModel->getKeyFrameIndex(keyFrame);
+	if (index == -1) return;
 	lstKeyFrames->setCurrentRow(index);
 	updateTimeSlider();
 }
 
 /******************************************************************************************************************************/
-void AnimationPanel::onCurrentListItemChanged(int currentRow )
+void AnimationPanel::onAnimationStarted()
 {
-	VideoKeyFrame* newKeyFrame = getSelectedKeyframe();
-	if (newKeyFrame)
-		emit frameSelectionChanged(newKeyFrame);
+	lstKeyFrames->setDisabled(true);
+	sliderAnimationTime->setDisabled(true);
+	btnAnimationPlay->setIcon(QIcon(":/icons/pause.png"));
+	animationRunning = true;
 }
 
 /******************************************************************************************************************************/
+void AnimationPanel::onAnimationStopped()
+{
+	animationRunning = false;
+	btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));
+	lstKeyFrames->setDisabled(false);
+	sliderAnimationTime->setDisabled(false);
+}
 
-void AnimationPanel::onCloneKeyFrame()
+/******************************************************************************************************************************/
+/* User input on our list  */
+/******************************************************************************************************************************/
+
+void AnimationPanel::onItemClicked(QListWidgetItem *item)
+{
+	if (!videoModel)
+		return;
+
+	int currentRow = lstKeyFrames->row(item);
+	if (currentRow == videoModel->count()) {
+		onCloneKeyFramePressed();
+		return;
+	}
+
+	/* Single press on list item more or less */
+	VideoKeyFrame* newKeyFrame = videoModel->getKeyframeByIndex(currentRow);
+	if (newKeyFrame)
+		emit frameSwitched(newKeyFrame);
+}
+
+/******************************************************************************************************************************/
+void AnimationPanel::onCloneKeyFramePressed()
 {
 	if (animationRunning || !videoModel)
 		return;
 
-	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
-	if (currentKeyFrame == NULL) {
-		if (videoModel->count())
-			currentKeyFrame = videoModel->getKeyframeByIndex(videoModel->count()-1);
-		else
-			return;
-	}
+	/* Try selected item */
+	int currentIndex = getSelectedKeyframeID();
 
-	int currentIndex = videoModel->getKeyFrameIndex(currentKeyFrame);
-	videoModel->forkFrame(currentKeyFrame);
-	updateItems(currentIndex+1);
+	/* If nothing selected, try last keyframe */
+	if (currentIndex == -1)
+		currentIndex = videoModel->count()-1;
+
+	/* No keyframes - bail out - shouldn't happen  */
+	if (currentIndex < 0)
+		return;
+
+	VideoKeyFrame* keyframeToClone = videoModel->getKeyframeByIndex(currentIndex);
+	if (!keyframeToClone) return;
+
+	VideoKeyFrame* newFrame = videoModel->forkFrame(keyframeToClone);
+	currentIndex++;
+
+
+	/* Update all items after current keyframe */
+	updateItems(currentIndex);
 	updateTimeSlider();
+	emit frameSwitched(newFrame);
 
-	emit frameSelectionChanged(getSelectedKeyframe());
+	lstKeyFrames->scrollToItem(lstKeyFrames->item(videoModel->count()));
+	lstKeyFrames->setCurrentRow(currentIndex);
 }
 
 /******************************************************************************************************************************/
 void AnimationPanel::onDeleteKeyframe()
 {
-	if (animationRunning)
-		return;
+	if (animationRunning || !videoModel) return;
 
-	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
-	if (currentKeyFrame == NULL)
-		return;
+	/* Can't delete last keyframe */
+	if (videoModel->count() == 1) return;
 
-	if (videoModel->count() == 1)
-		return;
+	/* Find what keyframe is selected - if none then its false call */
+	int currentIndex = getSelectedKeyframeID();
+	if (currentIndex == -1) return;
 
-	emit frameSelectionChanged(NULL);
+	VideoKeyFrame* victim = videoModel->getKeyframeByIndex(currentIndex);
+	if (!victim) return;
 
-	int currentIndex = lstKeyFrames->currentRow();
-	videoModel->deleteFrame(currentKeyFrame);
+	/* Tell everyone stop using our keyframe if selected for some reason*/
+	if (currentRenderedModel == victim)
+		emit frameSwitched(NULL);
 
+	/* Delete the frame */
+	videoModel->deleteFrame(victim);
+
+	/* Update the items from new current frame and select it*/
+	currentIndex = std::max(0,currentIndex-1);
 	updateItems(currentIndex);
-
-	if (currentIndex == videoModel->count())
-		currentIndex--;
 	lstKeyFrames->setCurrentRow(currentIndex);
 
-	currentKeyFrame = getSelectedKeyframe();
-	emit frameSelectionChanged(currentKeyFrame);
-
-	if (currentKeyFrame && currentIndex == videoModel->count() - 1)
-		currentKeyFrame->duration = 200;
+	/* Tell everyone about new keyframe */
+	VideoKeyFrame* currentFrame = videoModel->getKeyframeByIndex(currentIndex);
+	emit frameSwitched(currentFrame);
 }
 /******************************************************************************************************************************/
 
 void AnimationPanel::onKeyframeChangeTime()
 {
-	if (animationRunning)
-		return;
+	if (animationRunning || !videoModel) return;
 
 	VideoKeyFrame* currentKeyFrame = getSelectedKeyframe();
 	if (currentKeyFrame == NULL)
@@ -247,6 +289,9 @@ void AnimationPanel::onTimeTextFinished()
 	timeEditItem = -1;
 	updateTimeSlider();
 }
+
+/******************************************************************************************************************************/
+/* Time Slider  */
 /******************************************************************************************************************************/
 
 void AnimationPanel::onPlayPauseButtonPressed()
@@ -254,27 +299,25 @@ void AnimationPanel::onPlayPauseButtonPressed()
 	if (!videoModel)
 		return;
 
-	if (animationRunning) {
-		animationTimer->stop();
-		btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));
-		lstKeyFrames->setDisabled(false);
-		sliderAnimationTime->setDisabled(false);
-		emit animationStopped();
-	}else {
-		emit animationStarted();
-		lstKeyFrames->setDisabled(true);
-		sliderAnimationTime->setDisabled(true);
-		animationTimer->setInterval(INTEREVAL);
-		animationTimer->setSingleShot(false);
-		animationTimer->start();
-		btnAnimationPlay->setIcon(QIcon(":/icons/pause.png"));
-	}
+	if (!animationThread.isRunning())
+		animationThread.start(videoModel, sliderAnimationTime->value());
+	else
+		animationThread.stop();
+}
 
-	animationRunning = !animationRunning;
+void AnimationPanel::onRepeatButtonClicked(bool checked)
+{
+	animationThread.setRepeat(checked);
+}
+
+void AnimationPanel::onClose()
+{
+	/* TODO */
+	animationThread.stop();
+	animationThread.wait();
 }
 
 /******************************************************************************************************************************/
-
 void AnimationPanel::onBackwardButton()
 {
 	sliderAnimationTime->setSliderPosition(0);
@@ -289,7 +332,15 @@ void AnimationPanel::onTimeSliderMoved(int newValue)
 
 	VideoKeyFrame* prevFrame = videoModel->getLastKeyframeBeforeTime(newValue);
 	if (!prevFrame) return;
+
 	int newIndex = videoModel->getKeyFrameIndex(prevFrame);
+	int currentIndex = getSelectedKeyframeID();
+
+	if (newIndex != currentIndex && newIndex != -1)
+	{
+		lstKeyFrames->setCurrentRow(newIndex);
+		lstKeyFrames->scrollToItem(lstKeyFrames->item(newIndex));
+	}
 
 	VideoKeyFrame* nextFrame = videoModel->getKeyframeByIndex(newIndex+1);
 
@@ -301,34 +352,14 @@ void AnimationPanel::onTimeSliderMoved(int newValue)
 		double t = newValue - currTimeMsec;
 		t /= (nextTimeMsec-currTimeMsec);
 
-		{
-			double time = videoModel->pFrame->interpolate_frame(prevFrame,nextFrame,t);
-			emit frameSelectionChanged(videoModel->pFrame);
-			emit FPSUpdated(time);
-		}
+		double time = videoModel->pFrame->interpolate_frame(prevFrame,nextFrame,t);
+		emit frameSwitched(videoModel->pFrame);
+		emit FPSUpdated(time);
 	}
 }
+
 /******************************************************************************************************************************/
-
-void AnimationPanel::onAnimationTimer()
-{
-	int pos = sliderAnimationTime->sliderPosition()+INTEREVAL;
-
-	if (pos > sliderAnimationTime->maximum()) {
-
-		if (btnRepeat->isChecked())
-			sliderAnimationTime->setSliderPosition(0);
-		else {
-			btnAnimationPlay->click();
-		}
-	}
-	else
-		sliderAnimationTime->setSliderPosition(pos);
-
-	onTimeSliderMoved(pos);
-
-}
-
+/* Other  */
 /******************************************************************************************************************************/
 void AnimationPanel::updateItems(int startItem)
 {
@@ -352,7 +383,6 @@ void AnimationPanel::updateItems(int startItem)
 }
 
 /******************************************************************************************************************************/
-
 void AnimationPanel::updateListItem(int id)
 {
 	if (!videoModel)
@@ -380,7 +410,6 @@ void AnimationPanel::updateListItem(int id)
 }
 
 /******************************************************************************************************************************/
-
 void AnimationPanel::insertPlus(int id)
 {
 	QListWidgetItem* item = lstKeyFrames->item(id);
@@ -405,6 +434,15 @@ VideoKeyFrame* AnimationPanel::getSelectedKeyframe()
 }
 
 /******************************************************************************************************************************/
+int AnimationPanel::getSelectedKeyframeID()
+{
+	int id = lstKeyFrames->currentRow();
+	if (id >= videoModel->count())
+		return -1;
+	return id;
+}
+
+/******************************************************************************************************************************/
 void AnimationPanel::updateTimeSlider()
 {
 	if (!videoModel)
@@ -426,3 +464,16 @@ void AnimationPanel::updateTimeSlider()
 }
 /******************************************************************************************************************************/
 
+void AnimationThread::run()
+{
+	should_stop = false;
+	assert(videoModel);
+
+	while (!should_stop)
+	{
+		this->sleep(1);
+	}
+
+	assert(videoModel);
+}
+/******************************************************************************************************************************/
