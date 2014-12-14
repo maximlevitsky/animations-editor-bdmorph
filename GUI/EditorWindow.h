@@ -56,7 +56,6 @@ public slots:
 signals:
 	void modelEdited(MeshModel* model);
 	void selectionChanged(int selectedVertex, int selectedFace);
-	void FPSUpdated(double msec);
 
 private:
     /* transformations*/

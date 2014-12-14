@@ -35,7 +35,6 @@ struct LogSpiral
 KVFModel::KVFModel(MeshModel* model) :
 	alpha1(0.5),
 	lastVFCalcTime(0),
-	lastLogSpiralTime(0),
 	MeshModel(*model),
 	L2(NULL),
 	L1(NULL),
@@ -285,15 +284,15 @@ void KVFModel::applyVFLogSpiral()
         }
     }
 
-    lastLogSpiralTime  = t.measure_msec();
+    double lastLogSpiralTime  = t.measure_msec();
     printf("KVF: Log spiral  time: %f msec\n", lastLogSpiralTime);
 
 	for (unsigned int i = 0; i < numVertices; i++)
 		vertices[i] = newPoints[i] / counts[i];
 
-	double totalTime = lastVFCalcTime + lastLogSpiralTime;
-	double FPS = 1000.0 / (totalTime);
-	printf("KVF: Total solve time: %f msec (%f FPS)\n", totalTime, FPS);
+	create_msec = lastVFCalcTime + lastLogSpiralTime;
+	double FPS = 1000.0 / (create_msec);
+	printf("KVF: Total solve time: %f msec (%f FPS)\n", create_msec, FPS);
 
     historyAdd(disps);
 }

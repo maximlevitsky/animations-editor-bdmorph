@@ -79,17 +79,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnBackward">
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="resources/resources.rc">
-          <normaloff>:/icons/backward.png</normaloff>:/icons/backward.png</iconset>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QSlider" name="sliderAnimationTime">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

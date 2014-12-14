@@ -117,4 +117,39 @@ void VideoModel::deleteFrame(VideoKeyFrame* frame)
 	delete *iter;
 	keyframes.erase(iter);
 }
+
+/******************************************************************************************************************************/
+
+MeshModel* VideoModel::interpolateFrame(double msec, double* timeduration)
+{
+	int prevTime = 0,duration = 0;
+	VideoKeyFrame *prevFrame = NULL, *nextFrame = NULL;
+
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+	{
+		duration = (*iter)->duration;
+
+		if (prevTime + duration > msec)
+		{
+			prevFrame = *iter;
+			iter++;
+			nextFrame = iter == keyframes.end() ? prevFrame : *iter;
+			break;
+		}
+
+		prevTime += duration;
+	}
+
+	if (!prevFrame || duration == 0)
+		return NULL;
+
+	double t = (double)(msec - prevTime) / duration;
+	*timeduration =pFrame->interpolate_frame(prevFrame,nextFrame,t);
+
+	if (*timeduration != -1)
+		return pFrame;
+	else
+		return NULL;
+}
+
 /******************************************************************************************************************************/

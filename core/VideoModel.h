@@ -45,6 +45,8 @@ public:
 	/* frames for interpolation, share some data with master frame */
 	BDMORPHModel* frames[5];
 
+	MeshModel* interpolateFrame(double msec, double *timeduration_out);
+
 	bool initialize();
 
 private:

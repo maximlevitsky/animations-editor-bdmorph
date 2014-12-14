@@ -175,7 +175,7 @@ void EditorWindow::onClearPins()
 
 void EditorWindow::onResetTransform()
 {
-	if (disableEdit || !renderModel) return;
+	if (!renderModel) return;
 
 	double maxZoomX = width() / renderModel->getWidth();
 	double maxZoomY = height() / renderModel->getHeight();
@@ -412,7 +412,6 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 				kvfModel->applyVFLogSpiral();
 
 			emit modelEdited(kvfModel);
-			emit FPSUpdated(kvfModel->lastLogSpiralTime+kvfModel->lastVFCalcTime);
 		}
 	}
 
@@ -462,13 +461,13 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
 	mouseMoved = false;
 	mouseLeft = event->buttons() & Qt::LeftButton;
 
-	if (!renderModel || disableEdit)
-		return;
 
     QPointF pos = event->pos(); // (0,0) is upper left
     pos.setY(height()-pos.y()-1);
     lastMousePos = pos;
 
+	if (!renderModel || disableEdit)
+		return;
 
     setCursor(Qt::BlankCursor);
 
@@ -549,7 +548,6 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 				kvfModel->applyVFLogSpiral();
 
 			emit modelEdited(kvfModel);
-			emit FPSUpdated(kvfModel->lastLogSpiralTime+kvfModel->lastVFCalcTime);
 			repaint();
 
 			double msec = t.measure_msec();

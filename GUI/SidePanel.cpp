@@ -6,7 +6,7 @@
 #include "OutlineModel.h"
 #include "Utils.h"
 
-SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent)
+SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), currentisBDMORPH(false)
 {
 	setupUi(this);
 	connect_(btnCreateMesh, clicked(), this, onMeshCreateButtonPressed());
@@ -38,6 +38,10 @@ void SidePanel::onFrameSwitched(MeshModel* model)
 	bool isBDMORPH = dynamic_cast<BDMORPHModel*>(model) != NULL;
 	bool isOutlineModel = dynamic_cast<OutlineModel*>(model) != NULL;
 
+	if (isBDMORPH && currentisBDMORPH)
+		return;
+	currentisBDMORPH = isBDMORPH;
+
 	setUpdatesEnabled(false);
 	frameOutline->setVisible(isOutlineModel);
 	frameKVF->setVisible(isKVFModel);
@@ -46,6 +50,13 @@ void SidePanel::onFrameSwitched(MeshModel* model)
 	frameWireframe->setVisible(model != NULL);
 	setUpdatesEnabled(true);
 	/* TODO */
+}
+
+/******************************************************************************************************************************/
+
+void SidePanel::onVideoModelLoaded(VideoModel* model)
+{
+	videoModel = model;
 }
 
 /******************************************************************************************************************************/

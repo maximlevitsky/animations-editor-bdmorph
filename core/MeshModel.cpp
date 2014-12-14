@@ -23,7 +23,8 @@ MeshModel::MeshModel() :
 		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
 				maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
 		numVertices(0), numFaces(0),
-		center(0,0)
+		center(0,0),
+		create_msec(0)
 {
 	/* create new empty mesh model
 	 * Used for OutlineModel
@@ -42,7 +43,8 @@ MeshModel::MeshModel(const MeshModel& other):
 		vertices(other.vertices),
 		hasUV(other.hasUV),
 		created(false),
-		center(other.center)
+		center(other.center),
+		create_msec(0)
 {
 	/* Create a mesh model from a copy
 	 * Here we assume that we are shallow copy

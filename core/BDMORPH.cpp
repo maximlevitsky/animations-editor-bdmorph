@@ -810,6 +810,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	double msec = t1.measure_msec();
 	printf("BDMORPH: total time %f msec, %f FPS (%i iterations)\n", msec, 1000.0/msec, iteration);
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
+	create_msec = msec;
 	return msec;
 }
 

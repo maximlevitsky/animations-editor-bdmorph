@@ -106,10 +106,9 @@ private:
     std::deque<UndoItem> redo;
     std::vector<LogItem> currentDeformLog;
 
-public:
     /* statistics */
     double lastVFCalcTime;
-    double lastLogSpiralTime;
+public:
 };
 
 #endif

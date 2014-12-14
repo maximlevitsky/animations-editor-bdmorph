@@ -117,8 +117,6 @@ MainWindow::MainWindow() : videoModel(NULL), currentFrameModel(NULL), outlineMod
 	/* --------------------------------------------------------------------------------*/
 	/* we listen to everyone  */
 	connect_(editorWindow, selectionChanged(int,int), 		this, onEditorSelectionChanged(int,int));
-	connect_(editorWindow, FPSUpdated(double), 				this, onFPSUpdated(double));
-	connect_(animationPanel, FPSUpdated(double), 			this, onFPSUpdated(double));
 	connect_(sidePanel, meshCreationRequest(int), 			this, onMeshCreationRequest(int));
 	connect_(animationPanel, frameSwitched(MeshModel*),		this, onFrameSwitchListener(MeshModel*));
 	connect_(sidePanel->btnLoadModel, clicked(),			this, onLoadModel());
@@ -139,6 +137,10 @@ MainWindow::MainWindow() : videoModel(NULL), currentFrameModel(NULL), outlineMod
 	connect_(actionAbout, triggered(),						this, onAbout());
 	connect_(actionExit, triggered(), 						this, close());
 	connect_(actionTest_animations, triggered(), 			this, onInterpolationTest());
+	connect_(&animationPanel->animationThread, frameSwitched(MeshModel*),
+															this, onFrameSwitchListener(MeshModel*));
+	connect_(editorWindow, modelEdited(MeshModel*), 		this, onFrameEdited(MeshModel*));
+
 	/* --------------------------------------------------------------------------------*/
 	/* We listen to ourselves */
 	connect_(this, frameSwitched(MeshModel*), 				this, onFrameSwitched(MeshModel*));
@@ -245,6 +247,7 @@ void MainWindow::onLoadModel()
 		}
 		emit videoModelLoaded(videoModel);
 		emit frameSwitched(videoModel->getKeyframeByIndex(1));
+		setStatusBarStatistics(videoModel->numVertices, videoModel->numFaces);
     }
 
 
@@ -336,16 +339,17 @@ void MainWindow::onResetTexture()
 }
 
 /*****************************************************************************************************/
-void MainWindow::onFPSUpdated(double msec)
+void MainWindow::setFPS(double msec)
 {
 	QString str;
 
-	if (msec >0 ) {
+	if (msec >0 )
+	{
 		str.sprintf("%4.2f FPS", 1000.0/msec);
 		lblFPS->setText(str);
 		lblFPS->show();
 	} else {
-		lblFPS->setText("FAILURE");
+		lblFPS->hide();
 	}
 }
 
@@ -359,11 +363,17 @@ void MainWindow::onFrameSwitchListener(MeshModel* model)
 void MainWindow::onFrameSwitched(MeshModel* model)
 {
 	currentFrameModel = model;
-
 	bool isKVFModel = dynamic_cast<KVFModel*>(model) != NULL;
 	bool isBDMORPH = dynamic_cast<BDMORPHModel*>(model) != NULL;
-	//bool isOutlineModel = dynamic_cast<OutlineModel*>(model) != NULL;
 	actionAnimation_panel->setVisible(isKVFModel||isBDMORPH);
+
+	if (model) setFPS(model->create_msec);
+}
+
+/*****************************************************************************************************/
+void  MainWindow::onFrameEdited(MeshModel* model)
+{
+	if (model) setFPS(model->create_msec);
 }
 
 void MainWindow::onVideoModelLoaded(VideoModel* model)

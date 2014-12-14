@@ -15,6 +15,7 @@
 #include "MeshModel.h"
 #include "ThumbnailRenderer.h"
 #include "Utils.h"
+#include <unistd.h>
 
 #define INTEREVAL (1000/60)
 
@@ -51,7 +52,6 @@ AnimationPanel::AnimationPanel(QWidget* parent) :
 
 	/* Play/pause buttons */
 	connect_(btnAnimationPlay, clicked(bool), 				this, onPlayPauseButtonPressed());
-	connect_(btnBackward, clicked(bool), 					this, onBackwardButton());
 	connect_(btnRepeat, clicked(bool),						this, onRepeatButtonClicked(bool));
 
 	/* Slider*/
@@ -184,7 +184,6 @@ void AnimationPanel::onCloneKeyFramePressed()
 	VideoKeyFrame* newFrame = videoModel->forkFrame(keyframeToClone);
 	currentIndex++;
 
-
 	/* Update all items after current keyframe */
 	updateItems(currentIndex);
 	updateTimeSlider();
@@ -299,8 +298,10 @@ void AnimationPanel::onPlayPauseButtonPressed()
 	if (!videoModel)
 		return;
 
+	int startTime = sliderAnimationTime->value();
+
 	if (!animationThread.isRunning())
-		animationThread.start(videoModel, sliderAnimationTime->value());
+		animationThread.startme(videoModel, startTime);
 	else
 		animationThread.stop();
 }
@@ -316,46 +317,27 @@ void AnimationPanel::onClose()
 	animationThread.stop();
 	animationThread.wait();
 }
-
-/******************************************************************************************************************************/
-void AnimationPanel::onBackwardButton()
-{
-	sliderAnimationTime->setSliderPosition(0);
-	onTimeSliderMoved(0);
-}
-
 /******************************************************************************************************************************/
 void AnimationPanel::onTimeSliderMoved(int newValue)
 {
 	if (!videoModel)
 		return;
 
+	sliderAnimationTime->setValue(newValue);
+
 	VideoKeyFrame* prevFrame = videoModel->getLastKeyframeBeforeTime(newValue);
 	if (!prevFrame) return;
-
 	int newIndex = videoModel->getKeyFrameIndex(prevFrame);
 	int currentIndex = getSelectedKeyframeID();
-
 	if (newIndex != currentIndex && newIndex != -1)
 	{
 		lstKeyFrames->setCurrentRow(newIndex);
 		lstKeyFrames->scrollToItem(lstKeyFrames->item(newIndex));
 	}
 
-	VideoKeyFrame* nextFrame = videoModel->getKeyframeByIndex(newIndex+1);
-
-	if (nextFrame != NULL)
-	{
-		int currTimeMsec = videoModel->getKeyFrameTimeMsec(prevFrame);
-		int nextTimeMsec = videoModel->getKeyFrameTimeMsec(nextFrame);
-
-		double t = newValue - currTimeMsec;
-		t /= (nextTimeMsec-currTimeMsec);
-
-		double time = videoModel->pFrame->interpolate_frame(prevFrame,nextFrame,t);
-		emit frameSwitched(videoModel->pFrame);
-		emit FPSUpdated(time);
-	}
+	double duration;
+	MeshModel* pFrame = videoModel->interpolateFrame(newValue, &duration);
+	emit frameSwitched(pFrame);
 }
 
 /******************************************************************************************************************************/
@@ -458,22 +440,48 @@ void AnimationPanel::updateTimeSlider()
 
 	sliderAnimationTime->setMinimum(0);
 	sliderAnimationTime->setMaximum(totalDuration);
-	sliderAnimationTime->setSliderPosition(current_time);
+	sliderAnimationTime->setSliderPosition(0);
 	sliderAnimationTime->setTickPosition(QSlider::NoTicks);
-	sliderAnimationTime->setSingleStep(1);
+	sliderAnimationTime->setValue(current_time);
 }
 /******************************************************************************************************************************/
 
 void AnimationThread::run()
 {
-	should_stop = false;
 	assert(videoModel);
+	int total_video_time = videoModel->getTotalTime();
+
+	TimeTimer time(startTimeMsec);
+	double dummy;
 
 	while (!should_stop)
 	{
-		this->sleep(1);
-	}
+		int current_frame_time = time.current_time();
+		printf("Start frame time: %d\n",current_frame_time);
 
-	assert(videoModel);
+
+		if (current_frame_time > total_video_time)
+		{
+			if (repeat) {
+				time.reset();
+				continue;
+			} else
+				break;
+		}
+
+		MeshModel *newFrame = videoModel->interpolateFrame(current_frame_time, &dummy);
+		emit frameSwitched(newFrame);
+		int end_time = time.current_time();
+
+		printf("End frame time: %d\n", end_time);
+
+		int sleep_duration = current_frame_time + frameDurationMsec - end_time;
+
+		printf("Sleep time: %d\n", sleep_duration);
+
+		if (sleep_duration > 1)
+			msleep(sleep_duration);
+	}
 }
+
 /******************************************************************************************************************************/

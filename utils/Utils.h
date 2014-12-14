@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "vector2d.h"
 #include <stdarg.h>
+#include <sys/time.h>
 
 /***********************************************************************************************/
 
@@ -22,6 +23,35 @@ public:
 		last_time = now;
 		return ((double)(now - last_time_saved)) / (CLOCKS_PER_SEC / 1000);
 	}
+};
+
+
+class TimeTimer
+{
+public:
+	TimeTimer(int startMsec)
+	{
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		start_tstamp = (long long) tp.tv_sec * 1000L + tp.tv_usec/1000 - startMsec;
+	}
+
+	int current_time()
+	{
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		long long  now_tstamp = (long long) tp.tv_sec * 1000L + tp.tv_usec/1000;
+		return now_tstamp - start_tstamp;
+	}
+
+	void reset()
+	{
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		start_tstamp = (long long) tp.tv_sec * 1000L + tp.tv_usec/1000;
+	}
+
+	long long start_tstamp;
 };
 
 /***********************************************************************************************/

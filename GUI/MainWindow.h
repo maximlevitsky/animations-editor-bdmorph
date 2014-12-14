@@ -26,6 +26,7 @@ public:
 
 	void setStatusBarStatistics(int vertexCount, int facesCount);
 	void clearStatusBar();
+	void setFPS(double msec);
 
 public slots:
 	void onLoadModel();
@@ -35,6 +36,7 @@ public slots:
 	void onResetTexture();
 
 	void onFrameSwitched(MeshModel* model);
+	void onFrameEdited(MeshModel* model);
 	void onVideoModelLoaded(VideoModel* model);
 	void onFrameSwitchListener(MeshModel* model);
 
@@ -47,7 +49,6 @@ public slots:
 
 	void onEditorSelectionChanged(int selectedVertex, int selectedFace);
 	void onInterpolationTest();
-	void onFPSUpdated(double msec);
 
 	void onCreateOutlineModel();
 	void onMeshCreationRequest(int requestedDensity);

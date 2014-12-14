@@ -20,11 +20,14 @@ class AnimationThread : public QThread
 	Q_OBJECT
 public:
 
-	AnimationThread() : should_stop(false), videoModel(NULL),startTimeMsec(0)
+	AnimationThread() : should_stop(false), videoModel(NULL),startTimeMsec(0), frameDurationMsec(32), repeat(false)
 	{}
 
-	void start(VideoModel* model, int starttime)
+	void startme(VideoModel* model, int starttime)
 	{
+		if (isRunning())
+			return;
+		should_stop = false;
 		videoModel = model;
 		startTimeMsec = starttime;
 		QThread::start();
@@ -51,6 +54,7 @@ private:
 
 	VideoModel* videoModel;
 	int startTimeMsec;
+	double frameDurationMsec;
 };
 
 /*****************************************************************************************/
@@ -60,6 +64,7 @@ class AnimationPanel : public QDockWidget, public Ui_AnimationPanel
 	Q_OBJECT
 public:
 	AnimationPanel(QWidget* parent);
+	virtual ~AnimationPanel() { onClose(); }
 	void setThumbailRenderer(ThumbnailRenderer* r) { renderer = r; }
 
 	AnimationThread animationThread;
@@ -81,7 +86,6 @@ public slots:
 	void onTimeSliderMoved(int newValue);
 
 	void onPlayPauseButtonPressed();
-	void onBackwardButton();
 
 	void onAnimationStarted();
 	void onAnimationStopped();
@@ -93,7 +97,6 @@ public slots:
 signals:
 	/* we emit this when user clicks on a different frame */
 	void frameSwitched(MeshModel* model);
-	void FPSUpdated(double msec);
 
 private:
 	VideoModel* videoModel;

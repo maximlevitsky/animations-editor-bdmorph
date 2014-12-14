@@ -72,6 +72,8 @@ public:
     bool hasTextureMapping() { return hasUV; }
     void identityTexCoords();
 	bool updateMeshInfo();
+
+	double create_msec;
 private:
     bool created;
     bool hasUV;
