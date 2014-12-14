@@ -58,7 +58,6 @@ private:
 };
 
 /*****************************************************************************************/
-
 class AnimationPanel : public QDockWidget, public Ui_AnimationPanel
 {
 	Q_OBJECT

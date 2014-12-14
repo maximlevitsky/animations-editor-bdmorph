@@ -1,6 +1,7 @@
 #include "VideoModel.h"
 #include "BDMORPH.h"
 #include <assert.h>
+#include <fstream>
 
 /******************************************************************************************************************************/
 VideoModel::VideoModel() : pFrame(NULL)
@@ -13,8 +14,11 @@ bool VideoModel::initialize()
 	bool result = pFrame->initialize();
 	if (!result) return false;
 
-	keyframes.push_back(new VideoKeyFrame(this));
-	keyframes.push_back(new VideoKeyFrame(this));
+	if (!keyframes.size()) {
+		keyframes.push_back(new VideoKeyFrame(this));
+		keyframes.push_back(new VideoKeyFrame(this));
+
+	}
 
 	return true;
 }
@@ -150,6 +154,79 @@ MeshModel* VideoModel::interpolateFrame(double msec, double* timeduration)
 		return pFrame;
 	else
 		return NULL;
+}
+
+/******************************************************************************************************************************/
+bool VideoModel::saveToFile(const std::string filename)
+{
+    std::ofstream outfile(filename);
+    if (outfile.bad())
+    	return false;
+
+    if (!ends_with(filename, ".vobj"))
+    	return false;
+
+    outfile << "VOBJ" << std::endl;
+    outfile << numFaces << " " << numVertices << " " << keyframes.size() << std::endl;
+
+    saveVOBJFaces(outfile);
+    saveVOBJTexCoords(outfile);
+    saveVOBJVertices(outfile);
+
+    for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+    {
+    	VideoKeyFrame *keyframe = *iter;
+
+    	outfile << "keyframe" << " " << keyframe->duration << std::endl;
+    	keyframe->saveVOBJVertices(outfile);
+    }
+
+    return true;
+}
+
+/******************************************************************************************************************************/
+bool VideoModel::loadFromFile(const std::string &filename)
+{
+	if (!ends_with(filename, ".vobj")) {
+		bool retval = MeshModel::loadFromFile(filename);
+		if (!retval) return false;
+		return initialize();
+	}
+
+	std::ifstream infile(filename);
+	if (infile.bad())
+	    return false;
+
+
+	std::string magic;
+	infile >> magic;
+	if (magic != "VOBJ")
+		return false;
+
+	int keyFrameCount;
+	infile >> numFaces >> numVertices >> keyFrameCount;
+
+	if (keyFrameCount == 0)
+		return false;
+
+	loadVOBJFaces(infile);
+	loadVOBJTexCoords(infile);
+	loadVOBJVertices(infile);
+
+	updateMeshInfo();
+
+	for (int i = 0 ; i < keyFrameCount ; i++)
+	{
+		int duration;
+		infile >> magic >> duration;
+		VideoKeyFrame* frame = new VideoKeyFrame(this);
+		frame->numVertices = numVertices;
+		frame->loadVOBJVertices(infile);
+		frame->duration = duration;
+		keyframes.push_back(frame);
+	}
+
+	return true;
 }
 
 /******************************************************************************************************************************/

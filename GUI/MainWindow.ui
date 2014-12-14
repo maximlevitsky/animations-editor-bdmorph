@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Almost KVF deformation with BDMORPH animations</string>
+   <string>AKVF deformations with BDMORPH animation</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -38,13 +38,14 @@
     </property>
     <addaction name="actionNew_model"/>
     <addaction name="actionLoad_mesh"/>
-    <addaction name="actionLoad_texture"/>
+    <addaction name="actionSave_model"/>
     <addaction name="actionUnload_model"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_texture"/>
     <addaction name="actionReset_texture"/>
     <addaction name="separator"/>
     <addaction name="actionSave_screenshot"/>
     <addaction name="actionSave_video"/>
-    <addaction name="actionSave_model"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -60,10 +61,9 @@
     </property>
     <addaction name="actionUndo"/>
     <addaction name="actionRedo"/>
+    <addaction name="actionReset_model"/>
     <addaction name="separator"/>
     <addaction name="actionPin_edit_mode"/>
-    <addaction name="separator"/>
-    <addaction name="actionReset_model"/>
     <addaction name="actionReset_pins"/>
    </widget>
    <widget class="QMenu" name="menuAnimations">
@@ -71,11 +71,10 @@
      <string>Animations</string>
     </property>
     <addaction name="actionNew_keyframe"/>
+    <addaction name="actionLoad_keyframe"/>
     <addaction name="actionDelete_keyframe"/>
     <addaction name="separator"/>
     <addaction name="actionPlay"/>
-    <addaction name="actionRewind"/>
-    <addaction name="separator"/>
     <addaction name="actionLoop"/>
    </widget>
    <widget class="QMenu" name="menuDebug">
@@ -107,12 +106,12 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad_mesh">
    <property name="text">
-    <string>Load model</string>
+    <string>Load...</string>
    </property>
   </action>
   <action name="actionLoad_texture">
    <property name="text">
-    <string>Load texture</string>
+    <string>Load texture...</string>
    </property>
   </action>
   <action name="actionReset_texture">
@@ -137,7 +136,7 @@
   </action>
   <action name="actionReset_model">
    <property name="text">
-    <string>Reset deformation</string>
+    <string>Reset</string>
    </property>
   </action>
   <action name="actionReset_pins">
@@ -178,7 +177,7 @@
   </action>
   <action name="actionSave_model">
    <property name="text">
-    <string>Save model</string>
+    <string>Save...</string>
    </property>
   </action>
   <action name="actionExit">
@@ -219,7 +218,7 @@
   </action>
   <action name="actionSave_video">
    <property name="text">
-    <string>Save video</string>
+    <string>Save video...</string>
    </property>
   </action>
   <action name="actionDelete_keyframe">
@@ -252,7 +251,7 @@
   </action>
   <action name="actionSave_screenshot">
    <property name="text">
-    <string>Save screenshot</string>
+    <string>Save screenshot...</string>
    </property>
   </action>
   <action name="action_show_orig_VF">
@@ -270,12 +269,12 @@
   </action>
   <action name="actionUnload_model">
    <property name="text">
-    <string>Unload model</string>
+    <string>Unload</string>
    </property>
   </action>
   <action name="actionNew_model">
    <property name="text">
-    <string>New model</string>
+    <string>New</string>
    </property>
   </action>
   <action name="actionTest_animations">
@@ -286,6 +285,11 @@
   <action name="actionReapply_VF">
    <property name="text">
     <string>Reapply last VF</string>
+   </property>
+  </action>
+  <action name="actionLoad_keyframe">
+   <property name="text">
+    <string>Load keyframe...</string>
    </property>
   </action>
  </widget>

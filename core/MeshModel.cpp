@@ -400,6 +400,7 @@ bool  MeshModel::saveOBJ(std::ofstream& ofile)
 	return true;
 }
 
+/******************************************************************************************************************************/
 void MeshModel::identityTexCoords()
 {
 	texCoords->resize(numVertices);
@@ -407,3 +408,69 @@ void MeshModel::identityTexCoords()
 	(*texCoords)[i] = vertices[i];
 
 }
+
+/******************************************************************************************************************************/
+bool MeshModel::saveVOBJFaces(std::ofstream& ofile)
+{
+	for (unsigned int i = 0; i < numFaces; i++)
+		ofile << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
+	return true;
+}
+/******************************************************************************************************************************/
+
+bool MeshModel::saveVOBJTexCoords(std::ofstream& ofile)
+{
+	for (unsigned int i = 0; i < numVertices; i++)
+		ofile << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
+	return true;
+}
+
+/******************************************************************************************************************************/
+
+bool MeshModel::saveVOBJVertices(std::ofstream& ofile)
+{
+	for (unsigned int i = 0; i < numVertices; i++)
+		ofile << vertices[i][0] << ' ' << vertices[i][1] << std::endl;
+	return true;
+}
+
+/******************************************************************************************************************************/
+bool MeshModel::loadVOBJFaces(std::ifstream& infile)
+{
+	faces->resize(numFaces);
+	for (unsigned int i = 0; i < numFaces; i++)
+	{
+		if (infile.eof()) return false;
+		infile >>  (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
+	}
+	return true;
+}
+
+/******************************************************************************************************************************/
+bool MeshModel::loadVOBJVertices(std::ifstream& infile)
+{
+	vertices.resize(numVertices);
+	for (unsigned int i = 0; i < numVertices; i++) {
+		if (infile.eof()) return false;
+		infile >> vertices[i].x >> vertices[i].y;
+	}
+
+	return true;
+}
+/******************************************************************************************************************************/
+bool MeshModel::loadVOBJTexCoords(std::ifstream& infile)
+{
+	texCoords->resize(numVertices);
+	for (unsigned int i = 0; i < numVertices; i++) {
+		if (infile.eof()) return false;
+		infile >> (*texCoords)[i][0] >> (*texCoords)[i][1];
+	}
+
+	hasUV = true;
+	return true;
+}
+
+
+
+
+

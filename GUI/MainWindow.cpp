@@ -103,7 +103,6 @@ MainWindow::MainWindow() : videoModel(NULL), currentFrameModel(NULL), outlineMod
 	connect_(actionNew_keyframe, triggered(), 				animationPanel, onCloneKeyFramePressed());
 	connect_(actionDelete_keyframe, triggered(), 			animationPanel, onDeleteKeyframe());
 	connect_(actionPlay, triggered(), 						animationPanel, onPlayPauseButtonPressed());
-	connect_(actionRewind, triggered(), 					animationPanel, onBackwardButton());
 	connect_(&animationPanel->animationThread, started(),   animationPanel, onAnimationStarted());
 	connect_(&animationPanel->animationThread, finished(),  animationPanel, onAnimationStopped());
 
@@ -196,7 +195,7 @@ void MainWindow::clearStatusBar()
 /*****************************************************************************************************/
 void MainWindow::onLoadModel()
 {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Choose model"), QString(), QLatin1String("*.off *.obj *.poly"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("Choose model"), QString(), QLatin1String("*.off *.obj *.poly *.vobj"));
     if (filename == "") return;
 
     QFileInfo fileinfo(filename);
@@ -211,12 +210,10 @@ void MainWindow::onLoadModel()
 
     if (filename.endsWith(".poly"))
     {
-    	if (outlineModel)
-    		delete outlineModel;
+    	if (outlineModel) delete outlineModel;
     	outlineModel = new OutlineModel();
 
     	bool result = outlineModel->loadFromFile(filename.toStdString());
-
     	if (!result) {
     		delete outlineModel;
     		outlineModel = NULL;
@@ -224,6 +221,7 @@ void MainWindow::onLoadModel()
     	}
 		emit videoModelLoaded(NULL);
     	emit frameSwitched(outlineModel);
+    	clearStatusBar();
     } else
     {
 		/* load new model */
@@ -231,20 +229,12 @@ void MainWindow::onLoadModel()
 
 		bool result = videoModel->loadFromFile(filename.toStdString());
 		if (result == false) {
-			QMessageBox::warning(this, "Error", "Can't load mesh");
+			QMessageBox::warning(this, "Error", "Error on mesh load/inilialize");
 			delete videoModel;
 			videoModel = NULL;
 			return;
 		}
 
-		result = videoModel->initialize();
-		if (result == false)
-		{
-			QMessageBox::warning(this, "Error", "Problem initializing animations");
-			delete videoModel;
-			videoModel = NULL;
-			return;
-		}
 		emit videoModelLoaded(videoModel);
 		emit frameSwitched(videoModel->getKeyframeByIndex(1));
 		setStatusBarStatistics(videoModel->numVertices, videoModel->numFaces);
@@ -283,9 +273,21 @@ void MainWindow::onCreateOutlineModel()
 void MainWindow::onSaveModel()
 {
 	if ( !currentFrameModel) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.off *.obj"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.off *.obj *.vobj"));
     if ( filename == "") return;
-    currentFrameModel->saveToFile(filename.toStdString());
+
+    /* Todo : will be split in several functions for clarity */
+    if (filename.endsWith(".obj") || filename.endsWith(".off"))
+    {
+    	currentFrameModel->saveToFile(filename.toStdString());
+    	return;
+    }
+
+    if (filename.endsWith(".vobj")) {
+    	if (videoModel)
+    		videoModel->saveToFile(filename.toStdString());
+    	return;
+    }
 }
 
 void MainWindow::onUnloadModel()

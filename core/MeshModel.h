@@ -69,6 +69,14 @@ public:
     virtual bool saveToFile(const std::string filename);
     virtual bool loadFromFile(const std::string &filename);
 
+    bool loadVOBJFaces(std::ifstream& infile);
+    bool loadVOBJTexCoords(std::ifstream& ofile);
+    bool loadVOBJVertices(std::ifstream& infile);
+
+    bool saveVOBJFaces(std::ofstream& ofile);
+    bool saveVOBJTexCoords(std::ofstream& ofile);
+    bool saveVOBJVertices(std::ofstream& ofile);
+
     bool hasTextureMapping() { return hasUV; }
     void identityTexCoords();
 	bool updateMeshInfo();

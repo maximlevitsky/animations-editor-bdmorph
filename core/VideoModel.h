@@ -49,6 +49,9 @@ public:
 
 	bool initialize();
 
+	virtual bool saveToFile(const std::string filename);
+	virtual bool loadFromFile(const std::string &filename);
+
 private:
 	std::vector<VideoKeyFrame*> keyframes;
 
