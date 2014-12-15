@@ -226,7 +226,7 @@ bool VideoModel::loadFromFile(const std::string &filename)
 		keyframes.push_back(frame);
 	}
 
-	return true;
+	return initialize();
 }
 
 /******************************************************************************************************************************/
