@@ -10,7 +10,7 @@
 class SidePanel;
 class AnimationPanel;
 class EditorWindow;
-class ThumbnailRenderer;
+class OffScreenRenderer;
 class VideoModel;
 class MeshModel;
 class KVFModel;

@@ -10,7 +10,6 @@
 #include "MainWindow.h"
 #include "EditorWindow.h"
 #include "SidePanel.h"
-#include "ThumbnailRenderer.h"
 #include "AnimationPanel.h"
 #include "utils.h"
 #include "VideoModel.h"
@@ -37,7 +36,7 @@ MainWindow::MainWindow()
 	addDockWidget(Qt::BottomDockWidgetArea, animationPanel);
 
 	programstate = new ProgramState();
-	programstate->thumbnailRenderer = new ThumbnailRenderer(NULL, editorWindow);
+	programstate->thumbnailRenderer = new OffScreenRenderer(NULL, editorWindow);
 
 	/* --------------------------------------------------------------------------------*/
 	/* Make everyone listen to program state */

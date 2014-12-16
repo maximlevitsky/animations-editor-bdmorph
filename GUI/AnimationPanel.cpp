@@ -13,7 +13,7 @@
 #include "AnimationPanel.h"
 #include "VideoModel.h"
 #include "MeshModel.h"
-#include "ThumbnailRenderer.h"
+#include "OffScreenRenderer.h"
 #include "utils.h"
 #include <unistd.h>
 

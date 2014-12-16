@@ -7,12 +7,12 @@
 #include <QImage>
 
 class MeshModel;
-class ThumbnailRenderer : public QGLWidget
+class OffScreenRenderer : public QGLWidget
 {
 	Q_OBJECT
 public:
-	ThumbnailRenderer(QWidget* parent, QGLWidget* shareWidget);
-	virtual ~ThumbnailRenderer() {}
+	OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget);
+	virtual ~OffScreenRenderer() {}
 	QImage renderThumbnail(MeshModel* model);
 	QGLFramebufferObject *fbo;
 };

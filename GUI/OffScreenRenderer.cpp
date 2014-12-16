@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <assert.h>
 #include <QtOpenGL>
-#include "ThumbnailRenderer.h"
+#include "OffScreenRenderer.h"
 #include "MeshModel.h"
 
-ThumbnailRenderer::ThumbnailRenderer(QWidget* parent,
+OffScreenRenderer::OffScreenRenderer(QWidget* parent,
 		QGLWidget* shareWidget) :
 		QGLWidget(parent, shareWidget)
 {
@@ -25,7 +25,7 @@ ThumbnailRenderer::ThumbnailRenderer(QWidget* parent,
     glEnable(GL_POLYGON_SMOOTH);
 }
 
-QImage ThumbnailRenderer::renderThumbnail(MeshModel* model)
+QImage OffScreenRenderer::renderThumbnail(MeshModel* model)
 {
 	makeCurrent();
 	assert(model);

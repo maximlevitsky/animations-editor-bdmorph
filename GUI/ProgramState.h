@@ -4,7 +4,7 @@
 #include <string>
 #include <qobject.h>
 #include "VideoModel.h"
-#include "ThumbnailRenderer.h"
+#include "OffScreenRenderer.h"
 #include "OutlineModel.h"
 #include <QTimer>
 #include <QElapsedTimer>
@@ -87,7 +87,7 @@ public:
 	int targetFPS;
 
 	/* Misc */
-	ThumbnailRenderer *thumbnailRenderer;
+	OffScreenRenderer *thumbnailRenderer;
 
 public:
 	/* Load/store parts of the state */

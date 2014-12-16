@@ -26,7 +26,7 @@ INCLUDE_DIRECTORIES(. ./GUI ./core ./utils ./GUI/widgets)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")
 
 SET(kvf2d_SOURCES
-	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/ThumbnailRenderer.cpp
+	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/OffScreenRenderer.cpp
 	GUI/widgets/ActionButton.cpp GUI/ProgramState.cpp
 
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
@@ -37,7 +37,7 @@ SET(kvf2d_SOURCES
 )
 SET(kvf2d_HEADERS 
 	GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h 
-	GUI/AnimationPanel.h GUI/ThumbnailRenderer.h GUI/widgets/ActionButton.h
+	GUI/AnimationPanel.h GUI/OffScreenRenderer.h GUI/widgets/ActionButton.h
 	GUI/ProgramState.h
 	)
 
