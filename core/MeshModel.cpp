@@ -9,7 +9,7 @@
 
 #include "MeshModel.h"
 #include "OutlineModel.h"
-#include "Utils.h"
+#include "utils.h"
 
 #define LINE_WIDTH 2
 
@@ -19,16 +19,12 @@ MeshModel::MeshModel() :
 		boundaryVertices(new std::set<Vertex>),
 		texCoords(new std::vector<Point2>),
 		created(true),
-		hasUV(false),
 		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
 				maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
 		numVertices(0), numFaces(0),
 		center(0,0),
 		create_msec(0)
 {
-	/* create new empty mesh model
-	 * Used for OutlineModel
-	 */
 }
 
 /******************************************************************************************************************************/
@@ -41,7 +37,6 @@ MeshModel::MeshModel(const MeshModel& other):
 		numVertices(other.numVertices),
 		numFaces(other.numFaces),
 		vertices(other.vertices),
-		hasUV(other.hasUV),
 		created(false),
 		center(other.center),
 		create_msec(0)
@@ -170,6 +165,21 @@ bool MeshModel::updateMeshInfo()
     return true;
 }
 
+void MeshModel::moveMesh(Vector2 newCenter)
+{
+	Vector2 move = newCenter - center;
+
+    for (unsigned int i = 0; i < numVertices; i++)
+    {
+    	vertices[i] += move;
+    }
+
+    center += move;
+    minPoint += move;
+    maxPoint += move;
+}
+
+
 /******************************************************************************************************************************/
 void MeshModel::renderFaces()
 {
@@ -202,6 +212,9 @@ void MeshModel::renderWireframe()
 /******************************************************************************************************************************/
 void MeshModel::renderVertex(unsigned int v, double scale)
 {
+	if (v >= numVertices)
+		return;
+
 	#define VERTEX_SIZE 3
 	glPushAttrib(GL_LINE_BIT);
     glLineWidth(1);
@@ -222,6 +235,9 @@ void MeshModel::renderVertex(unsigned int v, double scale)
 
 void MeshModel::renderFace(unsigned int fnum)
 {
+	if (fnum >= numFaces)
+		return;
+
 	std::vector<Point2> &coords = *texCoords;
 
 	if (fnum < 0 || fnum >= numFaces)
@@ -303,7 +319,6 @@ bool  MeshModel::loadOFF(std::ifstream& infile)
 	}
 
 	identityTexCoords();
-	hasUV = false;
 	return updateMeshInfo();
 }
 
@@ -328,6 +343,7 @@ bool  MeshModel::loadOBJ(std::ifstream& infile)
 	numVertices = 0;
 	numFaces = 0;
 	double x,y,z;
+	bool hasUV = false;
 	std::string a,b,c;
 
 	while (!infile.eof())
@@ -386,10 +402,8 @@ bool  MeshModel::saveOBJ(std::ofstream& ofile)
 	for (unsigned int i = 0; i < numVertices; i++)
 		ofile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
 
-	if (hasUV) {
-		for (unsigned int i = 0; i < numVertices; i++)
-			ofile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
-	}
+	for (unsigned int i = 0; i < numVertices; i++)
+		ofile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
 
 	for (unsigned int i = 0; i < numFaces; i++)
 		ofile << "f " <<
@@ -465,12 +479,8 @@ bool MeshModel::loadVOBJTexCoords(std::ifstream& infile)
 		if (infile.eof()) return false;
 		infile >> (*texCoords)[i][0] >> (*texCoords)[i][1];
 	}
-
-	hasUV = true;
 	return true;
 }
-
-
 
 
 

@@ -7,11 +7,9 @@
 
 ThumbnailRenderer::ThumbnailRenderer(QWidget* parent,
 		QGLWidget* shareWidget) :
-		QGLWidget(parent, shareWidget), textureRef(0)
+		QGLWidget(parent, shareWidget)
 {
 	makeCurrent();
-
-
 	fbo = new QGLFramebufferObject(128,128);
 	bool result = fbo->bind();
 
@@ -57,11 +55,4 @@ QImage ThumbnailRenderer::renderThumbnail(MeshModel* model)
 
     model->renderFaces();
 	return fbo->toImage();
-}
-
-void ThumbnailRenderer::onTextureChanged(GLuint texture)
-{
-	textureRef = texture;
-	makeCurrent();
-	glBindTexture(GL_TEXTURE_2D, textureRef);
 }

@@ -9,7 +9,7 @@
 #include "cholmod_common.h"
 #include "cholmod_matrix.h"
 #include "cholmod_vector.h"
-#include "Utils.h"
+#include "utils.h"
 #include "vector2d.h"
 #include "MeshModel.h"
 
@@ -117,6 +117,11 @@ public:
 	~BDMORPHModel();
 
 	double interpolate_frame(MeshModel *a, MeshModel* b, double t);
+	void renderInitialEdge(double scale);
+
+	MeshModel *modela;
+	MeshModel *modelb;
+	double last_t;
 private:
 
 	OrderedEdge e0;
@@ -153,14 +158,11 @@ private:
 	void calculate_new_vertex_positions();
 	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
 
-	void renderOverlay(double scale);
+
 	cholmod_factor *LL;
-	MeshModel *modela;
-	MeshModel *modelb;
+
 
 };
-
-
 
 
 #endif

@@ -22,10 +22,56 @@ OutlineModel::OutlineModel() : selectedVertex(-1)
 	minPoint.y = 0;
 	maxPoint.x = 1;
 	maxPoint.y = 1;
-
 	center.x = 0.5;
 	center.y = 0.5;
+	setScale(0.5,1);
 }
+
+/******************************************************************************************************************************/
+
+OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
+{
+	minPoint.x = 0;
+	minPoint.y = 0;
+	maxPoint.x = 1;
+	maxPoint.y = 1;
+	center.x = 0.5;
+	center.y = 0.5;
+	setScale(1,1);
+
+	std::map<Vertex,Vertex> theirToOurBoundaryVertices;
+
+	for (auto iter = from->boundaryVertices->begin() ; iter != from->boundaryVertices->end() ; iter++)
+	{
+		Vertex v = theirToOurBoundaryVertices.size();
+		theirToOurBoundaryVertices.insert(std::make_pair(*iter,v));
+	}
+
+	for (auto iter = from->faces->begin() ; iter != from->faces->end() ; iter++) {
+		Vertex a = iter->a();
+		Vertex b = iter->b();
+		Vertex c = iter->c();
+
+		if (theirToOurBoundaryVertices.count(a) && theirToOurBoundaryVertices.count(b))
+			edges.insert(Edge(theirToOurBoundaryVertices[a], theirToOurBoundaryVertices[b]));
+
+		if (theirToOurBoundaryVertices.count(b) && theirToOurBoundaryVertices.count(c))
+			edges.insert(Edge(theirToOurBoundaryVertices[b], theirToOurBoundaryVertices[c]));
+
+		if (theirToOurBoundaryVertices.count(c) && theirToOurBoundaryVertices.count(a))
+			edges.insert(Edge(theirToOurBoundaryVertices[c], theirToOurBoundaryVertices[a]));
+
+
+		vertices.resize(theirToOurBoundaryVertices.size());
+		for (auto iter = theirToOurBoundaryVertices.begin() ; iter != theirToOurBoundaryVertices.end() ; iter++) {
+			vertices[iter->second] = from->vertices[iter->first];
+		}
+
+		numFaces = 0;
+		numVertices = theirToOurBoundaryVertices.size();
+	}
+}
+
 /******************************************************************************************************************************/
 OutlineModel::~OutlineModel()
 {}
@@ -67,6 +113,7 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 
 bool OutlineModel::moveAction(Point2 pos1, Point2 pos2, double radius)
 {
+
 	Vertex oldVertex = getClosestVertex(pos1, false, radius);
 	if (oldVertex != -1) {
 		vertices[oldVertex] = pos2;
@@ -79,25 +126,12 @@ bool OutlineModel::moveAction(Point2 pos1, Point2 pos2, double radius)
 
 void OutlineModel::renderFaces()
 {
+
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glEnable(GL_TEXTURE_2D);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glBegin(GL_QUADS);
-	glTexCoord2f(0,0);
-	glVertex2f(0,0);
-
-	glTexCoord2f(1,0);
-	glVertex2f(1,0);
-
-	glTexCoord2f(1,1);
-	glVertex2f(1,1);
-
-	glTexCoord2f(0,1);
-	glVertex2f(0,1);
-	glEnd();
-
-
+	renderInternal();
 	glPopAttrib();
 }
 
@@ -108,22 +142,7 @@ void OutlineModel::renderWireframe()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glColor3f(0,0,0);
 	glLineWidth(1.5);
-
-	glBegin(GL_QUADS);
-
-	glTexCoord2f(0,0);
-	glVertex2f(0,0);
-
-	glTexCoord2f(1,0);
-	glVertex2f(1,0);
-
-	glTexCoord2f(1,1);
-	glVertex2f(1,1);
-
-	glTexCoord2f(0,1);
-	glVertex2f(0,1);
-
-	glEnd();
+	renderInternal();
 	glPopAttrib();
 }
 
@@ -274,7 +293,7 @@ bool OutlineModel::saveToFile(std::string filename)
 		ofile << i << " " << vertices[*iter].x << " " << vertices[*iter].y << std::endl;
 	}
 
-	return true; /*TODO*/
+	return true;
 }
 
 /******************************************************************************************************************************/
@@ -347,6 +366,13 @@ bool OutlineModel::createMesh(MeshModel *output,int triangleCount)
 	output->numFaces = out.numberoftriangles;
 
 	output->identityTexCoords();
+
+	for (unsigned int i = 0 ; i < output->numVertices ;i++)
+	{
+		(*output->texCoords)[i][0] /= scaleX;
+		(*output->texCoords)[i][1] /= scaleY;
+	}
+
 	return output->updateMeshInfo();
 }
 
@@ -405,6 +431,39 @@ bool OutlineModel::loadFromFile(const std::string &filename)
 	}
 
 	numVertices = vertices.size();
-	/* TODO */
 	return true;
+}
+
+
+Point2 OutlineModel::adjustAspectRatioMul(Point2 in)
+{
+	Point2 out = in;
+	out.x *= scaleX;
+	out.y *= scaleY;
+	return out;
+}
+
+
+void OutlineModel::renderInternal()
+{
+	Point2 point1(0,0);
+	Point2 point2(1,1);
+
+	point1 = adjustAspectRatioMul(point1);
+	point2 = adjustAspectRatioMul(point2);
+
+	glBegin(GL_QUADS);
+
+	glTexCoord2f(0,0);
+	glVertex2f(point1.x,point1.y);
+
+	glTexCoord2f(1,0);
+	glVertex2f(point2.x,point1.y);
+
+	glTexCoord2f(1,1);
+	glVertex2f(point2.x,point2.y);
+
+	glTexCoord2f(0,1);
+	glVertex2f(point1.x,point2.y);
+	glEnd();
 }

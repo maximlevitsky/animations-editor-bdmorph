@@ -3,12 +3,14 @@
 
 #include <ctime>
 #include <vector>
-#include <algorithm>
 #include <assert.h>
 #include <stdint.h>
 #include "vector2d.h"
 #include <stdarg.h>
 #include <sys/time.h>
+
+typedef int Vertex;
+#define connect_(a,b,c,d) connect(a, SIGNAL(b), c, SLOT(d))
 
 /***********************************************************************************************/
 
@@ -24,38 +26,6 @@ public:
 		return ((double)(now - last_time_saved)) / (CLOCKS_PER_SEC / 1000);
 	}
 };
-
-
-class TimeTimer
-{
-public:
-	TimeTimer(int startMsec)
-	{
-		struct timeval tp;
-		gettimeofday(&tp, NULL);
-		start_tstamp = (long long) tp.tv_sec * 1000L + tp.tv_usec/1000 - startMsec;
-	}
-
-	int current_time()
-	{
-		struct timeval tp;
-		gettimeofday(&tp, NULL);
-		long long  now_tstamp = (long long) tp.tv_sec * 1000L + tp.tv_usec/1000;
-		return now_tstamp - start_tstamp;
-	}
-
-	void reset()
-	{
-		struct timeval tp;
-		gettimeofday(&tp, NULL);
-		start_tstamp = (long long) tp.tv_sec * 1000L + tp.tv_usec/1000;
-	}
-
-	long long start_tstamp;
-};
-
-/***********************************************************************************************/
-typedef int Vertex;
 
 /***********************************************************************************************/
 struct Face
@@ -149,7 +119,6 @@ struct Angle
 };
 
 /***********************************************************************************************/
-
 struct BBOX
 {
 	Point2 minP;
@@ -176,7 +145,6 @@ struct BBOX
 };
 
 /***********************************************************************************************/
-
 class CmdStream
 {
 public:
@@ -223,6 +191,7 @@ private:
 };
 
 /***********************************************************************************************/
+
 class CmdStreamBuilder
 {
 	std::vector<uint8_t> cmd_stream;
@@ -262,6 +231,7 @@ public:
 };
 
 /***********************************************************************************************/
+
 typedef unsigned int TmpMemAdddress;
 class TmpMemAllocator
 {
@@ -289,45 +259,10 @@ private:
 
 /***********************************************************************************************/
 
-typedef std::vector<Point2> vertexList;
-
-#define connect_(a,b,c,d) connect(a, SIGNAL(b), c, SLOT(d))
-
-
-inline bool ends_with(std::string const & value, std::string const & ending)
-{
-    if (ending.size() > value.size()) return false;
-    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
-
-/**********************************************************************************************/
-/* stolen from http://stackoverflow.com/questions/2049582/how-to-determine-a-point-in-a-triangle */
-
-static inline double planeSign (Point2 p1, Point2 p2, Point2 p3)
-{
-    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-}
-
-static inline bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3)
-{
-    bool b1, b2, b3;
-    b1 = planeSign(pt, v1, v2) < 0.0f;
-    b2 = planeSign(pt, v2, v3) < 0.0f;
-    b3 = planeSign(pt, v3, v1) < 0.0f;
-    return ((b1 == b2) && (b2 == b3));
-}
-
-/**********************************************************************************************/
-
-
-static inline void debug_printf(const char* string, ...)
-{
-#ifdef __DEBUG_VERBOSE__
-	va_list list;
-	va_start(list,string);
-	vprintf(string,list);
-#endif
-}
+bool ends_with(std::string const & value, std::string const & ending);
+bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3);
+void debug_printf(const char* string, ...);
+std::string printTime(int time);
+int getTime(std::string time);
 
 #endif

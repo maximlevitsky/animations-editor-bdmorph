@@ -10,7 +10,7 @@
 
 #include "vector2d.h"
 #include "cholmod_matrix.h"
-#include "Utils.h"
+#include "utils.h"
 #include "MeshModel.h"
 
 #define UNDOSIZE 20
@@ -51,6 +51,7 @@ public:
 
 	/* deformation entry points*/
 	void setAlpha(double alpha);
+	double getAlpha() { return alpha1; }
 	void clearPins();
 	const std::set<Vertex>& getPinnedVertexes() { return pinnedVertexes; }
 

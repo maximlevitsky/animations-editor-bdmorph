@@ -9,7 +9,7 @@
 #include <math.h>
 #include <cholmod.h>
 #include <iterator>
-#include "Utils.h"
+#include "utils.h"
 #include "BDMORPH.h"
 #include <QtOpenGL>
 
@@ -278,7 +278,8 @@ BDMORPHModel::BDMORPHModel(BDMORPHModel* orig) :
 		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL), initialized(false),
 		init_cmd_stream(orig->init_cmd_stream),
 		iteration_cmd_stream(orig->iteration_cmd_stream),
-		extract_solution_cmd_stream(orig->extract_solution_cmd_stream)
+		extract_solution_cmd_stream(orig->extract_solution_cmd_stream),
+		last_t(0)
 {
 	L = new double[orig->edgeCount];
 	L0 = new double[orig->edgeCount];
@@ -720,6 +721,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 	modela = a;
 	modelb = b;
+	last_t = t;
 
 	/* Calculate the interpolated metric */
 	calculate_initial_lengths(a,b,t);
@@ -815,15 +817,10 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 }
 
 /*****************************************************************************************************/
-void BDMORPHModel::renderOverlay(double scale)
+void BDMORPHModel::renderInitialEdge(double scale)
 {
 	/* DEBUG code */
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-
-	//if (modela) {
-	//	glColor4f(1,0,0,0.2);
-	//	modela->renderWireframe();
-	//}
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glColor3f(0,1,0);

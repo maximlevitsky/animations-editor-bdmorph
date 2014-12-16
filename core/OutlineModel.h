@@ -2,7 +2,7 @@
 #define OUTLINEMODEL_H_
 
 #include "MeshModel.h"
-#include "Utils.h"
+#include "utils.h"
 #include <vector>
 #include <set>
 
@@ -10,6 +10,7 @@ class OutlineModel: public MeshModel
 {
 public:
 	OutlineModel();
+	OutlineModel(MeshModel *from);
 	virtual ~OutlineModel();
 
 	void renderFaces();
@@ -23,10 +24,17 @@ public:
 	bool loadFromFile(const std::string &filename);
 	bool createMesh(MeshModel *out, int approxTriangleCount);
 
+	void setScale(double sX, double sY) {
+		scaleX = sX;
+		scaleY = sY;
+	}
+
 private:
 	std::set<Edge> edges;
 	std::set<Vertex> deletedVertexes;
 	Vertex selectedVertex;
+	double scaleX;
+	double scaleY;
 
 	Vertex addVertex(Point2 p);
 	void deleteVertex(Vertex v);
@@ -37,8 +45,8 @@ private:
 	bool historyUndo();
 
 	void getVertices(std::set<Vertex> &standaloneVertices, std::set<Vertex> &normalVertices);
-
-
+	Point2 adjustAspectRatioMul(Point2 in);
+	void renderInternal();
 };
 
 #endif /* OUTLINEMODEL_H_ */

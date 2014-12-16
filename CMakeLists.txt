@@ -27,17 +27,24 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")
 
 SET(kvf2d_SOURCES
 	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/ThumbnailRenderer.cpp
-	GUI/widgets/ActionButton.cpp
+	GUI/widgets/ActionButton.cpp GUI/ProgramState.cpp
 
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
 	core/BDMORPH.cpp core/OutlineModel.cpp
 
 	utils/cholmod_matrix.cpp utils/cholmod_common.cpp utils/vector2d.cpp 
-	utils/triangle.c
+	utils/triangle.c utils/utils.cpp
 )
+SET(kvf2d_HEADERS 
+	GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h 
+	GUI/AnimationPanel.h GUI/ThumbnailRenderer.h GUI/widgets/ActionButton.h
+	GUI/ProgramState.h
+	)
 
-SET(kvf2d_HEADERS GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h GUI/AnimationPanel.h GUI/ThumbnailRenderer.h GUI/widgets/ActionButton.h)
-SET(kvf2d_FORMS GUI/MainWindow.ui GUI/SidePanel.ui GUI/AnimationPanel.ui)
+	
+SET(kvf2d_FORMS 
+	GUI/MainWindow.ui GUI/SidePanel.ui GUI/AnimationPanel.ui GUI/About.ui
+	)
 SET(kvf2d_RESOURCES GUI/resources/resources.rc)
 
 QT4_WRAP_CPP(kvf2d_HEADERS_MOC ${kvf2d_HEADERS})

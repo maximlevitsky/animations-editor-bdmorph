@@ -217,3 +217,82 @@ void CholmodSparseMatrix::parallelMultiply(CholmodSparseMatrix &m, CholmodSparse
 }
 
 
+
+
+/***********************************************************************************************************/
+class AnimationThread : public QThread
+{
+	Q_OBJECT
+public:
+
+	AnimationThread() : should_stop(false), videoModel(NULL),startTimeMsec(0), frameDurationMsec(32), repeat(false)
+	{}
+
+	void startme(VideoModel* model, int starttime)
+	{
+		if (isRunning())
+			return;
+		should_stop = false;
+		videoModel = model;
+		startTimeMsec = starttime;
+		QThread::start();
+	}
+
+	void stop()
+	{
+		should_stop = true;
+		wait();
+		videoModel = NULL;
+		startTimeMsec = 0;
+	}
+
+	void setRepeat(bool newrepeat) { repeat  = newrepeat;  }
+signals:
+	void animationStarted();
+	void animationStopped();
+	void frameSwitched(MeshModel* model);
+
+private:
+	bool should_stop;
+	bool repeat;
+	virtual void run()
+	{
+		assert(videoModel);
+		int total_video_time = videoModel->getTotalTime();
+
+		TimeTimer time(startTimeMsec);
+		double dummy;
+
+		while (!should_stop)
+		{
+			int current_frame_time = time.current_time();
+			printf("Start frame time: %d\n",current_frame_time);
+
+			if (current_frame_time > total_video_time)
+			{
+				if (repeat) {
+					time.reset();
+					continue;
+				} else
+					break;
+			}
+
+			MeshModel *newFrame = videoModel->interpolateFrame(current_frame_time, &dummy);
+			emit frameSwitched(newFrame);
+			int end_time = time.current_time();
+
+			printf("End frame time: %d\n", end_time);
+
+			int sleep_duration = current_frame_time + frameDurationMsec - end_time;
+
+			printf("Sleep time: %d\n", sleep_duration);
+			if (sleep_duration > 1)
+				msleep(sleep_duration);
+		}		
+	}
+
+	VideoModel* videoModel;
+	int startTimeMsec;
+	double frameDurationMsec;
+};
+/***********************************************************************************************************/

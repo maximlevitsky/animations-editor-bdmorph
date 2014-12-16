@@ -9,7 +9,7 @@
 
 #define SQRT_2 1.41421356
 
-#include "Utils.h"
+#include "utils.h"
 #include "KVFModel.h"
 #include "cholmod_vector.h"
 #include "cholmod_common.h"
@@ -235,7 +235,7 @@ void KVFModel::applyVFLogSpiral()
 {
 	TimeMeasurment t;
 
-	/* TODO: hack*/
+	/* FIXME: hack - the code doesn't work when field is parallel*/
 	if(!pinnedVertexes.size())
 		return;
 
@@ -252,11 +252,11 @@ void KVFModel::applyVFLogSpiral()
             int e1 = (*faces)[i][j];
             int e2 = (*faces)[i][(j+1)%3];
 
-            std::complex<double> v1(vf[e1][0],vf[e1][1]);
-            std::complex<double> v2(vf[e2][0],vf[e2][1]);
+            std::complex<double> v1(vf[e1].x,vf[e1].y);
+            std::complex<double> v2(vf[e2].x,vf[e2].y);
 
-            std::complex<double> p1(vertices[e1][0], vertices[e1][1]);
-            std::complex<double> p2(vertices[e2][0], vertices[e2][1]);
+            std::complex<double> p1(vertices[e1].x, vertices[e1].y);
+            std::complex<double> p2(vertices[e2].x, vertices[e2].y);
 
             std::complex<double> z = (v1-v2)/(p1-p2);
             std::complex<double> p0 = (p2*v1-p1*v2)/(v1-v2);
@@ -302,9 +302,6 @@ void KVFModel::applyVF()
 {
 	for (unsigned int i = 0; i < numVertices; i++)
 			vertices[i] += vf[i] * 0.5;
-
-	/* TODO: not completely correct*/
-    historyAdd(disps);
 }
 
 /*****************************************************************************************************/
@@ -499,6 +496,7 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
 
 void KVFModel::historyReset()
 {
+	/* restore initial alpha */
 	undo.clear();
 	redo.clear();
 	vertices = initialVertexes;

@@ -5,6 +5,7 @@
 #include <QMainWindow>
 #include <QtOpenGL>
 #include "ui_MainWindow.h"
+#include "ProgramState.h"
 
 class SidePanel;
 class AnimationPanel;
@@ -16,6 +17,7 @@ class KVFModel;
 class QLabel;
 class BDMORPHModel;
 class OutlineModel;
+class QProgressBar;
 
 class MainWindow : public QMainWindow, public Ui_MainWindow
 {
@@ -23,40 +25,15 @@ class MainWindow : public QMainWindow, public Ui_MainWindow
 public:
 	MainWindow();
 	virtual ~MainWindow();
-
-	void setStatusBarStatistics(int vertexCount, int facesCount);
 	void clearStatusBar();
-	void setFPS(double msec);
-
 public slots:
-	void onLoadModel();
-	void onUnloadModel();
-	void onSaveModel();
-    void onChooseTexture();
-	void onResetTexture();
 
-	void onFrameSwitched(MeshModel* model);
-	void onFrameEdited(MeshModel* model);
-	void onVideoModelLoaded(VideoModel* model);
-	void onFrameSwitchListener(MeshModel* model);
-
-	void onSidePanelMenuShowHide(bool checked);
-	void onAnimationPanelMenuShowHide(bool checked);
+	void programStateUpdated(int flags, void *param);
 
 	void onSaveScreenShot();
 	void onSaveVideo();
 	void onAbout();
-
-	void onEditorSelectionChanged(int selectedVertex, int selectedFace);
 	void onInterpolationTest();
-
-	void onCreateOutlineModel();
-	void onMeshCreationRequest(int requestedDensity);
-
-signals:
-	void videoModelLoaded(VideoModel* model);
-	void frameSwitched(MeshModel* model);
-	void textureChanged(GLuint textureRef);
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;
@@ -68,15 +45,11 @@ private:
 	QLabel* lblSelectedVertex;
 	QLabel* lblSelectedFace;
 
-	VideoModel* videoModel;
-	MeshModel* currentFrameModel;
-	GLuint textureRef;
+	QFrame *progressFrame;
+	QProgressBar *progressIndicator;
+	QPushButton *cancelButton;
 
-	OutlineModel* outlineModel;
-	ThumbnailRenderer* thumbnailRender;
-	void setTexture(const QString file);
-
-	QPixmap texture;
+	ProgramState* programstate;
 };
 
 #endif

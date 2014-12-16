@@ -8,19 +8,19 @@ VideoModel::VideoModel() : pFrame(NULL)
 {}
 
 /******************************************************************************************************************************/
-bool VideoModel::initialize()
+bool VideoModel::initialize_animations()
 {
 	pFrame = new BDMORPHModel(this);
 	bool result = pFrame->initialize();
 	if (!result) return false;
-
-	if (!keyframes.size()) {
-		keyframes.push_back(new VideoKeyFrame(this));
-		keyframes.push_back(new VideoKeyFrame(this));
-
-	}
-
 	return true;
+}
+/******************************************************************************************************************************/
+
+void VideoModel::initialize_keyframes()
+{
+	keyframes.push_back(new VideoKeyFrame(this));
+	keyframes.push_back(new VideoKeyFrame(this));
 }
 
 /******************************************************************************************************************************/
@@ -49,8 +49,6 @@ int VideoModel::getTotalTime()
 		retval += (*iter)->duration;
 		last_time = (*iter)->duration;
 	}
-
-	/* TODO: HACK!!*/
 	retval -= last_time;
 	return retval;
 }
@@ -103,23 +101,35 @@ int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)
 	return time;
 }
 /******************************************************************************************************************************/
-VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
+VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference, MeshModel* newPoints)
 {
 	/* inserts new keyframe after this one */
 	auto iter = std::find(keyframes.begin(), keyframes.end(),reference);
 	assert (iter != keyframes.end());
 
-	VideoKeyFrame *frame = new VideoKeyFrame(reference);
+	VideoKeyFrame *frame;
+
+	if (!newPoints)
+		frame = new VideoKeyFrame(reference);
+	else
+		frame = new VideoKeyFrame(newPoints);
+
 	keyframes.insert(iter + 1, frame);
 	return frame;
 }
 /******************************************************************************************************************************/
-void VideoModel::deleteFrame(VideoKeyFrame* frame)
+VideoKeyFrame* VideoModel::deleteFrame(VideoKeyFrame* frame)
 {
+	assert (keyframes.size() > 1);
+	int id = getKeyFrameIndex(frame);
+
 	auto iter = std::find(keyframes.begin(), keyframes.end(),frame);
 	assert (iter != keyframes.end());
 	delete *iter;
 	keyframes.erase(iter);
+
+	if (id > 0) id--;
+	return getKeyframeByIndex(id);
 }
 
 /******************************************************************************************************************************/
@@ -162,7 +172,6 @@ bool VideoModel::saveToFile(const std::string filename)
     std::ofstream outfile(filename);
     if (outfile.bad())
     	return false;
-
     if (!ends_with(filename, ".vobj"))
     	return false;
 
@@ -187,16 +196,12 @@ bool VideoModel::saveToFile(const std::string filename)
 /******************************************************************************************************************************/
 bool VideoModel::loadFromFile(const std::string &filename)
 {
-	if (!ends_with(filename, ".vobj")) {
-		bool retval = MeshModel::loadFromFile(filename);
-		if (!retval) return false;
-		return initialize();
-	}
+	if (!ends_with(filename, ".vobj"))
+		return false;
 
 	std::ifstream infile(filename);
 	if (infile.bad())
 	    return false;
-
 
 	std::string magic;
 	infile >> magic;
@@ -225,8 +230,31 @@ bool VideoModel::loadFromFile(const std::string &filename)
 		frame->duration = duration;
 		keyframes.push_back(frame);
 	}
+	return initialize_animations();
+}
 
-	return initialize();
+/******************************************************************************************************************************/
+bool VideoModel::createFromFile(const std::string &filename)
+{
+	bool retval = MeshModel::loadFromFile(filename);
+	if (!retval) return false;
+	retval = initialize_animations();
+	if (!retval) return false;
+	initialize_keyframes();
+	return true;
+}
+/******************************************************************************************************************************/
+
+bool VideoModel::createFromOutline(OutlineModel* outlineModel, int trianglecount)
+{
+	if (!outlineModel->createMesh(this, trianglecount))
+		return false;
+
+    if (!initialize_animations())
+    	return false;
+
+    initialize_keyframes();
+    return true;
 }
 
 /******************************************************************************************************************************/

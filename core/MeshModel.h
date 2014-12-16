@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "vector2d.h"
-#include "Utils.h"
+#include "utils.h"
 
 class OutlineModel;
 
@@ -38,7 +38,6 @@ public:
     virtual void historyReset() {}
     virtual bool historyRedo() { return false;}
     virtual bool historyUndo() { return false;}
-
 
     void renderVertex(unsigned int v, double scale);
 	void renderFace(unsigned int f);
@@ -77,14 +76,13 @@ public:
     bool saveVOBJTexCoords(std::ofstream& ofile);
     bool saveVOBJVertices(std::ofstream& ofile);
 
-    bool hasTextureMapping() { return hasUV; }
     void identityTexCoords();
 	bool updateMeshInfo();
+	void moveMesh(Vector2 newCenter);
 
 	double create_msec;
 private:
     bool created;
-    bool hasUV;
 };
 
 /******************************************************************************************************************************/

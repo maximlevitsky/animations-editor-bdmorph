@@ -14,22 +14,10 @@
 #include "VideoModel.h"
 #include <assert.h>
 
-using std::max;
-using std::min;
-
-
 /******************************************************************************************************************************/
 EditorWindow::EditorWindow(QWidget* parent) :
-			kvfModel(NULL), renderModel(NULL), outlineModel(NULL) ,wireframeTransparency(0),
-			QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
-			pinMode(false),
-			multitouchMode(false),
-			drawVF(false),
-			drawVFOrig(false),
-			disableEdit(false),
-			hoveredVertex(-1),
-			hoveredFace(-1),
-			showSelection(false)
+			programstate(NULL),
+			QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 {
     setAttribute(Qt::WA_AcceptTouchEvents);
     setAttribute(Qt::WA_StaticContents);
@@ -37,197 +25,54 @@ EditorWindow::EditorWindow(QWidget* parent) :
     setMouseTracking(true);
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
-
 /******************************************************************************************************************************/
-void  EditorWindow::onResetPoints()
+void EditorWindow::programStateUpdated(int flags, void *param)
 {
-	if (disableEdit || !renderModel) return;
-	renderModel->historyReset();
-	emit modelEdited(renderModel);
-	repaint();
+	if (!programstate) return;
+	MeshModel *currentModel = programstate->currentModel;
+	bool need_repaint = false;
 
-	/* TODO: updat alpha in GUI */
-}
-/******************************************************************************************************************************/
-void EditorWindow::onUndoModel()
-{
-	if (disableEdit || !renderModel) return;
-	renderModel->historyUndo();
-	repaint();
-	emit modelEdited(renderModel);
-
-	/* TODO: updat alpha in GUI */
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onRedoModel()
-{
-	if (disableEdit || !renderModel) return;
-	renderModel->historyRedo();
-	repaint();
-	emit modelEdited(renderModel);
-
-	/* TODO: updat alpha in GUI */
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onSaveLog()
-{
-	if ( !kvfModel || disableEdit) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.txt"));
-    if (filename == "") return;
-
-    std::ofstream outfile(filename.toAscii());
-    kvfModel->historySaveToFile(outfile);
-}
-/******************************************************************************************************************************/
-void EditorWindow::onRunLog()
-{
-	if ( !kvfModel || disableEdit) return;
-    QString filename = QFileDialog::getOpenFileName(this, tr("Choose log"), QString(), QLatin1String("*.txt"));
-    if (filename == "") return;
-    std::ifstream infile(filename.toAscii());
-
-    printf("STARTING log replay\n");
-    TimeMeasurment t;
-
-    int numSteps;
-    infile >> numSteps;
-
-    /* TODO: rework and update alpha in GIU*/
-
-    for (int step = 0; step < numSteps; step++)
-    {
-    	kvfModel->historyLoadFromFile(infile);
-        repaint();
-        emit modelEdited(kvfModel);
-    }
-
-    printf("DONE WITH log replay (took %f msec)\n", t.measure_msec());
-    kvfModel->historySnapshot();
-
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onChangeAlpha(int i)
-{
-	if ( !kvfModel || disableEdit) return;
-	kvfModel->setAlpha((double) (i) / 100 * 8);
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onDrawVFModeChanged(bool m)
-{
-	drawVF = m;
-	repaint();
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onDrawOrigVFModeChanged(bool m)
-{
-	drawVFOrig = m;
-	repaint();
-}
-
-void EditorWindow::onShowSelectionChanged(bool m)
-{
-	showSelection = m;
-	if (showSelection) {
-		setMouseTracking(true);
-	} else {
-		setMouseTracking(false);
-		hoveredFace = -1;
-		hoveredVertex = -1;
-		emit selectionChanged(-1,-1);
-	}
-	repaint();
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onReuseVF()
-{
-	if ( !kvfModel || disableEdit) return;
-	kvfModel->applyVF();
-	emit modelEdited(kvfModel);
-	repaint();
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onPinModeChanged(bool m)
-{
-	pinMode = m;
-}
-/******************************************************************************************************************************/
-void EditorWindow::onChangeWireframe(int i)
-{
-	wireframeTransparency = i;
-	repaint();
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onClearPins()
-{
-	if (kvfModel)
-		kvfModel->clearPins();
-	repaint();
-}
-/******************************************************************************************************************************/
-
-void EditorWindow::onResetTransform()
-{
-	if (!renderModel) return;
-
-	double maxZoomX = width() / renderModel->getWidth();
-	double maxZoomY = height() / renderModel->getHeight();
-
-	double maxZoom = std::min(maxZoomX,maxZoomY);
-	modelWidth = renderModel->getWidth() * maxZoom * 0.5;
-	modelLocation = QPointF(0, 0);
-	repaint();
-}
-
-/******************************************************************************************************************************/
-void EditorWindow::onFrameSwitched(MeshModel* model)
-{
-	hoveredVertex = -1;
-	hoveredFace = -1;
-	renderModel = model;
-	kvfModel = dynamic_cast<KVFModel*>(model);
-	outlineModel = dynamic_cast<OutlineModel*>(model);
-
-	if (outlineModel)
-		onResetTransform();
-	repaint();
-}
-
-/******************************************************************************************************************************/
-
-void EditorWindow::onVideoModelLoaded(VideoModel* model)
-{
-	if (!model)
+	if (flags & (ProgramState::CURRENT_MODEL_CHANGED))
 	{
-		renderModel = NULL;
-		kvfModel = NULL;
-		outlineModel = NULL;
-	} else
-	{
-		renderModel = model;
-		onResetTransform();
+		programstate->selectedFace = -1;
+		programstate->selectedFace = -1;
+		need_repaint = true;
 	}
+
+	if (flags & (ProgramState::KEYFRAME_EDITED | ProgramState::ANIMATION_STEPPED)) {
+		need_repaint = true;
+	}
+
+	if (flags & ProgramState::EDIT_SETTINGS_CHANGED)
+	{
+		setMouseTracking(programstate->showSelection);
+		programstate->selectedFace = -1;
+		programstate->selectedFace = -1;
+		need_repaint = true;
+	}
+
+	if (flags & ProgramState::TEXTURE_CHANGED) {
+		makeCurrent();
+		glBindTexture(GL_TEXTURE_2D, programstate->textureRef);
+		need_repaint = true;
+	}
+
+	if (flags & ProgramState::TRANSFORM_RESET) {
+		if (currentModel)  {
+			double maxZoomX = width() / currentModel->getWidth();
+			double maxZoomY = height() / currentModel->getHeight();
+			double maxZoom = std::min(maxZoomX,maxZoomY);
+			modelWidth = currentModel->getWidth() * maxZoom * 0.5;
+			modelLocation = QPointF(0, 0);
+			need_repaint = true;
+		}
+	}
+
+	if (need_repaint)
+		repaint();
 }
 
 /******************************************************************************************************************************/
-
-void EditorWindow::onTextureChanged(GLuint texture)
-{
-	textureRef = texture;
-	makeCurrent();
-	glBindTexture(GL_TEXTURE_2D, textureRef);
-	repaint();
-}
-
-/******************************************************************************************************************************/
-
 void EditorWindow::initializeGL()
 {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -255,6 +100,9 @@ void EditorWindow::paintGL()
     glClearColor(1.,1.,1., 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	if (!programstate) return;
+	MeshModel *renderModel = programstate->currentModel;
+
     if (!renderModel)
     	return;
 
@@ -272,8 +120,9 @@ void EditorWindow::paintGL()
 
 	/* render the model*/
 	renderModel->renderFaces();
-	if (wireframeTransparency) {
-		glColor4f(0,0,0,(double)wireframeTransparency/100.0);
+	if (programstate->wireframeTransparency)
+	{
+		glColor4f(0,0,0,programstate->wireframeTransparency);
 		renderModel->renderWireframe();
 	}
 
@@ -283,16 +132,16 @@ void EditorWindow::paintGL()
 
 	/* Render hovered vertices */
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	if (hoveredFace != -1)
+	if (programstate->selectedFace != -1)
 	{
 		glColor4f(0,0,1,0.5);
-		renderModel->renderFace(hoveredFace);
+		renderModel->renderFace(programstate->selectedFace);
 	}
 
-	if (hoveredVertex != -1)
+	if (programstate->selectedVertex != -1)
 	{
 		glColor3f(0,0,1);
-		renderModel->renderVertex(hoveredVertex, ratio);
+		renderModel->renderVertex(programstate->selectedVertex, ratio);
 	}
 
 	/* render selected vertices */
@@ -302,12 +151,25 @@ void EditorWindow::paintGL()
 
 
 	/* render VF of KVF model */
+	KVFModel* kvfModel = dynamic_cast<KVFModel*>(renderModel);
 	if (kvfModel)
 	{
-		if (drawVFOrig)
+		if (programstate->showVForig)
 			kvfModel->renderVFOrig();
-		if (drawVF)
+		if (programstate->showVF)
 			kvfModel->renderVF();
+	}
+
+	BDMORPHModel* bdmodel = dynamic_cast<BDMORPHModel*>(renderModel);
+
+	if (bdmodel) {
+		if (programstate->showBDmorphEdge)
+			bdmodel->renderInitialEdge(ratio);
+
+		if (programstate->showBDmorphOrigMesh && bdmodel->modela ) {
+			glColor4f(1,0,0,programstate->wireframeTransparency);
+			bdmodel->modela->renderWireframe();
+		}
 	}
 }
 
@@ -327,15 +189,16 @@ bool EditorWindow::event(QEvent *event)
 /******************************************************************************************************************************/
 bool EditorWindow::touchEvent(QTouchEvent* te)
 {
-	if (pinMode)
-		return false; //if pin mode is checked, directed to mousepress event.
+	if (!programstate) return false;
+	if (programstate->pinMode) return false;
+	if (programstate->getCurrentMode() != ProgramState::PROGRAM_MODE_DEFORMATIONS) return false;
 
-	if (!kvfModel || disableEdit)
-		return false;
+	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
+    if (!kvfModel) return false;
 
 	QList<QTouchEvent::TouchPoint> touchPoints = te->touchPoints();
-
-	if (!multitouchMode && touchPoints.count() == 2) {
+	if (!programstate->multitouchMode && touchPoints.count() == 2)
+	{
 		//zoom only in normal mode
 		QTouchEvent::TouchPoint p0 = touchPoints.first();
 		QTouchEvent::TouchPoint p1 = touchPoints.last();
@@ -361,7 +224,7 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 		QTouchEvent::TouchPoint p = touchPoints[i];
 		if (touchPointLocations.count(p.id()) == 0) {
 			touchPointLocations[p.id()] = p.pos();
-			touchToVertex[p.id()] = kvfModel->getClosestVertex(screenToModel(p.pos()));
+			touchToVertex[p.id()] = kvfModel->getClosestVertex(screenToModel(kvfModel,p.pos()));
 		}
 		ids.insert(p.id());
 	}
@@ -400,18 +263,22 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 			if (touchToVertex[touchPoints[i].id()] == -1)
 				continue;
 
-			Vector2 displacement = screenToModel(touchPoints[i].pos()) - screenToModel(touchPointLocations[touchPoints[i].id()]);
+			Vector2 displacement = screenToModel(kvfModel,touchPoints[i].pos()) -
+					screenToModel(kvfModel,touchPointLocations[touchPoints[i].id()]);
 
 			disps.insert(DisplacedVertex(touchToVertex[touchPoints[i].id()], displacement));
 			touchPointLocations[touchPoints[i].id()] = touchPoints[i].pos();
 		}
-		if (disps.size() > 0) {
+		if (disps.size() > 0)
+		{
 			kvfModel->calculateVF(disps);
 
-			if (!drawVF && !drawVFOrig)
+			if (!programstate->showVF && !programstate->showVForig)
 				kvfModel->applyVFLogSpiral();
 
-			emit modelEdited(kvfModel);
+			programstate->FPS = kvfModel->create_msec;
+			programstate->onUpdateModel();
+			programstate->updateStatistics();
 		}
 	}
 
@@ -424,35 +291,42 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 /******************************************************************************************************************************/
 void EditorWindow::keyPressEvent(QKeyEvent *e)
 {
-	if (disableEdit)
-		return;
+	if (!programstate) return;
+	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
 
     switch(e->key()) {
     case Qt::Key_Up:
     	moveUp();
+    	repaint();
     	break;
     case Qt::Key_Down:
     	moveDown();
+    	repaint();
     	break;
     case Qt::Key_Left:
     	moveLeft();
+    	repaint();
     	break;
     case Qt::Key_Right:
     	moveRight();
+    	repaint();
     	break;
     case Qt::Key_Plus:
     case Qt::Key_Equal:
     	zoomIn();
+    	repaint();
     	break;
     case Qt::Key_Minus:
     case Qt::Key_Underscore:
     	zoomOut();
+    	repaint();
     	break;
     case Qt::Key_V:
-    	onReuseVF();
+    	if (programstate->getCurrentMode() != ProgramState::PROGRAM_MODE_DEFORMATIONS) break;
+    	if (kvfModel) kvfModel->applyVF();
+    	programstate->onUpdateModel();
     	break;
     }
-    update();
 }
 
 /******************************************************************************************************************************/
@@ -460,22 +334,21 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
 {
 	mouseMoved = false;
 	mouseLeft = event->buttons() & Qt::LeftButton;
-
-
     QPointF pos = event->pos(); // (0,0) is upper left
     pos.setY(height()-pos.y()-1);
     lastMousePos = pos;
 
-	if (!renderModel || disableEdit)
-		return;
+	if (!programstate) return;
+	MeshModel *model = programstate->currentModel;
+	if (!model) return;
 
     setCursor(Qt::BlankCursor);
+    Point2 modelPos = screenToModel(model,pos);
 
-    Point2 modelPos = screenToModel(pos);
-
-	if ((QApplication::keyboardModifiers() == Qt::NoModifier) && !pinMode && kvfModel)
+	if ((QApplication::keyboardModifiers() == Qt::NoModifier) &&
+			!programstate->pinMode && programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS)
 	{
-		Vertex v = kvfModel->getClosestVertex(modelPos);
+		Vertex v = model->getClosestVertex(modelPos);
 		/* Select this vertex */
 		selectedVertices.clear();
 		selectedVertices.push_back(v);
@@ -484,7 +357,7 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
 	}
 
 	if (event->buttons() & Qt::LeftButton)
-		renderModel->mousePressAction(modelPos,getRadius());
+		model->mousePressAction(modelPos,getRadius(model));
 
 	repaint();
 	return;
@@ -494,8 +367,10 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 {
 	mouseLeft = event->buttons() & Qt::LeftButton;
 
-	if (!renderModel)
-		return;
+	if (!programstate) return;
+	MeshModel *model = programstate->currentModel;
+	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
+	if (!model) return;
 
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
@@ -506,11 +381,11 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
     lastMousePos = curPos;
 
     /* Plain mouse move */
-    if (event->buttons() == Qt::NoButton && showSelection)
+    if (event->buttons() == Qt::NoButton && programstate->showSelection)
     {
-		hoveredVertex = renderModel->getClosestVertex(screenToModel(curPos));
-		hoveredFace = renderModel->getFaceUnderPoint(screenToModel(curPos));
-		emit selectionChanged(hoveredVertex,hoveredFace);
+		programstate->selectedVertex = model->getClosestVertex(screenToModel(model,curPos));
+		programstate->selectedFace = model->getFaceUnderPoint(screenToModel(model,curPos));
+		programstate->updateStatistics();
 		repaint();
 		return;
     }
@@ -527,8 +402,12 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 	/* Left button pressed - edit */
 	if ((event->buttons() & Qt::LeftButton))
     {
-		/* See if we can deform the mesh */
-		if (!disableEdit && !(mods & Qt::ShiftModifier) && !pinMode && kvfModel && kvfModel->getPinnedVertexes().size() != 0 )
+		bool deformMode =
+				programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS
+				&& kvfModel && kvfModel->getPinnedVertexes().size() &&
+				!programstate->pinMode && !(mods & Qt::ShiftModifier);
+
+		if (deformMode)
 		{
 			QPointF diff = curPos - oldPos;
 			Vertex selectedVertex = selectedVertices[0];
@@ -538,24 +417,22 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 
 			std::cout << "Mouse move delta:(" << diff.rx() << "," << diff.ry() << ")" << std::endl;
 
-			TimeMeasurment t;
-
 			std::set<DisplacedVertex> disps;
 			disps.insert(DisplacedVertex(selectedVertex, Vector2(diff.x(),diff.y())));
 			kvfModel->calculateVF(disps);
 
-			if (!drawVF && !drawVFOrig)
+			if (!programstate->showVF && !programstate->showVForig)
 				kvfModel->applyVFLogSpiral();
 
-			emit modelEdited(kvfModel);
+			programstate->FPS = kvfModel->create_msec;
+			programstate->onUpdateModel();
+			programstate->updateStatistics();
 			repaint();
-
-			double msec = t.measure_msec();
-			printf("KVF: Total frame time (with rendering): %f msec (%f FPS)\n\n", msec, 1000.0 / msec);
 			return;
 		}
 
-		if (!renderModel->moveAction(screenToModel(oldPos), screenToModel(curPos), getRadius())) {
+		if (!model->moveAction(screenToModel(model,oldPos), screenToModel(model,curPos), getRadius(model)))
+		{
 			/* If all failed, move the model */
 			QPointF diff = curPos - oldPos;
 			move(QPointF(diff.x(),diff.y()));
@@ -574,30 +451,33 @@ void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
     setCursor(Qt::ArrowCursor);
     selectedVertices.clear();
     mouseMoved = false;
-    if (!renderModel)
-    	return;
 
-    renderModel->historySnapshot();
+	if (!programstate) return;
+	MeshModel *model = programstate->currentModel;
+	if (!model) return;
+
+	model->historySnapshot();
     QPointF curPos = event->pos();
     curPos.setY(height()-curPos.y()-1);
-    renderModel->mouseReleaseAction(screenToModel(curPos),mouseMoved, getRadius(), !mouseLeft);
+    model->mouseReleaseAction(screenToModel(model,curPos),mouseMoved, getRadius(model), !mouseLeft);
     update();
 }
 
 /******************************************************************************************************************************/
 void EditorWindow::wheelEvent(QWheelEvent *event)
 {
-	if (!renderModel)
-		return;
+	if (!programstate) return;
+	MeshModel *model = programstate->currentModel;
+	if (!model) return;
 
 	QPointF pos = event->pos();
 	pos.setY(height()-pos.y()-1);
 
-	Point2 posBefore = screenToModel(pos);
+	Point2 posBefore = screenToModel(model,pos);
 	zoom(event->delta() > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR);
-	Point2 posAfter = screenToModel(pos);
+	Point2 posAfter = screenToModel(model,pos);
 
-	Vector2 diff = (posAfter-posBefore) * (modelWidth / renderModel->getWidth());
+	Vector2 diff = (posAfter-posBefore) * (modelWidth / model->getWidth());
 	QPointF m = QPointF(diff.x,diff.y);
 	move(m);
 
@@ -617,32 +497,22 @@ void EditorWindow::move(QPointF direction)
 }
 
 /******************************************************************************************************************************/
-Point2 EditorWindow::screenToModel(QPointF pos)
+Point2 EditorWindow::screenToModel(MeshModel *model,QPointF pos)
 {
+	assert(model);
 	pos -= modelLocation;
 	pos -= QPointF((double)width()/2,(double)height()/2);
-	pos *= renderModel->getWidth() / modelWidth;
-	pos.rx() += renderModel->center.x;
-	pos.ry() += renderModel->center.y;
+	pos *= model->getWidth() / modelWidth;
+	pos.rx() += model->center.x;
+	pos.ry() += model->center.y;
 	return Point2(pos.x(), pos.y());
 }
 
 
-double EditorWindow::getRadius()
+double EditorWindow::getRadius(MeshModel *model)
 {
-	Point2 modelPos = screenToModel(QPointF(0,0));
-	Point2 modelPos2 = screenToModel(QPointF(0,5));
+	Point2 modelPos = screenToModel(model,QPointF(0,0));
+	Point2 modelPos2 = screenToModel(model,QPointF(0,5));
 	return modelPos.distance(modelPos2);
 }
 /******************************************************************************************************************************/
-
-
-void EditorWindow::onAnimationStarted()
-{
-	disableEdit = true;
-}
-
-void EditorWindow::onAnimationStopped()
-{
-	disableEdit = false;
-}
