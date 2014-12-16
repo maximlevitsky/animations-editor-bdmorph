@@ -20,7 +20,7 @@ public:
 	bool mouseReleaseAction(Point2 pos, bool moved, double radius, bool rightButton);
 	bool moveAction(Point2 pos1, Point2 pos2, double radius);
 
-	bool saveToFile(std::string filename);
+	bool saveToFile(const std::string filename);
 	bool loadFromFile(const std::string &filename);
 	bool createMesh(MeshModel *out, int approxTriangleCount);
 

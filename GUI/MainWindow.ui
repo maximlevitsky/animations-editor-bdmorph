@@ -29,7 +29,7 @@
      <x>0</x>
      <y>0</y>
      <width>968</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuModel">
@@ -89,6 +89,7 @@
     <addaction name="actionReapply_VF"/>
     <addaction name="separator"/>
     <addaction name="actionTest_animations"/>
+    <addaction name="actionDebug_Console"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -290,6 +291,14 @@
   <action name="actionLoad_keyframe">
    <property name="text">
     <string>Load keyframe...</string>
+   </property>
+  </action>
+  <action name="actionDebug_Console">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Debug Console</string>
    </property>
   </action>
  </widget>

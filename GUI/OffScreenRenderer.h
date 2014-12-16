@@ -11,9 +11,19 @@ class OffScreenRenderer : public QGLWidget
 {
 	Q_OBJECT
 public:
-	OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget);
+	OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, int width,int height);
 	virtual ~OffScreenRenderer() {}
-	QImage renderThumbnail(MeshModel* model);
+
+	/* Slow simple render */
+	void renderToImage(MeshModel* model, QImage& out, int stripSize, double scale);
+
+	/* Fast render for video */
+	void setupTransform(MeshModel* model,bool vertFlip,int stripSize, double scale);
+	void renderBGRA(MeshModel* model, void* out);
+
+private:
+	int width;
+	int height;
 	QGLFramebufferObject *fbo;
 };
 

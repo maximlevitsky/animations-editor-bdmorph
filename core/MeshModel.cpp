@@ -187,8 +187,10 @@ void MeshModel::renderFaces()
 	glEnable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	glBegin(GL_TRIANGLES);
 	for (unsigned int i = 0; i < numFaces; i++)
-		renderFace(i);
+		renderFaceInternal(i);
+	glEnd();
 
 	glPopAttrib();
 }
@@ -204,7 +206,7 @@ void MeshModel::renderWireframe()
 
 	glBegin(GL_TRIANGLES);
 	for (unsigned int i = 0; i < numFaces; i++)
-		renderFace(i);
+		renderFaceInternal(i);
 	glEnd();
 	glPopAttrib();
 }
@@ -235,6 +237,15 @@ void MeshModel::renderVertex(unsigned int v, double scale)
 
 void MeshModel::renderFace(unsigned int fnum)
 {
+	glBegin(GL_TRIANGLES);
+	renderFaceInternal(fnum);
+	glEnd();
+
+}
+
+
+void MeshModel::renderFaceInternal(unsigned int fnum)
+{
 	if (fnum >= numFaces)
 		return;
 
@@ -245,14 +256,10 @@ void MeshModel::renderFace(unsigned int fnum)
 
 	Face &f = (*faces)[fnum];
 
-	glBegin(GL_TRIANGLES);
-
 	for (unsigned int j = 0; j < 3; j++) {
 		glTexCoord2f(coords[f[j]].x, coords[f[j]].y);
 		glVertex2f(vertices[f[j]].x, vertices[f[j]].y);
 	}
-	glEnd();
-
 }
 
 /******************************************************************************************************************************/

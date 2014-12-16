@@ -1,5 +1,6 @@
 #include "vector2d.h"
 #include <QDebug>
+#include <math.h>
 
 template<class T>
 Vector2D<T>& Vector2D<T>::rotate(T angle) { // counterclockwise

@@ -8,6 +8,7 @@
 #include "OutlineModel.h"
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QVideoEncoder.h>
 
 class ProgramState: public QObject
 {
@@ -46,7 +47,7 @@ public:
 		PROGRAM_MODE_DEFORMATIONS,
 		PROGRAM_MODE_OUTLINE,
 		PROGRAM_MODE_ANIMATION,
-		PROGRAM_MODE_VIDEO,
+		PROGRAM_MODE_BUSY,
 	};
 
 	/* Current program mode */
@@ -65,6 +66,7 @@ public:
 	int progressValue;
 	int selectedVertex;
 	int selectedFace;
+	QString statusbarMessage;
 
 	/* Editor settings*/
 	bool pinMode;
@@ -88,12 +90,14 @@ public:
 
 	/* Misc */
 	OffScreenRenderer *thumbnailRenderer;
+	OffScreenRenderer *imageRenderer;
 
 public:
 	/* Load/store parts of the state */
     bool createProject(std::string file);
 	bool loadProject(std::string filename);
 	bool saveToFile(std::string filename);
+	bool saveScreenshot(std::string filename);
 	bool createMeshFromOutline(int triangleCount);
 	void editOutline();
 	bool setTexture(std::string textureFile);
@@ -130,6 +134,8 @@ public:
 	void resetTransform();
 	void setProgress(int value);
 	void updateGUI();
+
+	bool createVideo(QString file);
 signals:
 	/* Informs all the users that parts of the state changed */
 	void programStateUpdated(int flags, void *param);
@@ -150,6 +156,12 @@ private:
 	QTimer *animationTimer;
 	QElapsedTimer animationReferenceTimer;
 	int maxAnimationTime;
+
+	/* Video encoding task*/
+	QVideoEncoder* videoEncoder;
+	uint8_t* imagebuffer;
+	int videoEncodingTime;
+
 };
 
 /***********************************************************************************************************/

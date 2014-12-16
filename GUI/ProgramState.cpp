@@ -1,6 +1,7 @@
 #include "ProgramState.h"
 #include <QMessageBox>
 #include <algorithm>
+#include <QApplication>
 
 /***********************************************************************************************************/
 ProgramState::ProgramState() :
@@ -23,11 +24,13 @@ ProgramState::ProgramState() :
 	outlineModel(NULL),
 	showBDmorphEdge(false),
 	showBDmorphOrigMesh(false),
-	targetFPS(30)
+	targetFPS(30),
+	videoEncoder(NULL)
 {
 	animationTimer = new QTimer(this);
 	animationTimer->setSingleShot(true);
 	connect_(animationTimer, timeout (), this, onAnimationTimer());
+	imagebuffer = (uint8_t*)malloc(1024*768*4);
 }
 
 /***********************************************************************************************************/
@@ -35,7 +38,7 @@ ProgramState::~ProgramState()
 {
 	delete videoModel;
 	delete outlineModel;
-	delete thumbnailRenderer;
+	free(imagebuffer);
 }
 /***********************************************************************************************************/
 bool ProgramState::createProject(std::string file)
@@ -104,7 +107,7 @@ bool ProgramState::createProject(std::string file)
 		currentModel = videoModel->getKeyframeByIndex(1);
 		vertexCount = videoModel->numVertices;
 		facesCount = videoModel->numFaces;
-		emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED,NULL);
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED,NULL);
 	}
 	else {
 		QMessageBox::warning(NULL, "Error", "Unknown file type selected");
@@ -134,7 +137,7 @@ bool ProgramState::loadProject(std::string filename)
 		currentModel = videoModel->getKeyframeByIndex(0);
 		vertexCount = videoModel->numVertices;
 		facesCount = videoModel->numFaces;
-		emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED, NULL);
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED, NULL);
     } else {
     	QMessageBox::warning(NULL, "Error", "Unknown file type selected");
     	return false;
@@ -163,7 +166,72 @@ bool ProgramState::saveToFile(std::string filename)
     return result;
 }
 
+bool ProgramState::saveScreenshot(std::string filename)
+{
+	if (!currentModel) return false;
+	QImage img;
+	imageRenderer->renderToImage(currentModel, img,0,0.9);
+
+	bool result = img.save(QString::fromStdString(filename));
+	if (!result) {
+		QMessageBox::warning(NULL, "Error", "Error on screenshot save");
+		return false;
+	}
+	return true;
+}
+
 /***********************************************************************************************************/
+bool ProgramState::createVideo(QString file)
+{
+	videoEncoder = new QVideoEncoder();
+	if (!videoEncoder->createFile(file, 1024,768)) {
+		delete videoEncoder;
+		videoEncoder = NULL;
+		QMessageBox::warning(NULL, "Error", "Error initializing video encoding");
+		return false;
+	}
+
+	switchToKeyframe(0);
+	mode = PROGRAM_MODE_BUSY;
+	emit programStateUpdated(MODE_CHANGED, NULL);
+
+	maxAnimationTime = videoModel->getTotalTime();
+	imageRenderer->setupTransform(videoModel,true,0,0.7);
+	videoEncodingTime = 0;
+
+	statusbarMessage = "Creating video...";
+
+	for (; videoEncodingTime < maxAnimationTime ; videoEncodingTime += 16)
+	{
+		TimeMeasurment t;
+		MeshModel* pFrame = videoModel->interpolateFrame(videoEncodingTime, &FPS);
+		printf("Took %f msec to BDMORPH the image\n", t.measure_msec());
+		imageRenderer->renderBGRA(pFrame,imagebuffer);
+		printf("Took %f msec to render the image\n", t.measure_msec());
+
+
+		if (!videoEncoder->encodeImage(imagebuffer, videoEncodingTime)) {
+			QMessageBox::critical(NULL, "Error", "Failure during encoding");
+			delete videoEncoder;
+			videoEncoder = NULL;
+			return false;
+
+		}
+		progressValue = (videoEncodingTime * 100) /maxAnimationTime;
+		updateStatistics();
+		QApplication::processEvents();
+	}
+
+	videoEncoder->close();
+	mode = PROGRAM_MODE_DEFORMATIONS;
+	progressValue = 0;
+	statusbarMessage.clear();
+	emit programStateUpdated(MODE_CHANGED|STATUSBAR_UPDATED, NULL);
+	return true;
+}
+
+/***********************************************************************************************************/
+
 bool ProgramState::setTexture(std::string newtextureFile)
 {
 	QPixmap newtex;
@@ -178,6 +246,7 @@ bool ProgramState::setTexture(std::string newtextureFile)
 	return true;
 }
 
+/***********************************************************************************************************/
 
 bool ProgramState::loadKeyframe(std::string filename)
 {
@@ -240,11 +309,15 @@ void ProgramState::editOutline()
 {
 	if (mode == PROGRAM_MODE_OUTLINE) return;
 
+	 if (QMessageBox::question(NULL,
+		"Warning","This will make you loose all changes in animation project",
+		QMessageBox::Cancel|QMessageBox::Ok,QMessageBox::Cancel) != QMessageBox::Ok )
+		return;
+
 	if (!outlineModel && currentModel)
 		outlineModel = new OutlineModel(currentModel);
 
 	clearStatusBar();
-
     if (outlineModel)
     {
     	unloadVideoModel();
@@ -409,7 +482,7 @@ enum ProgramState::PROGRAM_MODE ProgramState::getCurrentMode()
 void ProgramState::startAnimations(int time)
 {
 	if (!videoModel) return;
-	mode = PROGRAM_MODE_VIDEO;
+	mode = PROGRAM_MODE_BUSY;
 	currentAnimationTime = time;
 	maxAnimationTime = videoModel->getTotalTime();
 	animationReferenceTimer.start();
@@ -475,7 +548,7 @@ void ProgramState::interpolateFrame(int time)
 	currentAnimationTime = time;
 	emit programStateUpdated(ANIMATION_STEPPED, NULL);
 
-	if (mode != PROGRAM_MODE_ANIMATION && mode != PROGRAM_MODE_VIDEO)
+	if (mode != PROGRAM_MODE_ANIMATION && mode != PROGRAM_MODE_BUSY)
 	{
 		mode = PROGRAM_MODE_ANIMATION;
 		emit programStateUpdated(MODE_CHANGED, NULL);
@@ -561,7 +634,6 @@ bool ProgramState::loadTextureFile(std::string file, QPixmap &out)
 }
 
 /***********************************************************************************************************/
-
 void ProgramState::updateTexture()
 {
 	if (mode == PROGRAM_MODE_OUTLINE) {
@@ -579,15 +651,19 @@ void ProgramState::updateTexture()
 	textureRef = thumbnailRenderer->bindTexture(texture,GL_TEXTURE_2D);
 	thumbnailRenderer->makeCurrent();
 	glBindTexture(GL_TEXTURE_2D, textureRef);
+	imageRenderer->makeCurrent();
+	glBindTexture(GL_TEXTURE_2D, textureRef);
 	emit programStateUpdated(TEXTURE_CHANGED, NULL);
 }
 
+/***********************************************************************************************************/
 
 void ProgramState::updateGUI()
 {
 	emit programStateUpdated(PANEL_VISIBLITIY_CHANGED, NULL);
 }
 
+/***********************************************************************************************************/
 
 
 void ProgramState::tryToGuessLoadTexture(std::string file)
@@ -601,5 +677,7 @@ void ProgramState::tryToGuessLoadTexture(std::string file)
 		updateTexture();
 	}
 }
+
+/***********************************************************************************************************/
 
 

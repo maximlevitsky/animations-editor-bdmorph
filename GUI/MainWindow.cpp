@@ -17,6 +17,12 @@
 #include "OutlineModel.h"
 #include "ui_About.h"
 
+#include <fcntl.h>
+
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 /*****************************************************************************************************/
 MainWindow::MainWindow()
 {
@@ -36,7 +42,8 @@ MainWindow::MainWindow()
 	addDockWidget(Qt::BottomDockWidgetArea, animationPanel);
 
 	programstate = new ProgramState();
-	programstate->thumbnailRenderer = new OffScreenRenderer(NULL, editorWindow);
+	programstate->thumbnailRenderer = new OffScreenRenderer(NULL, editorWindow,128,128);
+	programstate->imageRenderer = new OffScreenRenderer(NULL, editorWindow, 1024,768);
 
 	/* --------------------------------------------------------------------------------*/
 	/* Make everyone listen to program state */
@@ -75,6 +82,9 @@ MainWindow::MainWindow()
 	connect_(actionAbout, triggered(),						this, onAbout());
 	connect_(actionExit, triggered(), 						this, close());
 	connect_(actionTest_animations, triggered(), 			this, onInterpolationTest());
+
+	connect_(actionSave_video, triggered(),					this, onSaveVideo());
+	connect_(actionDebug_Console, toggled(bool),            this, onToggleDebugConsole(bool));
 
 	/* --------------------------------------------------------------------------------*/
 	animationPanel->btnRepeat->setAction(actionLoop);
@@ -122,6 +132,10 @@ MainWindow::MainWindow()
 /*****************************************************************************************************/
 MainWindow::~MainWindow()
 {
+
+	delete programstate->thumbnailRenderer;
+	delete programstate->imageRenderer;
+
 	delete editorWindow;
 	delete animationPanel;
 	delete sidePanel;
@@ -178,6 +192,12 @@ void MainWindow::programStateUpdated(int flags, void *param)
 			progressIndicator->show();
 		} else
 			progressIndicator->hide();
+
+		if (programstate->statusbarMessage != "")
+			statusBar()->showMessage(programstate->statusbarMessage);
+		else
+			statusBar()->showMessage("Ready");
+
 	}
 
 	if (flags & ProgramState::MODE_CHANGED)
@@ -206,11 +226,17 @@ void MainWindow::programStateUpdated(int flags, void *param)
 /*****************************************************************************************************/
 void MainWindow::onSaveScreenShot()
 {
-	/*TODO */
+	if ( !programstate) return;
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.png *,jpg"));
+    if ( filename == "") return;
+    programstate->saveScreenshot(filename.toStdString());
 }
 void MainWindow::onSaveVideo()
 {
-	/*TODO */
+	if ( !programstate) return;
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.avi"));
+    if ( filename == "") return;
+    programstate->createVideo(filename);
 }
 
 
@@ -230,3 +256,40 @@ void MainWindow::onInterpolationTest()
 }
 
 /*****************************************************************************************************/
+
+void MainWindow::onToggleDebugConsole(bool on)
+{
+#ifdef _WIN32
+
+	// This shit is made excusive for Windows(R) (TM)
+
+	if (on)
+	{
+			// allocate a console for this app
+		AllocConsole();
+
+		// redirect unbuffered STDOUT to the console
+		HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+		int fileDescriptor = _open_osfhandle((intptr_t)consoleHandle, _O_TEXT);
+		FILE *fp = _fdopen( fileDescriptor, "w" );
+		*stdout = *fp;
+		//setvbuf( stdout, NULL, _IONBF, 0 );
+
+		// give the console window a nicer title
+		SetConsoleTitle("Debug Output");
+
+		// give the console window a bigger buffer size
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		if ( GetConsoleScreenBufferInfo(consoleHandle, &csbi) )
+		{
+			COORD bufferSize;
+			bufferSize.X = csbi.dwSize.X;
+			bufferSize.Y = 9999;
+			SetConsoleScreenBufferSize(consoleHandle, bufferSize);
+		}
+	}
+	else {
+		FreeConsole();
+	}
+#endif
+}

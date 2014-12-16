@@ -3,7 +3,6 @@
 #include <fstream>
 #include <ctime>
 #include <stdio.h>
-#include <unistd.h>
 #include <QtGui>
 #include <QtOpenGL>
 
@@ -355,6 +354,9 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
 		repaint();
 		return;
 	}
+
+	if (programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_BUSY)
+		return;
 
 	if (event->buttons() & Qt::LeftButton)
 		model->mousePressAction(modelPos,getRadius(model));

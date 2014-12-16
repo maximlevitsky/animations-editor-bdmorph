@@ -172,7 +172,7 @@ void CholmodSparseMatrix::multiply(CholmodSparseMatrix &m, CholmodSparseMatrix &
         while (curNonzero + (int)rowValues.size() > result.capacity) result.setCapacity(result.capacity*2);
 
         // this better traverse in sorted order...
-        for (typename std::map<int,double>::iterator it = rowValues.begin(); it != rowValues.end(); ++it) {
+        for (auto it = rowValues.begin(); it != rowValues.end(); ++it) {
             //if (ABS(it->second) > numeric_limits::epsilon())
                 result.addElement(i,it->first,it->second);
         }

@@ -15,7 +15,6 @@
 #include "MeshModel.h"
 #include "OffScreenRenderer.h"
 #include "utils.h"
-#include <unistd.h>
 
 #define INTEREVAL (1000/60)
 
@@ -45,7 +44,7 @@ AnimationPanel::AnimationPanel(QWidget* parent) :
 	connect_(sliderAnimationTime, sliderMoved (int), 		this, onTimeSliderMoved(int));
 
 	/* Keyframes list */
-	connect_(lstKeyFrames, itemClicked(QListWidgetItem*), 	this, onItemClicked(QListWidgetItem*));
+	connect_(lstKeyFrames, itemPressed(QListWidgetItem*), 	this, onItemClicked(QListWidgetItem*));
 	connect_(cloneAction, triggered(), 						this, onCloneKeyFramePressed());
 	connect_(changeTimeAction, triggered(), 				this, onKeyframeChangeTime());
 	connect_(deleteFramesAction, triggered(), 				this, onDeleteKeyframe());
@@ -111,11 +110,11 @@ void AnimationPanel::programStateUpdated(int flags, void *param)
 		}
 
 		ProgramState::PROGRAM_MODE mode = programstate->getCurrentMode();
-		lstKeyFrames->setDisabled(mode == ProgramState::PROGRAM_MODE_VIDEO);
-		sliderAnimationTime->setDisabled(mode == ProgramState::PROGRAM_MODE_VIDEO);
-		btnBackward->setDisabled(mode == ProgramState::PROGRAM_MODE_VIDEO);
+		lstKeyFrames->setDisabled(mode == ProgramState::PROGRAM_MODE_BUSY);
+		sliderAnimationTime->setDisabled(mode == ProgramState::PROGRAM_MODE_BUSY);
+		btnBackward->setDisabled(mode == ProgramState::PROGRAM_MODE_BUSY);
 
-		if (mode == ProgramState::PROGRAM_MODE_VIDEO)
+		if (mode == ProgramState::PROGRAM_MODE_BUSY)
 			btnAnimationPlay->setIcon(QIcon(":/icons/pause.png"));
 		else
 			btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));
@@ -180,10 +179,13 @@ void AnimationPanel::onKeyframeChangeTime()
 	if (currentID == -1 || currentID == 0) return;
 
 	QRect r = lstKeyFrames->visualItemRect(lstKeyFrames->item(currentID));
+
+	int upstripe = (r.height() - 128)/2;
+
 	r.setLeft(r.left()+10);
 	r.setRight(r.right()-10);
 
-	timeEdit->move(r.left(),r.bottom() - timeEdit->height()-5);
+	timeEdit->move(r.left(),r.bottom() - timeEdit->height()/2 - upstripe);
 	timeEdit->resize(r.width(),timeEdit->height());
 	timeEdit->setText(QString::fromStdString(printTime(programstate->getKeyframeTime(currentID))));
 	timeEdit->show();
@@ -215,7 +217,7 @@ void AnimationPanel::onPlayPauseButtonPressed()
 	if (!programstate) return;
 	ProgramState::PROGRAM_MODE mode = programstate->getCurrentMode();
 
-	if (mode == ProgramState::PROGRAM_MODE_VIDEO)
+	if (mode == ProgramState::PROGRAM_MODE_BUSY)
 		programstate->stopAnimations();
 	else
 		programstate->startAnimations(sliderAnimationTime->value());
@@ -275,7 +277,8 @@ void AnimationPanel::updateListItem(int id)
 	}
 
 	/* This code is gross... yuck and I wrote it*/
-	QImage im = programstate->thumbnailRenderer->renderThumbnail(frame);
+	QImage im;
+	programstate->thumbnailRenderer->renderToImage(frame, im,30,1);
 	QPixmap p = QPixmap::fromImage(im);
 
 	QPainter painter(&p);
@@ -300,7 +303,7 @@ void AnimationPanel::insertPlus(int id)
 
 void AnimationPanel::selectFrame(int index)
 {
-	lstKeyFrames->scrollToItem(lstKeyFrames->item(index));
+	lstKeyFrames->scrollToItem(lstKeyFrames->item(index+1));
 	lstKeyFrames->setCurrentRow(index);
 }
 

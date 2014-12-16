@@ -8,6 +8,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <fstream>
+#include <QApplication>
 
 SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), programstate(NULL)
 {
@@ -59,8 +60,14 @@ void SidePanel::programStateUpdated(int flags, void *param)
 		bool animations = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_ANIMATION;
 		bool outline = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_OUTLINE;
 		bool deformations = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS;
-		bool video = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_VIDEO;
+		bool video = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_BUSY;
 		bool nothing = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_NONE;
+
+		frameOutline->setVisible(false);
+		frameKVF->setVisible(false);
+		frameBDMorph->setVisible(false);
+		frameEdit->setVisible(false);
+		frameWireframe->setVisible(false);
 
 		frameLoad->setEnabled(!video);
 		btnConvertToKeyframe->setEnabled(animations);
@@ -201,6 +208,8 @@ void SidePanel::onRunLog()
     int numSteps;
     infile >> numSteps;
 
+    programstate->statusbarMessage = "Replaying log...";
+
     for (int step = 0; step < numSteps; step++)
     {
     	kvfModel->historyLoadFromFile(infile);
@@ -208,8 +217,11 @@ void SidePanel::onRunLog()
     	programstate->updateSettings();
     	programstate->FPS = kvfModel->create_msec;
     	programstate->setProgress((step*100)/numSteps);
+		QApplication::processEvents();
+
     }
 
+    programstate->statusbarMessage.clear();
     programstate->setProgress(0);
 
     printf("DONE WITH log replay (took %f msec)\n", t.measure_msec());

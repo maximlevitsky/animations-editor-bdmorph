@@ -34,6 +34,7 @@ public slots:
 	void onSaveVideo();
 	void onAbout();
 	void onInterpolationTest();
+	void onToggleDebugConsole(bool on);
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;

@@ -3,11 +3,9 @@
 #include <iostream>
 #include <fstream>
 #include <complex>
-#include <cmath>
+#include <math.h>
 #include <cholmod.h>
 #include <QtOpenGL>
-
-#define SQRT_2 1.41421356
 
 #include "utils.h"
 #include "KVFModel.h"
@@ -123,13 +121,13 @@ void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
         P.addElement(3*f+0,j,gjx*2);
         P.addElement(3*f+0,k,gkx*2);
 
-        P.addElement(3*f+1,i,giy*SQRT_2);
-        P.addElement(3*f+1,j,gjy*SQRT_2);
-        P.addElement(3*f+1,k,gky*SQRT_2);
+        P.addElement(3*f+1,i,giy*M_SQRT2);
+        P.addElement(3*f+1,j,gjy*M_SQRT2);
+        P.addElement(3*f+1,k,gky*M_SQRT2);
 
-        P.addElement(3*f+1,i+numVertices,gix*SQRT_2);
-        P.addElement(3*f+1,j+numVertices,gjx*SQRT_2);
-        P.addElement(3*f+1,k+numVertices,gkx*SQRT_2);
+        P.addElement(3*f+1,i+numVertices,gix*M_SQRT2);
+        P.addElement(3*f+1,j+numVertices,gjx*M_SQRT2);
+        P.addElement(3*f+1,k+numVertices,gkx*M_SQRT2);
 
         P.addElement(3*f+2,i+numVertices,giy*2);
         P.addElement(3*f+2,j+numVertices,gjy*2);
@@ -293,6 +291,7 @@ void KVFModel::applyVFLogSpiral()
 	create_msec = lastVFCalcTime + lastLogSpiralTime;
 	double FPS = 1000.0 / (create_msec);
 	printf("KVF: Total solve time: %f msec (%f FPS)\n", create_msec, FPS);
+    printf("\n");
 
     historyAdd(disps);
 }

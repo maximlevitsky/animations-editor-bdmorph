@@ -29,7 +29,7 @@ static double inline calculate_tan_half_angle(double a,double b,double c)
 	if (down <= 0)
 		return std::numeric_limits<double>::infinity();
 
-	assert(!isnan(up) && !isnan(down));
+	//assert(!isnan(up) && !isnan(down));
 
 	double val = up/down;
 	assert(val >= 0);
@@ -740,7 +740,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 		printf("BDMORPH: iteration %i : \u2207F and H(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
 
 		if (grad_norm < END_ITERATION_VALUE) {
-			printf("BDMORPH: iteration %i : found solution\n", iteration);
+			debug_printf("BDMORPH: iteration %i : found solution\n", iteration);
 			 break;
 		}
 
@@ -764,16 +764,16 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 
 		#ifdef __DEBUG__
 		char filename[50];
-		sprintf(filename, "iteration%d.m", iteration);
+		sdebug_printf(filename, "iteration%d.m", iteration);
 		FILE* file = fopen(filename, "w");
 		EnergyHessian.display("H", file);
-		fprintf(file, "Hf = H + tril(H, -1)';\n\n");
+		fdebug_printf(file, "Hf = H + tril(H, -1)';\n\n");
 		EnergyGradient.display("Gf", file);
-		fprintf(file, "\n\n");
+		fdebug_printf(file, "\n\n");
 		K.display("K", file);
-		fprintf(file, "\n\n");
+		fdebug_printf(file, "\n\n");
 		NewtonRHS.display("NEWTONRHS", file);
-		fprintf(file, "RHS = Hf * K - Gf;\n\n");
+		fdebug_printf(file, "RHS = Hf * K - Gf;\n\n");
 		fclose (file);
 		#endif
 
@@ -785,7 +785,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 		#endif
 
 		if (cholmod_get_common()->status != 0) {
-			printf("BDMORPH: iteration %i : cholmod solve failure\n", iteration);
+			debug_printf("BDMORPH: iteration %i : cholmod solve failure\n", iteration);
 			return -1;
 		}
 

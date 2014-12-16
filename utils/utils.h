@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include "vector2d.h"
 #include <stdarg.h>
-#include <sys/time.h>
 
 typedef int Vertex;
 #define connect_(a,b,c,d) connect(a, SIGNAL(b), c, SLOT(d))

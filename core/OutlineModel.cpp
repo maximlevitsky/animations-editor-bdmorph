@@ -24,7 +24,7 @@ OutlineModel::OutlineModel() : selectedVertex(-1)
 	maxPoint.y = 1;
 	center.x = 0.5;
 	center.y = 0.5;
-	setScale(0.5,1);
+	setScale(1,1);
 }
 
 /******************************************************************************************************************************/
@@ -104,7 +104,7 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 
 		Vertex toDelete = getClosestVertex(pos, false, radius);
 		if (toDelete == -1)
-			return -1;
+			return false;
 		deleteVertex(toDelete);
 		return true;
 	}
