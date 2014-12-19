@@ -41,24 +41,31 @@ endif(WIN32)
 ###################################################################################################
 
 if (APPLE)
-	SET(ROOT _something_)
 	SET (EXTERNAL_LIBRARIES
-		${ROOT}/suitesparse/amd.dylib
-		${ROOT}/suitesparse/camd.dylib
-		${ROOT}/suitesparse/colamd.dylib
-		${ROOT}/suitesparse/blas.dylib
-		${ROOT}/suitesparse/cholmod.dylib
-		${ROOT}/suitesparse/lapack.dylib
-		
-		${ROOT}/ffmpeg/lib/avcodec.dylib
-		${ROOT}/ffmpeg/lib/avformat.dylib
-		${ROOT}/ffmpeg/lib/avutil.dylib
-		${ROOT}/ffmpeg/lib/swscale.dylib
-	)	
-	SET(EXTERNAL_INCLUDES
-		${ROOT}/suitesparse/include/
-		${ROOT}/ffmpeg/include/
-	)	
+		cholmod amd camd colamd suitesparseconfig
+		blas lapack
+
+		avcodec avformat avutil swscale swresample
+		"-framework CoreFoundation"
+		"-framework CoreVideo"
+		"-framework VideoDecodeAcceleration"
+		x264 z bz2 iconv		
+	)
+
+	SET (EXTERNAL_INCLUDES
+		/usr/local/include/suitesparse
+	)
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")
+
+	set(MACOSX_BUNDLE_ICON_FILE macicon.icns)
+
+	set(kvf2d_ICON ${CMAKE_CURRENT_SOURCE_DIR}/GUI/icon/macicon.icns)
+	set_source_files_properties(${kvf2d_ICON} PROPERTIES
+       MACOSX_PACKAGE_LOCATION "Resources")
+
+    SET(ICON_RC_FILE ${kvf2d_ICON})
+
 endif(APPLE)
 
 ###################################################################################################
@@ -135,9 +142,11 @@ ADD_EXECUTABLE(kvf2d WIN32 MACOSX_BUNDLE
 )
 
 TARGET_LINK_LIBRARIES(kvf2d 
-	${QT_LIBRARIES} 
-	${OPENGL_LIBRARIES} 
-	${EXTERNAL_LIBRARIES} 
+	${QT_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${EXTERNAL_LIBRARIES}
 )
+
+
 ###################################################################################################
 
