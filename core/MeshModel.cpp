@@ -249,7 +249,7 @@ void MeshModel::renderFaceInternal(unsigned int fnum)
 
 	std::vector<Point2> &coords = *texCoords;
 
-	if (fnum < 0 || fnum >= numFaces)
+	if (fnum >= numFaces)
 		return;
 
 	Face &f = (*faces)[fnum];

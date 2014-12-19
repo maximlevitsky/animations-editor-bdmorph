@@ -13,7 +13,7 @@ class Vector2D {
         T   x;
         T   y;
 
-        void print(char *tag = "") const {
+        void print(const char *tag = "") const {
             qWarning("%s %g %g", tag, x, y);
         }
 

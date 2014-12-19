@@ -143,7 +143,6 @@ private:
 
 	int kCount;
 	int edgeCount;
-	bool initialized;
 
 private:
 	/* pre-computed command steams that will guide the steps of the algorithm*/
