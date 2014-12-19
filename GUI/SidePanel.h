@@ -15,9 +15,9 @@ public:
 public slots:
 	void programStateUpdated(int flags, void *param);
 
-	void onCreateModel();
-	void onLoadModel();
-	void onSaveModel();
+	void onImportProject();
+	void onLoadProject();
+	void onSaveProject();
 	void onChooseTexture();
 	void onResetTexture();
 	void onMeshCreateButtonPressed();

@@ -75,6 +75,12 @@ public:
 
 	bool mousePressAction(Point2 pos, double radius);
 	void renderOverlay(double scale);
+
+	bool saveVOBJ(std::ofstream& ofile);
+	bool loadVOBJ(std::ifstream& ifile);
+
+    double lastVFCalcTime;
+    double lastVFApplyTime;
 private:
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
@@ -106,9 +112,6 @@ private:
     std::deque<UndoItem> undo;
     std::deque<UndoItem> redo;
     std::vector<LogItem> currentDeformLog;
-
-    /* statistics */
-    double lastVFCalcTime;
 public:
 };
 

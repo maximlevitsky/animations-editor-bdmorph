@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>317</width>
-    <height>762</height>
+    <height>792</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -62,13 +62,19 @@
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
           <widget class="QPushButton" name="btnNewModel">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates new video video project ether from an mesh in obj or off format&lt;/p&gt;&lt;p&gt;or from picture (png or jpg format).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
-            <string>New project...</string>
+            <string>Import...</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="btnLoadModel">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load previosly saved video project (.vproject)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Load project...</string>
            </property>
@@ -80,6 +86,9 @@
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
           <widget class="QPushButton" name="btnSaveModel">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Saves current video project or current keyframe to an file &lt;/p&gt;&lt;p&gt;(depending on extension of file)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Save...</string>
            </property>
@@ -87,6 +96,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnEditOutline">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switches to outline editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
             <string>Edit outline</string>
            </property>

@@ -38,24 +38,10 @@ struct Face
 	}
 
 	Vertex f[3];
-
 	Vertex &operator[](int i) {return f[i];}
-
 	Vertex a() { return f[0]; }
 	Vertex b() { return f[1]; }
 	Vertex c() { return f[2]; }
-
-
-	void makeClockWise(const std::vector<Point2> &points)
-	{
-		const Point2 &a = points[f[0]];
-		const Point2 &b = points[f[1]];
-		const Point2 &c = points[f[2]];
-
-		double signedArea = a.x * (b.y-c.y) + b.x * (c.y-a.y) + c.x * (a.y-b.y);
-		if (signedArea < 0)
-			std::swap(f[0],f[2]);
-	}
 };
 
 /*****************************************************************************************************/

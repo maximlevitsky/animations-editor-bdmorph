@@ -275,7 +275,7 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 			if (!programstate->showVF && !programstate->showVForig)
 				kvfModel->applyVFLogSpiral();
 
-			programstate->FPS = kvfModel->create_msec;
+			programstate->FPS = 1000.0 / (kvfModel->lastVFApplyTime + kvfModel->lastVFCalcTime);
 			programstate->onUpdateModel();
 			programstate->updateStatistics();
 		}
@@ -383,7 +383,8 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
     lastMousePos = curPos;
 
     /* Plain mouse move */
-    if (event->buttons() == Qt::NoButton && programstate->showSelection)
+    if (event->buttons() == Qt::NoButton && programstate->showSelection &&
+    		mods == Qt::NoModifier)
     {
 		programstate->selectedVertex = model->getClosestVertex(screenToModel(model,curPos));
 		programstate->selectedFace = model->getFaceUnderPoint(screenToModel(model,curPos));
@@ -426,7 +427,7 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 			if (!programstate->showVF && !programstate->showVForig)
 				kvfModel->applyVFLogSpiral();
 
-			programstate->FPS = kvfModel->create_msec;
+			programstate->FPS = 1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime);
 			programstate->onUpdateModel();
 			programstate->updateStatistics();
 			repaint();
@@ -434,14 +435,7 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 		}
 
 		if (!model->moveAction(screenToModel(model,oldPos), screenToModel(model,curPos), getRadius(model)))
-		{
-			/* If all failed, move the model */
-			QPointF diff = curPos - oldPos;
-			move(QPointF(diff.x(),diff.y()));
-			repaint();
 			return;
-		}
-
 		mouseMoved = true;
 		repaint();
     }
@@ -452,7 +446,6 @@ void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
 {
     setCursor(Qt::ArrowCursor);
     selectedVertices.clear();
-    mouseMoved = false;
 
 	if (!programstate) return;
 	MeshModel *model = programstate->currentModel;
@@ -463,6 +456,7 @@ void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
     curPos.setY(height()-curPos.y()-1);
     model->mouseReleaseAction(screenToModel(model,curPos),mouseMoved, getRadius(model), !mouseLeft);
     update();
+    mouseMoved = false;
 }
 
 /******************************************************************************************************************************/

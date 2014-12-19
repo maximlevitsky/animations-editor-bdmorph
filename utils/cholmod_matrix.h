@@ -34,7 +34,7 @@ public:
 	/********************************************************************/
 
 	void startMatrixFill();
-	double* addElement(int r, int c, double value);
+	double* addElement(unsigned int r, unsigned int c, double value);
 	void addConstraint(const std::vector<int>& rows, double alpha);
 
 	/********************************************************************/

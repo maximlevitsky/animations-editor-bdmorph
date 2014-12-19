@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>2DNearIsometricDeformations</name>
+	<name>KVF</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -28,7 +28,7 @@
 		<link>
 			<name>build</name>
 			<type>2</type>
-			<location>/home/maxim/Technion/kvf</location>
+			<location>/home/maxim/Technion/Animation Project/kvf_release</location>
 		</link>
 	</linkedResources>
 </projectDescription>

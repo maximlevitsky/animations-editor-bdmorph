@@ -40,6 +40,14 @@ ProgramState::~ProgramState()
 	delete outlineModel;
 	free(imagebuffer);
 }
+
+
+void ProgramState::initialize()
+{
+	mode = PROGRAM_MODE_NONE;
+	emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+}
+
 /***********************************************************************************************************/
 bool ProgramState::createProject(std::string file)
 {
@@ -121,7 +129,7 @@ bool ProgramState::createProject(std::string file)
 /***********************************************************************************************************/
 bool ProgramState::loadProject(std::string filename)
 {
-    if (ends_with(filename, ".vobj"))
+    if (ends_with(filename, ".vproject"))
     {
 
     	VideoModel *newVideoModel = new VideoModel();
@@ -154,7 +162,7 @@ bool ProgramState::saveToFile(std::string filename)
 
     if (ends_with(filename, ".obj"))
     	result = currentModel && currentModel->saveToFile(filename);
-    else if (ends_with(filename, ".vobj"))
+    else if (ends_with(filename, ".vproject"))
     	result = videoModel && videoModel->saveToFile(filename);
     else if (ends_with(filename, ".poly"))
     	result = outlineModel && outlineModel->saveToFile(filename);
@@ -204,7 +212,10 @@ bool ProgramState::createVideo(QString file)
 	for (; videoEncodingTime < maxAnimationTime ; videoEncodingTime += 16)
 	{
 		TimeMeasurment t;
-		MeshModel* pFrame = videoModel->interpolateFrame(videoEncodingTime, &FPS);
+		double duration;
+		MeshModel* pFrame = videoModel->interpolateFrame(videoEncodingTime, &duration);
+		FPS = 1000.0 / duration;
+
 		printf("Took %f msec to BDMORPH the image\n", t.measure_msec());
 		imageRenderer->renderBGRA(pFrame,imagebuffer);
 		printf("Took %f msec to render the image\n", t.measure_msec());
@@ -555,7 +566,7 @@ void ProgramState::interpolateFrame(int time)
 	}
 
 
-	FPS = duration;
+	FPS = 1000.0/duration;
 	emit programStateUpdated(STATUSBAR_UPDATED, NULL);
 }
 
@@ -570,7 +581,7 @@ void ProgramState::setAnimationRepeat(bool enabled)
 
 void ProgramState::clearStatusBar()
 {
-	FPS=0;
+	FPS=-1;
 	vertexCount=0;
 	facesCount=0;
 	progressValue=0;

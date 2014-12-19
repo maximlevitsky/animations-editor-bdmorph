@@ -139,6 +139,9 @@ void AnimationPanel::onItemClicked(QListWidgetItem *item)
 {
 	if (!programstate) return;
 	int newID = lstKeyFrames->row(item);
+	selectFrame(newID);
+
+	programstate->switchToKeyframe(newID);
 
 	/* If we clicked on + sign, add new as a clone of last one */
 	if (newID == programstate->getKeyframeCount()) {
@@ -146,7 +149,6 @@ void AnimationPanel::onItemClicked(QListWidgetItem *item)
 		return;
 	}
 
-	programstate->switchToKeyframe(newID);
 }
 
 /******************************************************************************************************************************/

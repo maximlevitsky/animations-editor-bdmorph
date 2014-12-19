@@ -172,7 +172,7 @@ bool VideoModel::saveToFile(const std::string filename)
     std::ofstream outfile(filename);
     if (outfile.bad())
     	return false;
-    if (!ends_with(filename, ".vobj"))
+    if (!ends_with(filename, ".vproject"))
     	return false;
 
     outfile << "VOBJ" << std::endl;
@@ -185,9 +185,8 @@ bool VideoModel::saveToFile(const std::string filename)
     for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
     {
     	VideoKeyFrame *keyframe = *iter;
-
     	outfile << "keyframe" << " " << keyframe->duration << std::endl;
-    	keyframe->saveVOBJVertices(outfile);
+    	keyframe->saveVOBJ(outfile);
     }
 
     return true;
@@ -196,7 +195,7 @@ bool VideoModel::saveToFile(const std::string filename)
 /******************************************************************************************************************************/
 bool VideoModel::loadFromFile(const std::string &filename)
 {
-	if (!ends_with(filename, ".vobj"))
+	if (!ends_with(filename, ".vproject"))
 		return false;
 
 	std::ifstream infile(filename);
@@ -226,7 +225,7 @@ bool VideoModel::loadFromFile(const std::string &filename)
 		infile >> magic >> duration;
 		VideoKeyFrame* frame = new VideoKeyFrame(this);
 		frame->numVertices = numVertices;
-		frame->loadVOBJVertices(infile);
+		frame->loadVOBJ(infile);
 		frame->duration = duration;
 		keyframes.push_back(frame);
 	}

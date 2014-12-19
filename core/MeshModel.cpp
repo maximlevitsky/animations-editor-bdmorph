@@ -22,8 +22,7 @@ MeshModel::MeshModel() :
 		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
 				maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
 		numVertices(0), numFaces(0),
-		center(0,0),
-		create_msec(0)
+		center(0,0)
 {
 }
 
@@ -38,8 +37,7 @@ MeshModel::MeshModel(const MeshModel& other):
 		numFaces(other.numFaces),
 		vertices(other.vertices),
 		created(false),
-		center(other.center),
-		create_msec(0)
+		center(other.center)
 {
 	/* Create a mesh model from a copy
 	 * Here we assume that we are shallow copy

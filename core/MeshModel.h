@@ -81,8 +81,6 @@ public:
 	void moveMesh(Vector2 newCenter);
 
 	void renderFaceInternal(unsigned int fnum);
-
-	double create_msec;
 private:
     bool created;
 };

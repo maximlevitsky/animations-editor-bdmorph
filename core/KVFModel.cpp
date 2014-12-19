@@ -282,16 +282,15 @@ void KVFModel::applyVFLogSpiral()
         }
     }
 
-    double lastLogSpiralTime  = t.measure_msec();
-    printf("KVF: Log spiral  time: %f msec\n", lastLogSpiralTime);
+    lastVFApplyTime  = t.measure_msec();
+    printf("KVF: Log spiral  time: %f msec\n", lastVFApplyTime);
 
 	for (unsigned int i = 0; i < numVertices; i++)
 		vertices[i] = newPoints[i] / counts[i];
 
-	create_msec = lastVFCalcTime + lastLogSpiralTime;
-	double FPS = 1000.0 / (create_msec);
-	printf("KVF: Total solve time: %f msec (%f FPS)\n", create_msec, FPS);
-    printf("\n");
+	double create_time = lastVFCalcTime + lastVFApplyTime;
+	double FPS = 1000.0 / (create_time);
+	printf("KVF: Total solve time: %f msec (%f FPS)\n\n", create_time, FPS);
 
     historyAdd(disps);
 }
@@ -552,4 +551,40 @@ void KVFModel::clearPins()
 	pinnedVertexes.clear();
 
 	cholmod_free_factor(&L1, cholmod_get_common());
+}
+
+
+bool KVFModel::saveVOBJ(std::ofstream& ofile)
+{
+	ofile << "pins: " << pinnedVertexes.size() << " ";
+
+	for (auto iter = pinnedVertexes.begin() ;iter != pinnedVertexes.end(); iter++)
+		ofile << *iter << " ";
+
+	ofile << std::endl;
+
+	return saveVOBJVertices(ofile);
+}
+
+
+bool KVFModel::loadVOBJ(std::ifstream& ifile)
+{
+	std::string header;
+	ifile >> header;
+	if (header != "pins:")
+		return false;
+
+	unsigned int pincount;
+	ifile >> pincount;
+
+	if (pincount > numVertices)
+		return false;
+
+	for (unsigned int i = 0 ; i < pincount ; i++) {
+		int pin;
+		ifile >> pin;
+		pinnedVertexes.insert(pin);
+	}
+
+	return loadVOBJVertices(ifile);
 }

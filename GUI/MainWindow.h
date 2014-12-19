@@ -29,12 +29,13 @@ public:
 public slots:
 
 	void programStateUpdated(int flags, void *param);
-
 	void onSaveScreenShot();
 	void onSaveVideo();
 	void onAbout();
 	void onInterpolationTest();
 	void onToggleDebugConsole(bool on);
+	void onNewProject();
+
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;

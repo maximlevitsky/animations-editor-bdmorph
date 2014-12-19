@@ -24,9 +24,9 @@ SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), programstate(NULL)
 	connect_(sliderWireframeTransparency, valueChanged(int), 	this, onChangeWireframe(int));
 	connect_(sliderAlpha, valueChanged(int), 					this, onChangeAlpha(int));
 
-	connect_(btnNewModel, clicked(), 							this, onCreateModel());
-	connect_(btnLoadModel, clicked(),							this, onLoadModel());
-	connect_(btnSaveModel, clicked(), 							this, onSaveModel());
+	connect_(btnNewModel, clicked(), 							this, onImportProject());
+	connect_(btnLoadModel, clicked(),							this, onLoadProject());
+	connect_(btnSaveModel, clicked(), 							this, onSaveProject());
 	connect_(btnResetTexture, clicked(),						this, onResetTexture());
 	connect_(btnLoadTexture, clicked(),							this, onChooseTexture());
 	connect_(btnEditOutline, clicked(),							this, onEditOutlinePressed());
@@ -42,6 +42,8 @@ SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), programstate(NULL)
 	sliderMeshDensity->setTickPosition(QSlider::NoTicks);
 	sliderMeshDensity->setSliderPosition(1000);
 	sliderAlpha->setValue(5);
+	sliderAlpha->setMaximum(10000);
+	sliderAlpha->setTickPosition(QSlider::NoTicks); /* I don't want ticks, these are awful I heard*/
 }
 
 /******************************************************************************************************************************/
@@ -77,19 +79,29 @@ void SidePanel::programStateUpdated(int flags, void *param)
 		frameEdit->setVisible(outline || deformations);
 		frameWireframe->setVisible(!nothing);
 		btnCreateMesh->setEnabled(outline);
-		btnEditOutline->setEnabled(!outline);
+		btnEditOutline->setEnabled(!outline && !nothing);
+
+		btnLoadTexture->setEnabled(!nothing);
+		btnResetTexture->setEnabled(!nothing);
+		btnSaveModel->setEnabled(!nothing);
 	}
 
 	if (flags & (ProgramState::EDIT_SETTINGS_CHANGED|ProgramState::CURRENT_MODEL_CHANGED))
 	{
 		KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
-		if (kvfModel) sliderAlpha->setValue(kvfModel->getAlpha() * 100 / 8);
+
+		if (kvfModel)  {
+			sliderAlpha->setValue(kvfModel->getAlpha() * 1000);
+			QString alphaLabel;
+			alphaLabel.sprintf("Control points weight: (alpha=%f)", kvfModel->getAlpha() );
+			lblControlPoints->setText(alphaLabel);
+		}
 		sliderWireframeTransparency->setValue(programstate->wireframeTransparency*100);
 	}
 }
 
 /******************************************************************************************************************************/
-void SidePanel::onCreateModel()
+void SidePanel::onImportProject()
 {
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose base for new model (picture/outline/mesh"),
     		QString(), QLatin1String("*.png *.jpg *.poly *.obj *.off"));
@@ -99,19 +111,19 @@ void SidePanel::onCreateModel()
 }
 
 /*****************************************************************************************************/
-void SidePanel::onLoadModel()
+void SidePanel::onLoadProject()
 {
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose video model to load"),
-    		QString(), QLatin1String("*.vobj"));
+    		QString(), QLatin1String("*.vproject"));
     if (filename == "") return;
     programstate->loadProject(filename.toStdString());
 }
 
 /*****************************************************************************************************/
-void SidePanel::onSaveModel()
+void SidePanel::onSaveProject()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.obj *.vobj *.poly"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.obj *.vproject *.poly"));
     if ( filename == "") return;
     programstate->saveToFile(filename.toStdString());
 }
@@ -215,7 +227,7 @@ void SidePanel::onRunLog()
     	kvfModel->historyLoadFromFile(infile);
     	programstate->onUpdateModel();
     	programstate->updateSettings();
-    	programstate->FPS = kvfModel->create_msec;
+    	programstate->FPS = 1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime);
     	programstate->setProgress((step*100)/numSteps);
 		QApplication::processEvents();
 
@@ -255,7 +267,7 @@ void SidePanel::onChangeAlpha(int i)
 	if (!programstate) return;
 	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
 	if (!kvfModel) return;
-	kvfModel->setAlpha((double) (i) / 100 * 8);
+	kvfModel->setAlpha((((double) (i)) / 1000));
 	programstate->updateSettings();
 }
 
@@ -278,6 +290,12 @@ void SidePanel::onDrawOrigVFModeChanged(bool m)
 void SidePanel::onShowSelectionChanged(bool m)
 {
 	programstate->showSelection = m;
+
+	if (!m) {
+		programstate->selectedFace = -1;
+		programstate->selectedVertex = -1;
+	}
+
 	programstate->updateSettings();
 }
 

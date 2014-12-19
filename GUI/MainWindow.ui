@@ -29,17 +29,17 @@
      <x>0</x>
      <y>0</y>
      <width>968</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuModel">
     <property name="title">
-     <string>Model</string>
+     <string>Project</string>
     </property>
+    <addaction name="actionNew"/>
     <addaction name="actionNew_model"/>
     <addaction name="actionLoad_mesh"/>
     <addaction name="actionSave_model"/>
-    <addaction name="actionUnload_model"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_texture"/>
     <addaction name="actionReset_texture"/>
@@ -71,7 +71,6 @@
      <string>Animations</string>
     </property>
     <addaction name="actionNew_keyframe"/>
-    <addaction name="actionLoad_keyframe"/>
     <addaction name="actionDelete_keyframe"/>
     <addaction name="separator"/>
     <addaction name="actionPlay"/>
@@ -219,7 +218,7 @@
   </action>
   <action name="actionSave_video">
    <property name="text">
-    <string>Save video...</string>
+    <string>Export video...</string>
    </property>
   </action>
   <action name="actionDelete_keyframe">
@@ -275,7 +274,7 @@
   </action>
   <action name="actionNew_model">
    <property name="text">
-    <string>New</string>
+    <string>Import...</string>
    </property>
   </action>
   <action name="actionTest_animations">
@@ -299,6 +298,11 @@
    </property>
    <property name="text">
     <string>Debug Console</string>
+   </property>
+  </action>
+  <action name="actionNew">
+   <property name="text">
+    <string>New</string>
    </property>
   </action>
  </widget>

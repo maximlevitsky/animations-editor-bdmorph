@@ -56,9 +56,9 @@ MainWindow::MainWindow()
 	sidePanel->programStateCreated(programstate);
 	animationPanel->programStateCreated(programstate);
 
-	connect_(actionNew_model, triggered(), 					sidePanel, onCreateModel());
-	connect_(actionLoad_mesh, triggered(), 					sidePanel, onLoadModel());
-	connect_(actionSave_model, triggered(), 				sidePanel, onSaveModel());
+	connect_(actionNew_model, triggered(), 					sidePanel, onImportProject());
+	connect_(actionLoad_mesh, triggered(), 					sidePanel, onLoadProject());
+	connect_(actionSave_model, triggered(), 				sidePanel, onSaveProject());
 
 	connect_(actionUndo, triggered(), 						sidePanel, onUndoModel());
 	connect_(actionRedo, triggered(), 						sidePanel, onRedoModel());
@@ -85,6 +85,8 @@ MainWindow::MainWindow()
 
 	connect_(actionSave_video, triggered(),					this, onSaveVideo());
 	connect_(actionDebug_Console, toggled(bool),            this, onToggleDebugConsole(bool));
+
+	connect_(actionNew, triggered(), 						this, onNewProject());
 
 	/* --------------------------------------------------------------------------------*/
 	animationPanel->btnRepeat->setAction(actionLoop);
@@ -124,9 +126,8 @@ MainWindow::MainWindow()
 	lblSelectedFace->hide();
 	lblSelectedVertex->hide();
 	progressIndicator->hide();
-	programstate->createProject("");
+	programstate->initialize();
 	show();
-	programstate->resetTransform();
 }
 
 /*****************************************************************************************************/
@@ -166,21 +167,21 @@ void MainWindow::programStateUpdated(int flags, void *param)
 
 		if (programstate->selectedFace >= 0)  {
 			lblSelectedFace->show();
-			str.sprintf("Face: %d", programstate->selectedFace);
+			str.sprintf("Face: %5d", programstate->selectedFace);
 			lblSelectedFace->setText(str);
 		} else
 			lblSelectedFace->hide();
 
 		if (programstate->selectedVertex >= 0)  {
 			lblSelectedVertex->show();
-			str.sprintf("Vertex: %d", programstate->selectedVertex);
+			str.sprintf("Vertex: %5d", programstate->selectedVertex);
 			lblSelectedVertex->setText(str);
 		} else
 			lblSelectedVertex->hide();
 
-		if (programstate->FPS >0 )
+		if (programstate->FPS >=0 )
 		{
-			str.sprintf("%4.2f FPS", 1000.0/programstate->FPS);
+			str.sprintf("%06.2f FPS", programstate->FPS);
 			lblFPS->setText(str);
 			lblFPS->show();
 		} else {
@@ -253,6 +254,13 @@ void MainWindow::onAbout()
 void MainWindow::onInterpolationTest()
 {
 	programstate->interpolateFrame(programstate->currentAnimationTime+10);
+}
+
+/*****************************************************************************************************/
+
+void MainWindow::onNewProject()
+{
+	programstate->createProject("");
 }
 
 /*****************************************************************************************************/

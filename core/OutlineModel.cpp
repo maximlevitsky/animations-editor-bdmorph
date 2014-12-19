@@ -81,6 +81,9 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 {
 	if (moved) return false;
 
+	if (pos.x > 1 || pos.y > 1 || pos.x < 0 || pos.y < 0)
+		return false;
+
 	if (!rightButton)
 	{
 		/* Left button adds vertexes */
@@ -132,18 +135,19 @@ void OutlineModel::renderFaces()
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	renderInternal();
+
+	glDisable(GL_TEXTURE_2D);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glColor3f(0,0,0);
+	glLineWidth(1.5);
+	renderInternal();
+
 	glPopAttrib();
 }
 
 
 void OutlineModel::renderWireframe()
 {
-	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glColor3f(0,0,0);
-	glLineWidth(1.5);
-	renderInternal();
-	glPopAttrib();
 }
 
 /******************************************************************************************************************************/

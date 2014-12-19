@@ -205,13 +205,13 @@ void CholmodSparseMatrix::addConstraint(const std::vector<int>& rows,double alph
 }
 
 /******************************************************************************************************************************/
-double* CholmodSparseMatrix::addElement(int r, int c, double value)
+double* CholmodSparseMatrix::addElement(unsigned int r, unsigned int c, double value)
 {
-	if (lastR != r)
+	if (lastR != (int)r)
 	{
 		/* starting new row, */
-		assert (r > lastR);
-		while (lastR < r)
+		assert ((int)r > lastR);
+		while (lastR < (int)r)
 			rowStart[++lastR] = curLocation;
 	}
 

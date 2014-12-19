@@ -94,6 +94,8 @@ public:
 
 public:
 	/* Load/store parts of the state */
+	void initialize();
+
     bool createProject(std::string file);
 	bool loadProject(std::string filename);
 	bool saveToFile(std::string filename);
