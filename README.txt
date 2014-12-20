@@ -18,15 +18,17 @@ suitesparse libraries (for matrix solving)
 
 On linux you rougly need these packages:
 
-libqtcore4-dev libqtgui4-dev libqt4-opengl-dev
+cmake libqt4-dev libqt4-dev-bin
 libsuitesparse-metis-dev
 libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
 (Exact names will vary from distribution to distribution)
 
-On windows and mac you need somehow to obtain these libraries,
+On windows and/or OSX you need somehow to obtain these libraries, install Qt4,Cmake,
 and edit the CMakefiles.txt to reflect their locations
 Compilation on Windows tested under Visual Studio 2008
 
 Personally I advice you that if you are using Windows, to get a real OS, like
 Linux or at least OSX.
+
+

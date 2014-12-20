@@ -14,9 +14,10 @@ if (WIN32)
 		${ROOT}/suitesparse/amd.lib
 		${ROOT}/suitesparse/camd.lib
 		${ROOT}/suitesparse/colamd.lib
-		${ROOT}/suitesparse/blas.lib
 		${ROOT}/suitesparse/cholmod.lib
+
 		${ROOT}/suitesparse/lapack.lib
+		${ROOT}/suitesparse/blas.lib
 		
 		${ROOT}/ffmpeg/lib/avcodec.lib
 		${ROOT}/ffmpeg/lib/avformat.lib
@@ -32,7 +33,7 @@ if (WIN32)
 	SET(ICON_RC_FILE GUI/icon/winicon.rc)
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE  -DNOMINMAX -D_USE_MATH_DEFINES ")
-	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS}    -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE  -DNOMINMAX -D_USE_MATH_DEFINES ")
+	set(CMAKE_C_FLAGS   "${CMAKE_CXX_FLAGS}  -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE  -DNOMINMAX -D_USE_MATH_DEFINES ")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:NOREF" )
 	
 endif(WIN32)
@@ -48,7 +49,7 @@ if (APPLE)
 		"-framework CoreFoundation"
 		"-framework CoreVideo"
 		"-framework VideoDecodeAcceleration"
-		x264 z bz2 iconv		
+		  x264 z bz2 iconv
 	)
 
 	SET (EXTERNAL_INCLUDES
