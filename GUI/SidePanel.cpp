@@ -104,7 +104,7 @@ void SidePanel::programStateUpdated(int flags, void *param)
 void SidePanel::onImportProject()
 {
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose base for new model (picture/outline/mesh"),
-    		QString(), QLatin1String("*.png *.jpg *.poly *.obj *.off"));
+    		QString(), QLatin1String("Picture (*.png *.jpg);;Outline (*.poly);;Mesh (*.obj *.off)"));
     if (filename == NULL)
 		return;
     programstate->createProject(filename.toStdString());
@@ -123,7 +123,7 @@ void SidePanel::onLoadProject()
 void SidePanel::onSaveProject()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.obj *.vproject *.poly"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Current mesh (*.obj);;Outline (*.poly);;Video Project (*.vproject)"));
     if ( filename == "") return;
     programstate->saveToFile(filename.toStdString());
 }
@@ -131,7 +131,7 @@ void SidePanel::onSaveProject()
 /*****************************************************************************************************/
 void SidePanel::onChooseTexture()
 {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Choose image"), QString(), QLatin1String("*.png *.jpg *.bmp"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("Choose image"), QString(), QLatin1String("Texture (*.png *.jpg *.bmp)"));
     if (filename == NULL)
 		return;
 

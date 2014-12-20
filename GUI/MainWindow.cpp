@@ -228,14 +228,14 @@ void MainWindow::programStateUpdated(int flags, void *param)
 void MainWindow::onSaveScreenShot()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.png *,jpg"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Image file (*.png *.jpg)"));
     if ( filename == "") return;
     programstate->saveScreenshot(filename.toStdString());
 }
 void MainWindow::onSaveVideo()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.avi"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Video file (*.avi *.mp4)"));
     if ( filename == "") return;
     programstate->createVideo(filename);
 }

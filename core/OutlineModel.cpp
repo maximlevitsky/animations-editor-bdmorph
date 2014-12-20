@@ -184,14 +184,6 @@ void OutlineModel::renderOverlay(double scale)
 Vertex OutlineModel::addVertex(Point2 p)
 {
 	Vertex retval;
-
-	if (!deletedVertexes.empty()) {
-		retval = *deletedVertexes.begin();
-		deletedVertexes.erase(retval);
-		vertices[retval] = p;
-		return retval;
-	}
-
 	retval = numVertices++;
 	vertices.push_back(p);
 	return retval;
@@ -200,21 +192,35 @@ Vertex OutlineModel::addVertex(Point2 p)
 
 void OutlineModel::deleteVertex(Vertex v)
 {
-	if (v == (int)numVertices - 1) {
-		numVertices--;
-		vertices.pop_back();
-	} else {
-		deletedVertexes.insert(v);
-		vertices[v] = Point2(-1000, -1000);
-	}
+	std::set<Edge> editedEdges;
 
 	for (auto iter = edges.begin() ; iter != edges.end();)
 	{
 		if (iter->v0 == v || iter->v1 == v)
 			edges.erase(iter++);
-		else
-			++iter;
+		else 
+		{
+			Edge e = *iter;
+
+			if (e.v0 < v && e.v1 < v) {
+				iter++;
+			} else {
+
+				if (e.v0 >= v)
+					e.v0--;
+
+				if (e.v1 >= v)
+					e.v1--;
+
+				editedEdges.insert(Edge(e.v0,e.v1));
+				iter = edges.erase(iter);
+			}
+		}
 	}
+
+	edges.insert(editedEdges.begin(),editedEdges.end());
+	vertices.erase(vertices.begin()+v);
+	numVertices = vertices.size();
 
 	if (selectedVertex == v)
 		selectedVertex = -1;
@@ -254,7 +260,6 @@ void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Ve
 {
 
 	for (unsigned int i= 0 ; i < numVertices ;i++)
-		if (deletedVertexes.count(i) == 0)
 			standaloneVertices.insert(i);
 
 	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
@@ -263,7 +268,7 @@ void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Ve
 	}
 
 	for (unsigned int i = 0 ; i < numVertices ; i++)
-		if (deletedVertexes.count(i) == 0 && standaloneVertices.count(i) == 0)
+		if (standaloneVertices.count(i) == 0)
 			normalVertices.insert(i);
 }
 

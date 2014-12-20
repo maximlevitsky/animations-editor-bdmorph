@@ -31,7 +31,6 @@ public:
 
 private:
 	std::set<Edge> edges;
-	std::set<Vertex> deletedVertexes;
 	Vertex selectedVertex;
 	double scaleX;
 	double scaleY;
