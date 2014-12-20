@@ -191,7 +191,7 @@ bool ProgramState::saveScreenshot(std::string filename)
 /***********************************************************************************************************/
 bool ProgramState::createVideo(QString file)
 {
-	videoEncoder = new QVideoEncoder();
+	videoEncoder = new QVideoEncoder(30);
 	if (!videoEncoder->createFile(file, 1024,768)) {
 		delete videoEncoder;
 		videoEncoder = NULL;
@@ -205,30 +205,29 @@ bool ProgramState::createVideo(QString file)
 
 	maxAnimationTime = videoModel->getTotalTime();
 	imageRenderer->setupTransform(videoModel,true,0,0.7);
-	videoEncodingTime = 0;
+
 
 	statusbarMessage = "Creating video...";
 
-	for (; videoEncodingTime < maxAnimationTime ; videoEncodingTime += 16)
+	for (double position = 0; position < maxAnimationTime ; position += videoEncoder->getFrameTimeMsec())
 	{
-		TimeMeasurment t;
 		double duration;
-		MeshModel* pFrame = videoModel->interpolateFrame(videoEncodingTime, &duration);
+		MeshModel* pFrame = videoModel->interpolateFrame(position, &duration);
 		FPS = 1000.0 / duration;
 
-		printf("Took %f msec to BDMORPH the image\n", t.measure_msec());
+		TimeMeasurment t;
 		imageRenderer->renderBGRA(pFrame,imagebuffer);
 		printf("Took %f msec to render the image\n", t.measure_msec());
 
 
-		if (!videoEncoder->encodeImage(imagebuffer, videoEncodingTime)) {
+		if (!videoEncoder->encodeImage(imagebuffer)) {
 			QMessageBox::critical(NULL, "Error", "Failure during encoding");
 			delete videoEncoder;
 			videoEncoder = NULL;
 			return false;
 
 		}
-		progressValue = (videoEncodingTime * 100) /maxAnimationTime;
+		progressValue = (int)((position * 100) /maxAnimationTime);
 		updateStatistics();
 		QApplication::processEvents();
 	}

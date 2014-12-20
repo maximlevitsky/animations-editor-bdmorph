@@ -10,7 +10,7 @@
 #include "utils.h"
 
 /******************************************************************************************************************************/
-QVideoEncoder::QVideoEncoder()
+QVideoEncoder::QVideoEncoder(int FPS) : FPS(FPS)
 {
 	ok=false;
 	avFormatContext=0;
@@ -20,6 +20,7 @@ QVideoEncoder::QVideoEncoder()
 	avFrame=0;
 	picture_buf=0;
 	swsCtx=0;
+	currrent_frame = 0;
 	av_register_all();
 }
 /******************************************************************************************************************************/
@@ -65,8 +66,8 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 	avCodecCtx->bit_rate = 9000000;
 	avCodecCtx->width = width;
 	avCodecCtx->height = height;
-	avCodecCtx->time_base.num =1;
-	avCodecCtx->time_base.den =1000;
+	avCodecCtx->time_base.num = 1;
+	avCodecCtx->time_base.den = FPS;
 	avCodecCtx->gop_size = 250; /* emit one intra frame every ten frames */
 	avCodecCtx->max_b_frames=1;
 	avCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -91,12 +92,13 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 	avpicture_fill((AVPicture *)avFrame, picture_buf,avCodecCtx->pix_fmt, avCodecCtx->width, avCodecCtx->height);
 
 	ok=true;
+	currrent_frame = 0;
 	return true;
 }
 
 
 /******************************************************************************************************************************/
-bool QVideoEncoder::encodeImage(uint8_t* image,int pts)
+bool QVideoEncoder::encodeImage(uint8_t* image)
 {
 	if(!isOk()) return false;
 
@@ -110,15 +112,14 @@ bool QVideoEncoder::encodeImage(uint8_t* image,int pts)
 	int srcstride =Width*4;
 	uint8_t* srcplane = (uint8_t*)image;
 	sws_scale(swsCtx, &srcplane, &srcstride,0, Height, avFrame->data, avFrame->linesize);
-	avFrame->pts = pts;
+	avFrame->pts = currrent_frame++;
 
 	printf("Took %f msec to convert the image\n", t.measure_msec());
 
-
-	printf("Took %f msec to init the image\n", t.measure_msec());
-
 	AVPacket p = {0};
 	av_init_packet(&p);
+
+	p.stream_index = avStream->index;
 
 	int got_packet;
 	if (avcodec_encode_video2(avStream->codec, &p, avFrame, &got_packet) < 0)
@@ -129,7 +130,7 @@ bool QVideoEncoder::encodeImage(uint8_t* image,int pts)
 	if (!got_packet)
 		return true;
 
-	av_write_frame (avFormatContext, &p);
+	av_interleaved_write_frame (avFormatContext, &p);
 	printf("Took %f msec to write the image\n", t.measure_msec());
 
 	av_free_packet(&p);

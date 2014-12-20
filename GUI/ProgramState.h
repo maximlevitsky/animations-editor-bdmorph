@@ -162,7 +162,6 @@ private:
 	/* Video encoding task*/
 	QVideoEncoder* videoEncoder;
 	uint8_t* imagebuffer;
-	int videoEncodingTime;
 
 };
 

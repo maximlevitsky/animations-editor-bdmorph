@@ -15,6 +15,8 @@ extern "C" {
 #include "libavutil/dict.h"
 #include "libavutil/avstring.h"
 #include "libavutil/opt.h"
+#include "libavutil/avconfig.h"
+#include "libavcodec/avcodec.h"
 #include "libswscale/swscale.h"
 }
 
@@ -37,14 +39,19 @@ class QVideoEncoder
       SwsContext *swsCtx;
       QString fileName;
 
+      int FPS;
+      int currrent_frame;
+
    public:
-      QVideoEncoder();
+      QVideoEncoder(int FPS);
       virtual ~QVideoEncoder();
 
       bool createFile(QString filename,unsigned width,unsigned height);
-      bool encodeImage(uint8_t* image, int pts=-1);
+      bool encodeImage(uint8_t* image);
       bool close();
       bool isOk() { return ok; }
+
+      double getFrameTimeMsec() { return (1.0 / FPS) * 1000; }
 };
 
 
