@@ -8,4 +8,7 @@
     <file>pause.png</file>
     <file>play.png</file>
   </qresource>
+  <qresource prefix="MainWindow">
+    <file>../icon/icon.png</file>
+  </qresource>
 </RCC>

@@ -6,15 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>467</width>
-    <height>300</height>
+    <width>693</width>
+    <height>307</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>About</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
+  <property name="windowIcon">
+   <iconset resource="resources/resources.rc">
+    <normaloff>:/MainWindow/icon/icon.png</normaloff>:/MainWindow/icon/icon.png</iconset>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Animation program based on following papers:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;As-Killing-As-Possible Vector Fields for Planar Deformation&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Planar Shape Interpolation with Bounded Distortion&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Based on &lt;a href=&quot;http://www.cs.technion.ac.il/~cggc/Upload/Projects/KVFDeformation/download.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;KVFDeformation&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Implemented by Maxim Levitsky &amp;amp; Inbar Donag&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -30,7 +34,32 @@
      </property>
     </widget>
    </item>
-   <item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="label_2">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>256</width>
+       <height>256</height>
+      </size>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="pixmap">
+      <pixmap resource="resources/resources.rc">:/MainWindow/icon/icon.png</pixmap>
+     </property>
+     <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -42,7 +71,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources/resources.rc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>
