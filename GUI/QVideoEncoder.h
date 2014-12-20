@@ -1,6 +1,8 @@
 #ifndef __QVideoEncoder_H
 #define __QVideoEncoder_H
 
+// Adapted from https://code.google.com/p/qtffmpegwrapper/
+// Modified to work with modern ffmpeg
 
 #include <QIODevice>
 #include <QFile>

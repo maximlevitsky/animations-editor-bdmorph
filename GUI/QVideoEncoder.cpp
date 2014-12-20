@@ -1,4 +1,8 @@
 
+
+// Adapted from https://code.google.com/p/qtffmpegwrapper/
+// Modified to work with modern ffmpeg
+
 #include <qimage.h>
 #include <qstring.h>
 #include <QVideoEncoder.h>
