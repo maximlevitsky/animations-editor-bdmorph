@@ -206,9 +206,18 @@ void MainWindow::programStateUpdated(int flags, void *param)
 		auto mode = programstate->getCurrentMode();
 		bool hasKeyframes = mode != ProgramState::PROGRAM_MODE_NONE && mode != ProgramState::PROGRAM_MODE_OUTLINE;
 
-		animationPanel->setVisible(hasKeyframes);
-		actionAnimation_panel->setEnabled(hasKeyframes);
-		actionAnimation_panel->setChecked(hasKeyframes);
+		if (mode == ProgramState::PROGRAM_MODE_NONE || mode == ProgramState::PROGRAM_MODE_OUTLINE) 
+		{
+			animationPanel->setVisible(false);
+			actionAnimation_panel->setEnabled(false);
+			actionAnimation_panel->setChecked(false);
+
+		} else if(actionAnimation_panel->isEnabled() == false) 
+		{
+			animationPanel->setVisible(true);
+			actionAnimation_panel->setEnabled(true);
+			actionAnimation_panel->setChecked(true);
+		}
 
 		actionNew_keyframe->setEnabled(hasKeyframes);
 		actionDelete_keyframe->setEnabled(hasKeyframes);
