@@ -123,7 +123,7 @@ void SidePanel::onLoadProject()
 void SidePanel::onSaveProject()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Current mesh (*.obj);;Outline (*.poly);;Video Project (*.vproject)"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Mesh (*.obj);;Outline (*.poly);;Video Project (*.vproject)"));
     if ( filename == "") return;
     programstate->saveToFile(filename.toStdString());
 }
