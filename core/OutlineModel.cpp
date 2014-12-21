@@ -64,7 +64,7 @@ OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 
 		vertices.resize(theirToOurBoundaryVertices.size());
 		for (auto iter = theirToOurBoundaryVertices.begin() ; iter != theirToOurBoundaryVertices.end() ; iter++) {
-			vertices[iter->second] = from->vertices[iter->first];
+			vertices[iter->second] = (*from->texCoords)[iter->first];
 		}
 
 		numFaces = 0;
@@ -81,8 +81,8 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 {
 	if (moved) return false;
 
-	if (pos.x > 1 || pos.y > 1 || pos.x < 0 || pos.y < 0)
-		return false;
+	//if (pos.x > 1 || pos.y > 1 || pos.x < 0 || pos.y < 0)
+	//	return false;
 
 	if (!rightButton)
 	{
