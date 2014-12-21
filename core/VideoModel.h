@@ -55,6 +55,8 @@ public:
 	bool createFromFile(const std::string &filename);
 	bool createFromOutline(OutlineModel* model, int trianglecount);
 
+	virtual BBOX getActualBBox();
+
 private:
 	std::vector<VideoKeyFrame*> keyframes;
 

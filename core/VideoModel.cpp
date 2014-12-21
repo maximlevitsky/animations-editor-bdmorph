@@ -108,11 +108,10 @@ VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference, MeshModel* newPoi
 	assert (iter != keyframes.end());
 
 	VideoKeyFrame *frame;
+	frame = new VideoKeyFrame(reference);
 
-	if (!newPoints)
-		frame = new VideoKeyFrame(reference);
-	else
-		frame = new VideoKeyFrame(newPoints);
+	if (newPoints)
+		frame->vertices.swap(newPoints->vertices);
 
 	keyframes.insert(iter + 1, frame);
 	return frame;
@@ -257,3 +256,14 @@ bool VideoModel::createFromOutline(OutlineModel* outlineModel, int trianglecount
 }
 
 /******************************************************************************************************************************/
+
+BBOX VideoModel::getActualBBox()
+{
+	BBOX b(vertices);
+
+	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+    {
+		b += (*iter)->getActualBBox();
+    }
+	return b;
+}

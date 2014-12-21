@@ -19,8 +19,7 @@ MeshModel::MeshModel() :
 		boundaryVertices(new std::set<Vertex>),
 		texCoords(new std::vector<Point2>),
 		created(true),
-		minPoint(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
-				maxPoint(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
+		width(0),height(0),
 		numVertices(0), numFaces(0),
 		center(0,0)
 {
@@ -31,8 +30,7 @@ MeshModel::MeshModel(const MeshModel& other):
 		faces(other.faces),
 		boundaryVertices(other.boundaryVertices),
 		texCoords(other.texCoords),
-		minPoint(other.minPoint),
-		maxPoint(other.maxPoint),
+		width(other.width),height(other.height),
 		numVertices(other.numVertices),
 		numFaces(other.numFaces),
 		vertices(other.vertices),
@@ -107,13 +105,11 @@ bool MeshModel::updateMeshInfo()
 		return false;
 	}
 
-    for (unsigned int i = 0; i < numVertices; i++)
-    {
-    	minPoint = minPoint.min(vertices[i]);
-    	maxPoint = maxPoint.max(vertices[i]);
-    }
+	BBOX b = getActualBBox();
 
-    center = (minPoint+maxPoint)/2;
+	width = b.width();
+	height = b.height();
+	center = b.center();
 
 	std::map< int , std::map<int,int> > edgeCount;
 	std::set<Vertex> normalVertices;
@@ -173,8 +169,6 @@ void MeshModel::moveMesh(Vector2 newCenter)
     }
 
     center += move;
-    minPoint += move;
-    maxPoint += move;
 }
 
 

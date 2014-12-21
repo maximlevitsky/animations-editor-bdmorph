@@ -104,10 +104,17 @@ struct Angle
 };
 
 /***********************************************************************************************/
-struct BBOX
+class BBOX
 {
+public:
 	Point2 minP;
 	Point2 maxP;
+
+	BBOX()
+	{
+		minP = Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
+		maxP = Vector2(std::numeric_limits<double>::min(), std::numeric_limits<double>::min());
+	}
 
 	BBOX(const std::vector<Point2> &vertices)
 	{
@@ -127,6 +134,13 @@ struct BBOX
 
 	double width() { return maxP.x - minP.x; }
 	double height() { return maxP.y - minP.y; }
+
+	void operator+=(const BBOX& other) 
+	{
+		minP = minP.min(other.minP);
+		maxP = maxP.max(other.maxP);
+	}
+
 };
 
 /***********************************************************************************************/

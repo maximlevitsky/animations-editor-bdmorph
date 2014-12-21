@@ -196,6 +196,8 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
     if (!kvfModel) return false;
 
 	QList<QTouchEvent::TouchPoint> touchPoints = te->touchPoints();
+
+#if 0
 	if (!programstate->multitouchMode && touchPoints.count() == 2)
 	{
 		//zoom only in normal mode
@@ -207,6 +209,7 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 		zoom(scaleFactor + (1 - scaleFactor) / 1.05);
 		return true;
 	}
+#endif
 
 	if (te->type() == QEvent::TouchEnd)
 	{

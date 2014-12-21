@@ -22,7 +22,7 @@ public:
 
 	bool saveToFile(const std::string filename);
 	bool loadFromFile(const std::string &filename);
-	bool createMesh(MeshModel *out, int approxTriangleCount);
+	bool createMesh(MeshModel *out, int triCount);
 
 	void setScale(double sX, double sY) {
 		scaleX = sX;

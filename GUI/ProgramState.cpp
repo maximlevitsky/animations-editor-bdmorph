@@ -60,7 +60,7 @@ bool ProgramState::createProject(std::string file)
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
 	}
 
-	else if (ends_with(file, ".png") || ends_with(file, ".jpg") || file == "")
+	else if (ends_with(file, ".png") || ends_with(file, ".jpg") || ends_with(file, ".bmp") || file == "")
 	{
 		QPixmap newtexture;
 		if (!loadTextureFile(file, newtexture) && file != "") {
@@ -131,7 +131,6 @@ bool ProgramState::loadProject(std::string filename)
 {
     if (ends_with(filename, ".vproject"))
     {
-
     	VideoModel *newVideoModel = new VideoModel();
     	if (!newVideoModel->loadFromFile(filename)) {
     		QMessageBox::warning(NULL, "Error", "Can't load this video project");
@@ -173,6 +172,7 @@ bool ProgramState::saveToFile(std::string filename)
     	QMessageBox::warning(NULL, "Error", "Error on file save");
     return result;
 }
+/***********************************************************************************************************/
 
 bool ProgramState::saveScreenshot(std::string filename)
 {
@@ -204,7 +204,7 @@ bool ProgramState::createVideo(QString file)
 	emit programStateUpdated(MODE_CHANGED, NULL);
 
 	maxAnimationTime = videoModel->getTotalTime();
-	imageRenderer->setupTransform(videoModel,true,0,0.7);
+	imageRenderer->setupTransform(videoModel,true,0,0.9);
 
 
 	statusbarMessage = "Creating video...";
@@ -280,8 +280,8 @@ bool ProgramState::loadKeyframe(std::string filename)
 
     currentKeyframe->vertices.swap(newModel->vertices);
     currentKeyframe->updateMeshInfo();
-    currentKeyframe->minPoint = videoModel->minPoint;
-    currentKeyframe->maxPoint = videoModel->maxPoint;
+    currentKeyframe->width = videoModel->width;
+    currentKeyframe->height = videoModel->height;
     currentKeyframe->moveMesh(videoModel->center);
     delete newModel;
     emit programStateUpdated(KEYFRAME_EDITED, NULL);
@@ -367,6 +367,8 @@ void ProgramState::cloneKeyframe(int index)
 	emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED,NULL);
 }
 
+/***********************************************************************************************************/
+
 void ProgramState::createKeyframeFromPFrame()
 {
 	if (mode != PROGRAM_MODE_ANIMATION) return;
@@ -390,7 +392,6 @@ void ProgramState::createKeyframeFromPFrame()
 	}
 
 }
-
 
 /***********************************************************************************************************/
 void ProgramState::deleteKeyFrame(int index)
@@ -517,6 +518,8 @@ void ProgramState::resetTransform()
 	emit programStateUpdated(TRANSFORM_RESET,NULL);
 }
 
+/***********************************************************************************************************/
+
 void ProgramState::onAnimationTimer()
 {
 	currentAnimationTime += animationReferenceTimer.nsecsElapsed() / (1000*1000);
@@ -539,6 +542,7 @@ void ProgramState::onAnimationTimer()
 }
 
 /***********************************************************************************************************/
+
 void ProgramState::interpolateFrame(int time)
 {
 	if (!videoModel) return;
@@ -573,7 +577,6 @@ void ProgramState::interpolateFrame(int time)
 void ProgramState::setAnimationRepeat(bool enabled)
 {
 	animationRepeat = enabled;
-	/* TODO: tell about repeat to animation thread */
 }
 
 /***********************************************************************************************************/

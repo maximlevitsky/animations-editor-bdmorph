@@ -56,8 +56,9 @@ std::string printTime(int time)
 int getTime(std::string time)
 {
 	int minutes, seconds, fraction;
-	sscanf(time.c_str(), "%02d:%02d.%03d", &minutes, &seconds,&fraction);
-
+	
+	if (sscanf(time.c_str(), "%02d:%02d.%03d", &minutes, &seconds,&fraction) < 3)
+		return -1;
 
 	int result = minutes * 60;
 	result += seconds;

@@ -104,7 +104,7 @@ void SidePanel::programStateUpdated(int flags, void *param)
 void SidePanel::onImportProject()
 {
     QString filename = QFileDialog::getOpenFileName(this, tr("Choose base for new model (picture/outline/mesh"),
-    		QString(), QLatin1String("Picture (*.png *.jpg);;Outline (*.poly);;Mesh (*.obj *.off)"));
+    		QString(), QLatin1String("Mesh (*.obj *.off);;Picture (*.png *.jpg);;Outline (*.poly)"));
     if (filename == NULL)
 		return;
     programstate->createProject(filename.toStdString());
@@ -123,7 +123,7 @@ void SidePanel::onLoadProject()
 void SidePanel::onSaveProject()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Mesh (*.obj);;Outline (*.poly);;Video Project (*.vproject)"));
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Video Project (*.vproject);;Mesh (*.obj);;Outline (*.poly)"));
     if ( filename == "") return;
     programstate->saveToFile(filename.toStdString());
 }

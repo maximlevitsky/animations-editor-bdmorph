@@ -202,6 +202,10 @@ void AnimationPanel::onTimeTextFinished()
 	if (!programstate) return;
 
 	int newTime = getTime(timeEdit->text().toStdString());
+
+	if (newTime < 0)
+		return;
+
 	int currentID = programstate->getCurrentKeyframeId();
 	if (currentID == -1 || currentID == 0) return;
 

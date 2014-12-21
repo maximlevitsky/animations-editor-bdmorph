@@ -18,9 +18,9 @@ public:
     MeshModel(const MeshModel& other);
     virtual ~MeshModel();
 
-    double getWidth() { return maxPoint.x - minPoint.x; }
-    double getHeight() { return maxPoint.y - minPoint.y; }
-    BBOX getActualBBox();
+    double getWidth() { return width; }
+    double getHeight() { return height; }
+    virtual BBOX getActualBBox();
 
     int getNumVertices() { return numVertices; }
     int getNumFaces() { return numFaces; }
@@ -48,8 +48,8 @@ public:
 	std::vector<Point2> *texCoords;
     unsigned int numVertices, numFaces;
 
-    Vector2 minPoint;
-    Vector2 maxPoint;
+    double width;
+	double height;
 
     Point2 center;
 

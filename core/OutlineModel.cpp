@@ -18,10 +18,8 @@ void eatTokens(std::ifstream &ifile, int count)
 
 OutlineModel::OutlineModel() : selectedVertex(-1)
 {
-	minPoint.x = 0;
-	minPoint.y = 0;
-	maxPoint.x = 1;
-	maxPoint.y = 1;
+	width = 1;
+	height = 1;
 	center.x = 0.5;
 	center.y = 0.5;
 	setScale(1,1);
@@ -31,10 +29,8 @@ OutlineModel::OutlineModel() : selectedVertex(-1)
 
 OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 {
-	minPoint.x = 0;
-	minPoint.y = 0;
-	maxPoint.x = 1;
-	maxPoint.y = 1;
+	width = 1;
+	height = 1;
 	center.x = 0.5;
 	center.y = 0.5;
 	setScale(1,1);
@@ -306,14 +302,19 @@ bool OutlineModel::saveToFile(std::string filename)
 }
 
 /******************************************************************************************************************************/
-bool OutlineModel::createMesh(MeshModel *output,int triangleCount)
+bool OutlineModel::createMesh(MeshModel *output,int triCount)
 {
 	struct triangulateio in, out;
 	memset(&in,0,sizeof(triangulateio));
 	memset(&out,0,sizeof(triangulateio));
 
+	BBOX b = getActualBBox();
+	double approxArea = b.width()*b.height();
 
-	printf("OutlineModel: creating mesh with approximate %d triangles\n",triangleCount);
+	double triArea = approxArea/triCount;
+
+
+	printf("OutlineModel: creating mesh with approximate %d triangles\n",triCount);
 
 	/* Define input points. */
 	std::set<Vertex> standaloneVertices;
@@ -355,7 +356,7 @@ bool OutlineModel::createMesh(MeshModel *output,int triangleCount)
 	}
 
 	char commandline[100];
-	sprintf(commandline, "p -q -a%15.15f -D -j -P -z", 1.0/triangleCount);
+	sprintf(commandline, "p -q -a%15.15f -D -j -P -z", triArea);
 	triangulate(commandline, &in, &out, NULL);
 
 	output->faces->clear();
