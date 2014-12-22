@@ -301,7 +301,6 @@ BDMORPHModel::~BDMORPHModel()
 /*****************************************************************************************************/
 bool BDMORPHModel::initialize()
 {
-	assert(!initialized);
 	TimeMeasurment t;
 	std::deque<Vertex> vertexQueue;
 	std::set<Vertex> visitedVertices, mappedVertices;
