@@ -17,7 +17,7 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>As Killing as Possible Deformations With<br/> Bounded distoration shape animations</h1>
+        <h1><a href="index.html">As Killing as Possible Deformations With<br/> Bounded distoration shape animations</a></h1>
         <p class="view"><a href="https://github.com/maximlevitsky/animations-editor-bdmorph">View the Project on GitHub <small>maximlevitsky/animations-editor-bdmorph</small></a></p>
         <ul>
           <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/zipball/master">Download <strong>Source</strong></a></li>
@@ -28,58 +28,40 @@
         </ul>
       </header>
       <section>
-        <p>
-			This is implementation of paper:</p>
-			<a href="http://www.cs.technion.ac.il/%7Erenjie/papers/bdmorph.pdf">
-			"Planar Shape Interpolation with Bounded Distortion"
-			</a></p>
 
-			<p>The code is based on earlier project, implementing the following paper:</p>
-			<a href="http://www.stanford.edu/%7Ejustso1/assets/kvf_deformation.pdf">
-			"As-Killing-As-Possible Vector Fields for Planar Deformation"</a></p>
+		<h1> Getting started </h1>
 
-			You can find it here:
-			<p><a href="http://www.cs.technion.ac.il/%7Ecggc/Upload/Projects/KVFDeformation/index.html">http://www.cs.technion.ac.il/~cggc/Upload/Projects/KVFDeformation/index.html</a></p>
+		You start by creating new video project from some form of existing data.
+		You can start with existing planar mesh (in usual OBJ format) or from an picture.
+		in later case you will be be asked to draw the outline of object you want to animate. <br/>
+		Currently only one subject is supported, but in future versions you could use an picture that has more that one subject<br/><br/>
 
-			<h2>User guide</h2>
-			<a href=doc.html>User interface documentation</a> can be found here <br/><br/>
-			<h2>Screenshots and Videos</h2>
+		<img src="tutorial/pic1.png" width="50%"/>
+		<br/>
 
-			<a href="images/pic1.png">
-			<img src="images/pic1.png" width="320" height="240"/>
-			</a>
+		Its also possible to create an new outline from scratch by doing File->Create model <br/></br>
+		
 
-			<a href="images/pic2.png">
-			<img src="images/pic2.png" width="320" height="240"/>
-			</a>
+		<h1>Outline Editor</h1></br>
 
-			<a href="images/pic3.png">
-			<img src="images/pic3.png" width="320" height="240"/>
-			</a>
+		The editor is pretty basic so far, but good enough for the task. </br>
+		To start left click on place where you want to put first vertex and it will became selected (green)</br>
+		Everytime you click again, new edge will from from green vertex to new vertex.
+		An other vertex can be selected by clicking it.
+		
+		<video width="70%" controls>
+  		<source src="tutorial/tut1.mp4" type="video/mp4"/>
+		</video> <br/>
 
-			<video width="320" height="240" controls>
-  			<source src="images/video1.mp4" type="video/mp4"/>
-			</video>
 
-			<video width="320" height="240" controls>
-  			<source src="images/video2.mp4" type="video/mp4"/>
-			</video>
+		The <i>Create Mesh button</i> invokes <a href="http://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> library to create De-Launchy triangiliation
+		of the polygon you had drawn.<br/>
+		You can use <i>Mesh Density </i> button to control the density of the resulting mesh<br/><br/>
 
-			<video width="320" height="240" controls>
-  			<source src="images/video3.mp4" type="video/mp4"/>
-			</video>
+		<h1> The Main screen </h1> </br>
 
-			<a href="images/pic4.png">
-			<img src="images/pic4.png" width="320" height="240"/>
-			</a>
-
-			<video width="320" height="240" controls>
-  			<source src="images/video4.mp4" type="video/mp4"/>
-			</video>
-
-			<a href="images/pic5.png">
-			<img src="images/pic5.png" width="320" height="240"/>
-			</a>
+		<img src="tutorial/pic2.png" width="50%"/>
+		
 
       </section>
     </div>
