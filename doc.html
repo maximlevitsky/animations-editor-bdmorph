@@ -47,9 +47,28 @@
             <h1>Outline Editor</h1></br>
 
             The editor is pretty basic so far, but good enough for the task. </br>
-            To start left click on place where you want to put first vertex and it will became selected (green)</br>
-            Everytime you click again, new edge will from from green vertex to new vertex.
-            An other vertex can be selected by clicking it.
+
+            <ol>
+            <li>
+                To start left click on place where you want to put first vertex and it will became selected (green)
+                Everytime you click again, new edge will from from green vertex to new vertex.
+            </li>
+
+            <li>
+                Different vertex can be selected by clicking it and not moving the mouse
+            </li>
+
+            <li>
+                Clicking and dragging an vertex moves it and doesn't change the selection
+            </li>
+
+            <li>
+                Outline can be loaded from .poly files by clicking import and saved to .poly file using 'Save'
+            </li>
+
+            <li>
+                To create an mesh with 'holes' in it, place an standalone vertex inside each hole
+            </li>
 
             <br/><br/>
 
@@ -65,13 +84,177 @@
             It included mostly as a streess tesing measure.
             <br/><br/>
 
-            <h1> The Main screen </h1> </br>
+            <h1> Keyframe editor </h1> </br>
 
-            Here you can apply deformations to to mesh in very similiar way as in original KVF project.
-            First you pin the vertexes which you want rougly not move and then drag the one that you think will give you
-            the right deformation.
-            Adding/removing pins is done either when <b>Pin mode is selected</b> or when you hold <i>Shift</i> while clicking.
-            </br>
+            Here you can apply deformations to to mesh in very similiar way as in original KVF project.<br/>
+            To do so, you pin the vertices which you want rougly not move and then drag the one that you think will give you
+                 the right deformation<br/><br/>
+
+            <ol>
+            <li>
+            Adding/removing pins (Pinning) is done either when <i>Pin mode</i> is selected or when you hold <i>Shift</i> while clicking.<br/>
+            Pin is removed by clicking it
+            </li>
+
+            <li>
+            <i>Control points weight</i> allows you to tweak the KVF algorithm to give more or less weight to the pin points<br/>
+            Low values cause global movements, while high values cause distorations.<br/>
+            </li>
+
+            <li>
+            <i>Reset Control Points</i> removes all pins.
+            </li>
+
+            <li>
+            <i>Reset </i> restores the keyframe back to its creation point<br/>
+                <i>Undo/Redo</i> do their usual thing
+            </li>
+
+            <li>
+            <i>Hightlight selected vertexs</i> is semi-debug feature to show what face and vertex is under the mouse
+            both on the screen and in statusbar
+            </li>
+
+            <li>
+            Mouse wheel zooms, and dragging with right button moves the model on the screen (but model remains the same internally)
+            </li>
+
+            </ol>
+
+            <video width="70%" controls>
+            <source src="tutorial/tut2.mp4" type="video/mp4"/>
+            </video> <br/><br/>
+
+
+            <h1>Animation Editor</h1>
+            Here you add/remove the keyframes.<br/>
+
+
+            <ol>
+
+            <li>
+                Big plus adds new keyframe and initializes it to be exactly like the last one</br>
+                If you want to add an keyframe in the middle, you can right click and keyframe and choose <i>Clone Keyframe</i>
+            </li>
+
+
+            <li>
+                Delting an keyframe is also done with right click menu. You can't delete last keyframe.
+            </li>
+
+            <li>
+                Each keyframe has time asscociated with it, which is the relative moment from start of the video, at which
+                it will be displayed.<br/>
+                This can be changed by right clicking the keyframe and using <i>Edit time</i><br/>
+                Note that change affects <i>all</i> following frames in the way that only display duration of frame that is before current one is changed.<br/>
+            </li>
+
+            <li>
+                Frame can be loaded from mesh file, as long as the mesh has same faces and same vertex count.
+                This allows you to save current frame, and later load it.<br/>
+                To do so, use <i>Load from keyframe</i> righ click menu.
+            </li>
+
+            <li>
+                Lastly if you stop animation in the middle, you can convert the interpolated frame to keyframe by pressing <i>Convert to keyframe</i> button
+                which appears in side panel when you watch interpolated frame
+            </li>
+
+            </ol>
+
+           <video width="70%" controls>
+            <source src="tutorial/tut3.mp4" type="video/mp4"/>
+            </video> <br/></br>
+
+
+            <h1> Animations </h1>
+
+            Finally you can preview animations and save the output to video file, a project file, etc etc.
+
+
+            <ol>
+
+            <li>
+                Dragging the slider creates interpolated frame according to its new position. You can see the current time in the side bar.<br/>
+            </li>
+
+            <li>
+                As said earlier at any time you can convert an interpolated frame to an new keyframe.
+                Unless you do so however, the interpolated frames can't be edited.<br/>
+                You can only zoom and move them as usual.<br/>
+            </li>
+
+            <li>
+                Play/Loop/Rewind buttons do their usual thing to play back the animation on the screen.<br/>
+                While animation is running, Play button changes to Pause button
+            </li>
+
+            </ol>
+
+            While interpolated frame is visible, three debug features are shown in side panel:
+
+            <ol>
+
+            <li>
+                <i>Show anchor edge</i>: shows the the edge that is selected to start mapping from, as due to the nature of BDMORPH algorthm, the solution
+                is only known up to movement,scale and rotation, so one of the edges is chosen to be lineary interpolated between keyframes and rest according to
+                solution.<br/>
+                In next version, you will have ability to choose it, and have smarter way to choose it automatically
+            </li>
+
+            <li>
+                <i>Show starting model</i>: overlays wireframe of first keyframe over the model
+            </li>
+
+            <li>
+                <i>Target FPS</i>: changes the FPS the animation algorithm tries to acheeve. Moslty amusement feature if you set it low
+            </li>
+
+            </ol>
+
+           <video width="70%" controls>
+            <source src="tutorial/tut4.mp4" type="video/mp4"/>
+            </video> <br/></br>
+
+
+            <h1>Wrapping it up </h1>
+
+            At any moment you can save output in varity of ways:
+
+            <ol>
+            <li>
+                <u>Save current mesh to file:</u> Choose <i>Save</i> and set output file to <i>name</i>.obj
+            </li>
+
+            <li>
+                <u>Save video project:</u> Choose <i>Save</i> and set output file to <i>name</i>.vproject
+                In this case all the keyframes, pins, start times will be saved in this file, and you can later load it<br/>
+                <b>WARNING:</b> currenly very dumb internal format is used for this file, so chances are hight that future versions will not support it
+            </li>
+
+
+            <li>
+                <u> Save screenshot</u>: Chooose 'save screenshot' from the menu
+            </li>
+
+            <li>
+                <u> Create video file:</u> As you might have expected, choose 'Export video' from menu.<br/>
+                    output is tested with mp4 and avi formats, in both cases H264 video codec is used, and video size is 1024x768<br/>
+                    In future versions, more setting controlling video output will be provided.<br/>
+                    Note that due to a bug somewhere, the mp4 output doesn't play in some players
+            </li>
+
+
+            </ol>
+
+
+           <video width="70%" controls>
+            <source src="tutorial/tut5.mp4" type="video/mp4"/>
+            </video> <br/></br>
+
+            Note that everytime you import an mesh,outline or video project, and texture with same name exists in the folder its loaded.
+            This is why you see the garbage above, because it loads the screenshot as texture. 
+
 
         </section>
     </div>
