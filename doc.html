@@ -1,75 +1,85 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Animations-editor-bdmorph by maximlevitsky</title>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="chrome=1">
+        <title>Animations editor - User guide </title>
 
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <script src="javascripts/scale.fix.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+        <link rel="stylesheet" href="stylesheets/styles.css">
+        <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+        <script src="javascripts/scale.fix.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-  </head>
-  <body>
+        <!--[if lt IE 9]>
+        <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    </head>
+    <body>
     <div class="wrapper">
-      <header>
-        <h1><a href="index.html">As Killing as Possible Deformations With<br/> Bounded distoration shape animations</a></h1>
-        <p class="view"><a href="https://github.com/maximlevitsky/animations-editor-bdmorph">View the Project on GitHub <small>maximlevitsky/animations-editor-bdmorph</small></a></p>
-        <ul>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/zipball/master">Download <strong>Source</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-Linux-64bit.64-bit">Download <strong>for Linux</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-OSX.64.bit.dmg">Download <strong>for OSX</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-Windows.32.bit.zip">Download <strong>Windows</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph">View On <strong>GitHub</strong></a></li>
-        </ul>
-      </header>
-      <section>
+        <header>
+            <h1><a href="index.html">As Killing as possible deformations with<br/> bounded distoration animations</a></h1>
+            <p class="view"><a href="https://github.com/maximlevitsky/animations-editor-bdmorph">View the Project on GitHub 
+            <small>maximlevitsky/animations-editor-bdmorph</small></a></p>
+            <ul>
+                <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/zipball/master">Download <strong>Source</strong></a></li>
+                <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/">Download <strong>for Linux</strong></a></li>
+                <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-OSX.64.bit.dmg">Download <strong>for OSX</strong></a></li>
+                <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-Windows.32.bit.zip">Download <strong>for Windows</strong></a></li>
+                <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph">View On <strong>GitHub</strong></a></li>
+            </ul>
+        </header>
 
-		<h1> Getting started </h1>
+        <section>
 
-		You start by creating new video project from some form of existing data.
-		You can start with existing planar mesh (in usual OBJ format) or from an picture.
-		in later case you will be be asked to draw the outline of object you want to animate. <br/>
-		Currently only one subject is supported, but in future versions you could use an picture that has more that one subject<br/><br/>
+            <h1> Getting started </h1>
 
-		<img src="tutorial/pic1.png" width="50%"/>
-		<br/>
+            You start by creating new video project from some form of existing data.
+            You can start with existing planar mesh (in usual OBJ format) or from an picture.
+            in later case you will be be asked to draw the outline of object you want to animate. <br/>
+            Currently only one subject is supported, but in future versions you could use an picture that has more that one subject<br/><br/>
 
-		Its also possible to create an new outline from scratch by doing File->Create model <br/></br>
-		
+            <img src="tutorial/pic1.png" width="50%"/>
+            <br/>
 
-		<h1>Outline Editor</h1></br>
-
-		The editor is pretty basic so far, but good enough for the task. </br>
-		To start left click on place where you want to put first vertex and it will became selected (green)</br>
-		Everytime you click again, new edge will from from green vertex to new vertex.
-		An other vertex can be selected by clicking it.
-		
-		<video width="70%" controls>
-  		<source src="tutorial/tut1.mp4" type="video/mp4"/>
-		</video> <br/>
+            Its also possible to create an new outline from scratch by doing File->Create model <br/></br>
 
 
-		The <i>Create Mesh button</i> invokes <a href="http://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> library to create De-Launchy triangiliation
-		of the polygon you had drawn.<br/>
-		You can use <i>Mesh Density </i> button to control the density of the resulting mesh<br/><br/>
+            <h1>Outline Editor</h1></br>
 
-		<h1> The Main screen </h1> </br>
+            The editor is pretty basic so far, but good enough for the task. </br>
+            To start left click on place where you want to put first vertex and it will became selected (green)</br>
+            Everytime you click again, new edge will from from green vertex to new vertex.
+            An other vertex can be selected by clicking it.
 
-		<img src="tutorial/pic2.png" width="50%"/>
-		
+            <br/><br/>
 
-      </section>
+            <video width="70%" controls>
+            <source src="tutorial/tut1.mp4" type="video/mp4"/>
+            </video> <br/>
+
+
+            The <i>Create Mesh button</i> invokes code from <a href="http://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, 
+            a library that creates De-Launchy triangiliation of the polygon you had drawn.<br/>
+            You can use <i>Mesh Density </i> button to control the density of the resulting mesh
+            Default density is OK in most cases, and high density doesn't contribute to quality, but rather slows things down
+            It included mostly as a streess tesing measure.
+            <br/><br/>
+
+            <h1> The Main screen </h1> </br>
+
+            Here you can apply deformations to to mesh in very similiar way as in original KVF project.
+            First you pin the vertexes which you want rougly not move and then drag the one that you think will give you
+            the right deformation.
+            Adding/removing pins is done either when <b>Pin mode is selected</b> or when you hold <i>Shift</i> while clicking.
+            </br>
+
+        </section>
     </div>
     <footer>
-      <p>Project maintained by <a href="https://github.com/maximlevitsky">maximlevitsky</a></p>
-      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+        <p>Project maintained by <a href="https://github.com/maximlevitsky">maximlevitsky</a></p>
+        <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
     </footer>
+
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-    
-  </body>
+</body>
 </html>

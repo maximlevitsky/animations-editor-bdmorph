@@ -139,7 +139,7 @@ header ul:before {
   box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 0, inset rgba(255, 255, 255, 0.7) 0 -1px 0;
 }
 header ul li {
-  width: 79px;
+  width: 100px;
   float: left;
   border-right: 1px solid #3A7CBE;
   height: 38px;
@@ -148,12 +148,12 @@ header ul li.single {
   border: none;
 }
 header ul li + li {
-  width: 78px;
+  width: 100px;
   border-left: 1px solid #8BBEF3;
 }
 header ul li + li + li {
   border-right: none;
-  width: 79px;
+  width: 100px;
 }
 header ul a {
   line-height: 1;
