@@ -269,39 +269,6 @@ void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Ve
 }
 
 /******************************************************************************************************************************/
-bool OutlineModel::saveToFile(std::string filename)
-{
-	/* We write here .poly file but only for now, later we will use triangle directly */
-	std::ofstream ofile(filename);
-
-	std::set<Vertex> standaloneVertices;
-	std::set<Vertex> normalVertexes;
-	getVertices(standaloneVertices,normalVertexes);
-
-	/* First section - vertices */
-	ofile << normalVertexes.size() << " 2 0 1" << std::endl;
-	for (auto iter = normalVertexes.begin() ; iter != normalVertexes.end() ; iter++)
-		ofile << *iter << " " << vertices[*iter].x << " " << vertices[*iter].y  << " 1" << std::endl;
-
-	/* Second section - edges */
-	ofile << edges.size() << " 1" << std::endl;
-	int i = 0;
-	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
-		ofile << i << " " << iter->v0 << " " << iter->v1 <<  " 1" << std::endl;
-	}
-
-	/* Third section - holes */
-	ofile << standaloneVertices.size() << std::endl;
-	i = 0;
-	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++)
-	{
-		ofile << i << " " << vertices[*iter].x << " " << vertices[*iter].y << std::endl;
-	}
-
-	return true;
-}
-
-/******************************************************************************************************************************/
 bool OutlineModel::createMesh(MeshModel *output,int triCount)
 {
 	struct triangulateio in, out;
@@ -387,6 +354,39 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount)
 }
 
 /******************************************************************************************************************************/
+bool OutlineModel::saveToFile(std::string filename)
+{
+	/* We write here .poly file but only for now, later we will use triangle directly */
+	std::ofstream ofile(filename);
+
+	std::set<Vertex> standaloneVertices;
+	std::set<Vertex> normalVertexes;
+	getVertices(standaloneVertices,normalVertexes);
+
+	/* First section - vertices */
+	ofile << normalVertexes.size() << " 2 0 1" << std::endl;
+	for (auto iter = normalVertexes.begin() ; iter != normalVertexes.end() ; iter++)
+		ofile << *iter << " " << vertices[*iter].x << " " << vertices[*iter].y  << " 1" << std::endl;
+
+	/* Second section - edges */
+	ofile << edges.size() << " 1" << std::endl;
+	int i = 0;
+	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+		ofile << i << " " << iter->v0 << " " << iter->v1 <<  " 1" << std::endl;
+	}
+
+	/* Third section - holes */
+	ofile << standaloneVertices.size() << std::endl;
+	i = 0;
+	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++)
+	{
+		ofile << i << " " << vertices[*iter].x << " " << vertices[*iter].y << std::endl;
+	}
+
+	return true;
+}
+
+/******************************************************************************************************************************/
 bool OutlineModel::loadFromFile(const std::string &filename)
 {
 	std::ifstream ifile(filename);
@@ -434,10 +434,7 @@ bool OutlineModel::loadFromFile(const std::string &filename)
 		unsigned int v;
 		double x, y;
 		ifile >> v >> x >> y;
-
-		if (v>= vertices.size())
-			vertices.resize(v+1);
-		vertices[v] = Point2(x,y);
+		vertices.push_back(Point2(x,y));
 	}
 
 	numVertices = vertices.size();
@@ -445,6 +442,7 @@ bool OutlineModel::loadFromFile(const std::string &filename)
 }
 
 
+/******************************************************************************************************************************/
 Point2 OutlineModel::adjustAspectRatioMul(Point2 in)
 {
 	Point2 out = in;
@@ -454,6 +452,7 @@ Point2 OutlineModel::adjustAspectRatioMul(Point2 in)
 }
 
 
+/******************************************************************************************************************************/
 void OutlineModel::renderInternal()
 {
 	Point2 point1(0,0);
