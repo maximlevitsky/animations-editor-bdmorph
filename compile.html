@@ -22,14 +22,11 @@
         <small>maximlevitsky/animations-editor-bdmorph</small></a></p>
         <ul>
           <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/zipball/master">Download <strong>Source</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/">Download <strong>for Linux</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-OSX.64.bit.dmg">Download <strong>for OSX</strong></a></li>
-          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases/download/1.0-beta1/bdmorph-Windows.32.bit.zip">Download <strong>for Windows</strong></a></li>
+          <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph/releases">Download <strong>Latest release</strong></a></li>
           <li><a href="https://github.com/maximlevitsky/animations-editor-bdmorph">View On <strong>GitHub</strong></a></li>
         </ul>
       </header>
       <section>
-      </section>
 
       <h1>Ubuntu 14.14</h1>
 
@@ -53,9 +50,69 @@
         Now compile the source<br/>
         <code>make</code>
         </ol>
+		
+		<li>
+		Now you can run bdmorph in the directory
+		</li>
 
       <h1>Windows</h1>
-      <h1>Mac</h1>
+		<ol>
+		
+		<li>
+			Install Visual Studio (prepare the $$$ to be handled over...)
+		</li>
+		
+		<li>
+			Install  <a href="http://www.cmake.org/download/">CMake</a>
+		</li>
+		
+		<li>
+			Install Qt4 for Windows from  <a href="http://download.qt.io/archive/qt/4.8/4.8.6/">here</a>
+		</li>
+
+		
+		<li>
+			Install FFMPEG and SuiteSparse libraries<br/>
+			Libaries are 32 bit but should work with most visual studio versions
+			To help with install, you can download precompiled version of these from <a href="data/precompiled.zip">here</a>			
+		</li>
+		
+		<li>
+			Download the source and edit CMakefile.txt:<br/>
+			find the <code>SET(ROOT C:/Users/mlevtsky/Workspace/external)</code>
+			replace this path with where you extracted the precompiled version or edit this to point where you have the libs
+		</li>
+		
+		<li>
+			Open 'Qt 4.8.6 Command Prompt', enter the folder with source and do<br/>
+			<code>cmake -G "NMake Makefiles" . </code><br/>
+			<code>nmake</code><br/>
+		</li>
+		
+		
+		<li>
+			Now create an empty directory and place there:</br>
+			<li>
+				bdmorph.exe you compiled
+			</li>
+			<li>
+				QtCore4.dll
+				QtGui4.dll
+				QtOpenGL4.dll
+				(from QT bin dirctory, or add it to PATH)
+			</li>
+			<li>
+				all the libaries from dll folder of precomiled download you did
+			</li>
+			
+			<li>
+				start bdmorph.exe
+			</li>
+				
+		</ol>
+			
+		</section>
+
         
     </div>
     <footer>
