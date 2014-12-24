@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 2.6)
 
-PROJECT(kvf2d)
+PROJECT(bdmorph)
 FIND_PACKAGE(Qt4 REQUIRED)
 FIND_PACKAGE(OpenGL REQUIRED)
 SET(QT_USE_QTOPENGL TRUE)
 INCLUDE(${QT_USE_FILE})
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING   
+        "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
+        FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
 
 ###################################################################################################
 
@@ -60,17 +66,17 @@ if (APPLE)
 
 	set(MACOSX_BUNDLE_ICON_FILE macicon.icns)
 
-	set(kvf2d_ICON ${CMAKE_CURRENT_SOURCE_DIR}/GUI/icon/macicon.icns)
-	set_source_files_properties(${kvf2d_ICON} PROPERTIES
+	set(bdmorph_ICON ${CMAKE_CURRENT_SOURCE_DIR}/GUI/icon/macicon.icns)
+	set_source_files_properties(${bdmorph_ICON} PROPERTIES
        MACOSX_PACKAGE_LOCATION "Resources")
 
-    SET(ICON_RC_FILE ${kvf2d_ICON})
+    SET(ICON_RC_FILE ${bdmorph_ICON})
 
 endif(APPLE)
 
 ###################################################################################################
 
-if (NOT APPLE AND UNIX) # <- this is the way I like it
+if (NOT APPLE AND UNIX) # <- this is the way it should be
 	SET (EXTERNAL_LIBRARIES
 		cholmod amd camd colamd
 		openblas lapack		
@@ -92,7 +98,7 @@ INCLUDE_DIRECTORIES(
 	. ./GUI ./core ./utils ./GUI/widgets
 )
 
-SET(kvf2d_SOURCES
+SET(bdmorph_SOURCES
 	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp 
 	GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/OffScreenRenderer.cpp
 	GUI/widgets/ActionButton.cpp GUI/ProgramState.cpp
@@ -105,14 +111,14 @@ SET(kvf2d_SOURCES
 	utils/triangle.c utils/utils.cpp
 )
 
-SET(kvf2d_HEADERS_QT
+SET(bdmorph_HEADERS_QT
 	GUI/EditorWindow.h GUI/MainWindow.h GUI/SidePanel.h 
 	GUI/AnimationPanel.h GUI/OffScreenRenderer.h GUI/widgets/ActionButton.h
 	GUI/ProgramState.h
 )
 
-SET(kvf2d_HEADERS
-	${kvf2d_HEADERS_QT}
+SET(bdmorph_HEADERS
+	${bdmorph_HEADERS_QT}
 	GUI/QVideoEncoder.h
 	core/MeshModel.h core/KVFModel.h core/VideoModel.h
 	core/BDMORPH.h core/OutlineModel.h
@@ -120,28 +126,28 @@ SET(kvf2d_HEADERS
 	utils/triangle.h utils/utils.h
 )
 	
-SET(kvf2d_FORMS 
+SET(bdmorph_FORMS 
 	GUI/MainWindow.ui GUI/SidePanel.ui GUI/AnimationPanel.ui GUI/About.ui
 )
 
-SET(kvf2d_RESOURCES  GUI/resources/resources.rc )
+SET(bdmorph_RESOURCES  GUI/resources/resources.rc )
 
 ###################################################################################################
 
-QT4_WRAP_CPP(kvf2d_HEADERS_MOC ${kvf2d_HEADERS_QT})
-QT4_WRAP_UI(kvf2d_FORMS_HEADERS ${kvf2d_FORMS})
-QT4_ADD_RESOURCES(kvf2d_RESOURCES_RCC ${kvf2d_RESOURCES})
+QT4_WRAP_CPP(bdmorph_HEADERS_MOC ${bdmorph_HEADERS_QT})
+QT4_WRAP_UI(bdmorph_FORMS_HEADERS ${bdmorph_FORMS})
+QT4_ADD_RESOURCES(bdmorph_RESOURCES_RCC ${bdmorph_RESOURCES})
 
-ADD_EXECUTABLE(kvf2d WIN32 MACOSX_BUNDLE 
-	${kvf2d_SOURCES}
-	${kvf2d_RESOURCES_RCC} 
-	${kvf2d_HEADERS_MOC} 
-	${kvf2d_FORMS_HEADERS}
-	${kvf2d_HEADERS}
+ADD_EXECUTABLE(bdmorph WIN32 MACOSX_BUNDLE 
+	${bdmorph_SOURCES}
+	${bdmorph_RESOURCES_RCC} 
+	${bdmorph_HEADERS_MOC} 
+	${bdmorph_FORMS_HEADERS}
+	${bdmorph_HEADERS}
 	${ICON_RC_FILE}
 )
 
-TARGET_LINK_LIBRARIES(kvf2d 
+TARGET_LINK_LIBRARIES(bdmorph 
 	${QT_LIBRARIES}
 	${OPENGL_LIBRARIES}
 	${EXTERNAL_LIBRARIES}
