@@ -15,25 +15,26 @@ endif(NOT CMAKE_BUILD_TYPE)
 ###################################################################################################
 
 if (WIN32)
-	SET(ROOT C:/Users/mlevtsky/Workspace)
+	SET(ROOT C:/Users/mlevtsky/Workspace/external)
 	SET (EXTERNAL_LIBRARIES
-		${ROOT}/suitesparse/amd.lib
-		${ROOT}/suitesparse/camd.lib
-		${ROOT}/suitesparse/colamd.lib
-		${ROOT}/suitesparse/cholmod.lib
+		${ROOT}/lib/libamd.lib
+		${ROOT}/lib/libcamd.lib
+		${ROOT}/lib/libcolamd.lib
+		${ROOT}/lib/libccolamd.lib
+		${ROOT}/lib/libcholmod.lib
 
-		${ROOT}/suitesparse/lapack.lib
-		${ROOT}/suitesparse/blas.lib
+		${ROOT}/lib/libgoto_CHOLMOD.lib
+		${ROOT}/lib/libmetis_CHOLMOD.lib
 		
-		${ROOT}/ffmpeg/lib/avcodec.lib
-		${ROOT}/ffmpeg/lib/avformat.lib
-		${ROOT}/ffmpeg/lib/avutil.lib
-		${ROOT}/ffmpeg/lib/swscale.lib
+		${ROOT}/lib/avcodec.lib
+		${ROOT}/lib/avformat.lib
+		${ROOT}/lib/avutil.lib
+		${ROOT}/lib/swscale.lib
 	)
 	
 	SET(EXTERNAL_INCLUDES
-		${ROOT}/suitesparse/include/
-		${ROOT}/ffmpeg/include/
+		${ROOT}/include/
+		${ROOT}/include/suitesparse/
 	)
 
 	SET(ICON_RC_FILE GUI/icon/winicon.rc)
