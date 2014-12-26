@@ -79,6 +79,9 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
 
 	    for (unsigned int i = 0; i < getNumVertices(); i++)
 	    	vertices[i] += disp;
+
+		lastVFCalcTime = 1;
+		lastVFApplyTime = 1;
 		return;
 	}
 
