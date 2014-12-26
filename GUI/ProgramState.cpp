@@ -64,7 +64,7 @@ bool ProgramState::createProject(std::string file)
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
 	}
 
-	else if (ends_with(file, ".png") || ends_with(file, ".jpg") || ends_with(file, ".bmp") || file == "")
+	else if (ends_with(file, ".png") || ends_with(file, ".jpg") || ends_with(file, ".jpeg") || ends_with(file, ".bmp") || file == "")
 	{
 		QPixmap newtexture;
 		if (!loadTextureFile(file, newtexture) && file != "") {
@@ -117,8 +117,9 @@ bool ProgramState::createProject(std::string file)
 
 		mode = PROGRAM_MODE_DEFORMATIONS;
 		currentModel = videoModel->getKeyframeByIndex(1);
-		vertexCount = videoModel->numVertices;
-		facesCount = videoModel->numFaces;
+		vertexCount = videoModel->getNumVertices();
+		facesCount = videoModel->getNumFaces();
+	    currentAnimationTime = videoModel->getTotalTime();
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED,NULL);
 	}
 	else {
@@ -131,6 +132,34 @@ bool ProgramState::createProject(std::string file)
 }
 
 /***********************************************************************************************************/
+bool ProgramState::createProjectFromOutline(int triangleCount)
+{
+	if (mode != PROGRAM_MODE_OUTLINE) return false;
+	if (!outlineModel) return false;
+
+	VideoModel* newVideoModel  = new VideoModel();
+
+	if (!newVideoModel->createFromOutline(outlineModel, triangleCount))
+	{
+    	QMessageBox::warning(NULL, "Error","Problem on creating the mesh, check if outline is valid");
+    	delete newVideoModel;
+    	return false;
+	}
+
+	unloadVideoModel();
+	videoModel = newVideoModel;
+    currentModel = videoModel->getKeyframeByIndex(1);
+    vertexCount = currentModel->getNumVertices();
+    facesCount = currentModel->getNumFaces();
+    mode = PROGRAM_MODE_DEFORMATIONS;
+    wireframeTransparency = 0.5;
+    currentAnimationTime = videoModel->getTotalTime();
+    emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|EDIT_SETTINGS_CHANGED,NULL);
+    return true;
+}
+
+/***********************************************************************************************************/
+
 bool ProgramState::loadProject(std::string filename)
 {
     if (ends_with(filename, ".vproject"))
@@ -146,8 +175,9 @@ bool ProgramState::loadProject(std::string filename)
 		videoModel = newVideoModel;
 		mode = PROGRAM_MODE_DEFORMATIONS;
 		currentModel = videoModel->getKeyframeByIndex(0);
-		vertexCount = videoModel->numVertices;
-		facesCount = videoModel->numFaces;
+		vertexCount = videoModel->getNumVertices();
+		facesCount = videoModel->getNumFaces();
+	    currentAnimationTime = videoModel->getTotalTime();
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED, NULL);
     } else {
     	QMessageBox::warning(NULL, "Error", "Unknown file type selected");
@@ -159,6 +189,54 @@ bool ProgramState::loadProject(std::string filename)
 }
 
 /***********************************************************************************************************/
+bool ProgramState::loadTexture(std::string newtextureFile)
+{
+	QPixmap newtex;
+	if (!loadTextureFile(newtextureFile, newtex) && newtextureFile != "") {
+		QMessageBox::warning(NULL, "Error", "Can't load texture file");
+		return false;
+	}
+
+	textureFile = newtextureFile;
+	texture.swap(newtex);
+	updateTexture();
+	return true;
+}
+
+/***********************************************************************************************************/
+
+bool ProgramState::loadKeyframe(std::string filename)
+{
+	if (mode != PROGRAM_MODE_DEFORMATIONS) return false;
+
+	VideoKeyFrame* currentKeyframe = dynamic_cast<VideoKeyFrame*>(currentModel);
+	if (!currentKeyframe) return false;
+
+    MeshModel *newModel = new MeshModel();
+    if (!newModel->loadFromFile(filename)) {
+    	QMessageBox::warning(NULL, "Error", "Can't load mesh");
+    	delete newModel;
+    	return false;
+    }
+
+    if (newModel->getNumFaces() != currentKeyframe->getNumFaces() || newModel->getNumVertices() != currentKeyframe->getNumVertices() ) {
+    	QMessageBox::warning(NULL, "Error", "Incompatible model selected, can only load deformations of current mesh");
+    	delete newModel;
+    	return false;
+    }
+
+    currentKeyframe->vertices.swap(newModel->vertices);
+    currentKeyframe->updateMeshInfo();
+    currentKeyframe->width = videoModel->width;
+    currentKeyframe->height = videoModel->height;
+    currentKeyframe->moveMesh(videoModel->center);
+    delete newModel;
+    emit programStateUpdated(KEYFRAME_EDITED, NULL);
+    return true;
+}
+
+/***********************************************************************************************************/
+
 bool ProgramState::saveToFile(std::string filename)
 {
 	bool result;
@@ -176,6 +254,7 @@ bool ProgramState::saveToFile(std::string filename)
     	QMessageBox::warning(NULL, "Error", "Error on file save");
     return result;
 }
+
 /***********************************************************************************************************/
 
 bool ProgramState::saveScreenshot(std::string filename)
@@ -193,7 +272,7 @@ bool ProgramState::saveScreenshot(std::string filename)
 }
 
 /***********************************************************************************************************/
-bool ProgramState::createVideo(QString file)
+bool ProgramState::saveVideo(QString file)
 {
 	videoEncoder = new QVideoEncoder(30);
 	if (!videoEncoder->createFile(file, 1024,768)) {
@@ -245,80 +324,7 @@ bool ProgramState::createVideo(QString file)
 	return true;
 }
 
-/***********************************************************************************************************/
 
-bool ProgramState::setTexture(std::string newtextureFile)
-{
-	QPixmap newtex;
-	if (!loadTextureFile(newtextureFile, newtex) && newtextureFile != "") {
-		QMessageBox::warning(NULL, "Error", "Can't load texture file");
-		return false;
-	}
-
-	textureFile = newtextureFile;
-	texture.swap(newtex);
-	updateTexture();
-	return true;
-}
-
-/***********************************************************************************************************/
-
-bool ProgramState::loadKeyframe(std::string filename)
-{
-	if (mode != PROGRAM_MODE_DEFORMATIONS) return false;
-
-	VideoKeyFrame* currentKeyframe = dynamic_cast<VideoKeyFrame*>(currentModel);
-	if (!currentKeyframe) return false;
-
-    MeshModel *newModel = new MeshModel();
-    if (!newModel->loadFromFile(filename)) {
-    	QMessageBox::warning(NULL, "Error", "Can't load mesh");
-    	delete newModel;
-    	return false;
-    }
-
-    if (newModel->numFaces != currentKeyframe->numFaces || newModel->numVertices != currentKeyframe->numVertices ) {
-    	QMessageBox::warning(NULL, "Error", "Incomatable model selected, can only load deformations of current mesh");
-    	delete newModel;
-    	return false;
-    }
-
-    currentKeyframe->vertices.swap(newModel->vertices);
-    currentKeyframe->updateMeshInfo();
-    currentKeyframe->width = videoModel->width;
-    currentKeyframe->height = videoModel->height;
-    currentKeyframe->moveMesh(videoModel->center);
-    delete newModel;
-    emit programStateUpdated(KEYFRAME_EDITED, NULL);
-    return true;
-}
-
-/***********************************************************************************************************/
-bool ProgramState::createMeshFromOutline(int triangleCount)
-{
-	if (mode != PROGRAM_MODE_OUTLINE) return false;
-	if (!outlineModel) return false;
-
-	VideoModel* newVideoModel  = new VideoModel();
-
-
-	if (!newVideoModel->createFromOutline(outlineModel, triangleCount))
-	{
-    	QMessageBox::warning(NULL, "Error","Problem on creating the mesh, check if outline is valid");
-    	delete newVideoModel;
-    	return false;
-	}
-
-	unloadVideoModel();
-	videoModel = newVideoModel;
-    currentModel = videoModel->getKeyframeByIndex(1);
-    vertexCount = currentModel->numVertices;
-    facesCount = currentModel->numFaces;
-    mode = PROGRAM_MODE_DEFORMATIONS;
-    wireframeTransparency = 0.5;
-    emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|EDIT_SETTINGS_CHANGED,NULL);
-    return true;
-}
 /***********************************************************************************************************/
 void ProgramState::editOutline()
 {
@@ -338,6 +344,7 @@ void ProgramState::editOutline()
     	unloadVideoModel();
     	currentModel = outlineModel;
     	mode = PROGRAM_MODE_OUTLINE;
+    	updateTexture();
     	emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
 	}
 }

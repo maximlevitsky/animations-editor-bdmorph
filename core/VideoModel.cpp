@@ -8,6 +8,110 @@ VideoModel::VideoModel() : pFrame(NULL)
 {}
 
 /******************************************************************************************************************************/
+VideoModel::~VideoModel()
+{
+	for (auto iter = keyframes.begin(); iter != keyframes.end()  ;) {
+		delete *iter;
+		iter = keyframes.erase(iter);
+	}
+
+	delete pFrame;
+}
+/******************************************************************************************************************************/
+
+bool VideoModel::loadFromFile(const std::string &filename)
+{
+	if (!ends_with(filename, ".vproject"))
+		return false;
+
+	std::ifstream infile(filename);
+	if (infile.bad())
+	    return false;
+
+	std::string magic;
+	infile >> magic;
+	if (magic != "VOBJ")
+		return false;
+
+	int keyFrameCount,numFaces,numVertices;
+	infile >> numFaces >> numVertices >> keyFrameCount;
+
+	faces->resize(numFaces);
+	vertices.resize(numVertices);
+
+	if (keyFrameCount == 0 || numFaces == 0 || numVertices == 0)
+		return false;
+
+	loadVOBJFaces(infile);
+	loadVOBJTexCoords(infile);
+	loadVOBJVertices(infile);
+
+	updateMeshInfo();
+
+	for (int i = 0 ; i < keyFrameCount ; i++)
+	{
+		int duration;
+		infile >> magic >> duration;
+		VideoKeyFrame* frame = new VideoKeyFrame(this);
+		frame->loadVOBJ(infile);
+		frame->duration = duration;
+		keyframes.push_back(frame);
+	}
+
+	return initialize_animations();
+}
+/******************************************************************************************************************************/
+
+bool VideoModel::createFromFile(const std::string &filename)
+{
+	bool retval = MeshModel::loadFromFile(filename);
+	if (!retval) return false;
+	retval = initialize_animations();
+	if (!retval) return false;
+	initialize_keyframes();
+	return true;
+}
+/******************************************************************************************************************************/
+
+bool VideoModel::createFromOutline(OutlineModel* outlineModel, int trianglecount)
+{
+	if (!outlineModel->createMesh(this, trianglecount))
+		return false;
+
+    if (!initialize_animations())
+    	return false;
+
+    initialize_keyframes();
+    return true;
+}
+/******************************************************************************************************************************/
+
+bool VideoModel::saveToFile(const std::string filename)  const
+{
+    std::ofstream outfile(filename);
+    if (outfile.bad())
+    	return false;
+    if (!ends_with(filename, ".vproject"))
+    	return false;
+
+    outfile << "VOBJ" << std::endl;
+    outfile << getNumFaces() << " " << getNumVertices() << " " << keyframes.size() << std::endl;
+
+    saveVOBJFaces(outfile);
+    saveVOBJTexCoords(outfile);
+    saveVOBJVertices(outfile);
+
+    for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
+    {
+    	VideoKeyFrame *keyframe = *iter;
+    	outfile << "keyframe" << " " << keyframe->duration << std::endl;
+    	keyframe->saveVOBJ(outfile);
+    }
+
+    return true;
+}
+/******************************************************************************************************************************/
+
 bool VideoModel::initialize_animations()
 {
 	pFrame = new BDMORPHModel(this);
@@ -24,23 +128,14 @@ void VideoModel::initialize_keyframes()
 }
 
 /******************************************************************************************************************************/
-VideoModel::~VideoModel()
-{
-	for (auto iter = keyframes.begin(); iter != keyframes.end()  ;) {
-		delete *iter;
-		iter = keyframes.erase(iter);
-	}
 
-	delete pFrame;
-}
-/******************************************************************************************************************************/
-int VideoModel::count()
+int VideoModel::count() const
 {
 	return keyframes.size();
 }
 
 /******************************************************************************************************************************/
-int VideoModel::getTotalTime()
+int VideoModel::getTotalTime()  const
 {
 	int retval = 0;
 	int last_time = 0;
@@ -54,14 +149,14 @@ int VideoModel::getTotalTime()
 }
 
 /******************************************************************************************************************************/
-VideoKeyFrame* VideoModel::getKeyframeByIndex(int index)
+VideoKeyFrame* VideoModel::getKeyframeByIndex(int index)  const
 {
 	if (index >= 0 && index < (int)keyframes.size())
 		return keyframes[index];
 	return NULL;
 }
 /******************************************************************************************************************************/
-VideoKeyFrame* VideoModel::getLastKeyframeBeforeTime(int msecs)
+VideoKeyFrame* VideoModel::getLastKeyframeBeforeTime(int msecs)  const
 {
 	int time = 0;
 
@@ -76,7 +171,7 @@ VideoKeyFrame* VideoModel::getLastKeyframeBeforeTime(int msecs)
 	return keyframes.back();
 }
 /******************************************************************************************************************************/
-int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
+int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)  const
 {
 	int i = 0;
 	for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++, i++)
@@ -88,7 +183,7 @@ int VideoModel::getKeyFrameIndex(VideoKeyFrame* frame)
 	return -1;
 }
 /******************************************************************************************************************************/
-int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)
+int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)  const
 {
 	int time = 0;
 
@@ -166,98 +261,8 @@ MeshModel* VideoModel::interpolateFrame(double msec, double* timeduration)
 }
 
 /******************************************************************************************************************************/
-bool VideoModel::saveToFile(const std::string filename)
-{
-    std::ofstream outfile(filename);
-    if (outfile.bad())
-    	return false;
-    if (!ends_with(filename, ".vproject"))
-    	return false;
 
-    outfile << "VOBJ" << std::endl;
-    outfile << numFaces << " " << numVertices << " " << keyframes.size() << std::endl;
-
-    saveVOBJFaces(outfile);
-    saveVOBJTexCoords(outfile);
-    saveVOBJVertices(outfile);
-
-    for (auto iter = keyframes.begin() ; iter != keyframes.end() ; iter++)
-    {
-    	VideoKeyFrame *keyframe = *iter;
-    	outfile << "keyframe" << " " << keyframe->duration << std::endl;
-    	keyframe->saveVOBJ(outfile);
-    }
-
-    return true;
-}
-
-/******************************************************************************************************************************/
-bool VideoModel::loadFromFile(const std::string &filename)
-{
-	if (!ends_with(filename, ".vproject"))
-		return false;
-
-	std::ifstream infile(filename);
-	if (infile.bad())
-	    return false;
-
-	std::string magic;
-	infile >> magic;
-	if (magic != "VOBJ")
-		return false;
-
-	int keyFrameCount;
-	infile >> numFaces >> numVertices >> keyFrameCount;
-
-	if (keyFrameCount == 0)
-		return false;
-
-	loadVOBJFaces(infile);
-	loadVOBJTexCoords(infile);
-	loadVOBJVertices(infile);
-
-	updateMeshInfo();
-
-	for (int i = 0 ; i < keyFrameCount ; i++)
-	{
-		int duration;
-		infile >> magic >> duration;
-		VideoKeyFrame* frame = new VideoKeyFrame(this);
-		frame->numVertices = numVertices;
-		frame->loadVOBJ(infile);
-		frame->duration = duration;
-		keyframes.push_back(frame);
-	}
-	return initialize_animations();
-}
-
-/******************************************************************************************************************************/
-bool VideoModel::createFromFile(const std::string &filename)
-{
-	bool retval = MeshModel::loadFromFile(filename);
-	if (!retval) return false;
-	retval = initialize_animations();
-	if (!retval) return false;
-	initialize_keyframes();
-	return true;
-}
-/******************************************************************************************************************************/
-
-bool VideoModel::createFromOutline(OutlineModel* outlineModel, int trianglecount)
-{
-	if (!outlineModel->createMesh(this, trianglecount))
-		return false;
-
-    if (!initialize_animations())
-    	return false;
-
-    initialize_keyframes();
-    return true;
-}
-
-/******************************************************************************************************************************/
-
-BBOX VideoModel::getActualBBox()
+BBOX VideoModel::getActualBBox()  const
 {
 	BBOX b(vertices);
 

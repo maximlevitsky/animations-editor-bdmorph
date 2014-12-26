@@ -51,19 +51,21 @@ public:
 
 	/* deformation entry points*/
 	void setAlpha(double alpha);
-	double getAlpha() { return alpha1; }
+	double getAlpha() const { return alpha1; }
 	void clearPins();
-	const std::set<Vertex>& getPinnedVertexes() { return pinnedVertexes; }
+	const std::set<Vertex>& getPinnedVertexes() const { return pinnedVertexes; }
 
+	void displaceMesh(const std::set<DisplacedVertex> &displacements);
 	void calculateVF(const std::set<DisplacedVertex> &displacements);
 	void applyVFLogSpiral();
 	void applyVF();
 
 	/* rendering */
-	void renderVFOrig();
-	void renderVF();
+	void renderVFOrig() const;
+	void renderVF() const;
+	void renderOverlay(double scale) const;
 
-	void historySaveToFile(std::ofstream& outfile);
+	void historySaveToFile(std::ofstream& outfile) const;
 	void historyLoadFromFile(std::ifstream& infile);
 
 	/* undo and redo code*/
@@ -72,9 +74,7 @@ public:
 	bool historyRedo();
 	bool historyUndo();
 
-
 	bool mousePressAction(Point2 pos, double radius);
-	void renderOverlay(double scale);
 
 	bool saveVOBJ(std::ofstream& ofile);
 	bool loadVOBJ(std::ifstream& ifile);
@@ -102,10 +102,10 @@ private:
     std::vector<Point2> newPoints;
     std::vector<double> counts;
 
-	void renderVF_common(Vector2* VF);
+	void renderVF_common(Vector2* VF) const;
 
     void historyAdd(const std::set<DisplacedVertex> &disps);
-	Vertex getClosestPin(Point2 point, double radius);
+	Vertex getClosestPin(Point2 point, double radius) const;
 	void togglePinVertex(Vertex v);
 
     std::vector<Point2> initialVertexes;

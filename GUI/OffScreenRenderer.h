@@ -14,6 +14,9 @@ public:
 	OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, int width,int height);
 	virtual ~OffScreenRenderer();
 
+	/* Set texture used for rendering */
+	void setTexture(QPixmap &texture);
+
 	/* Slow simple render */
 	void renderToQImage(MeshModel* model, QImage& out, int stripSize, double scale);
 
@@ -21,7 +24,6 @@ public:
 	void setupTransform(MeshModel* model,bool vertFlip,int stripSize, double scale);
 	void renderToBufferBGRA(MeshModel* model, void* out);
 
-	void setTexture(QPixmap &texture);
 
 private:
 	int width;

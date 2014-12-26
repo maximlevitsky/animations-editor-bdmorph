@@ -239,7 +239,7 @@ void MainWindow::onSaveVideo()
 	if ( !programstate) return;
     QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Video file (*.avi *.mp4)"));
     if ( filename == "") return;
-    programstate->createVideo(filename);
+    programstate->saveVideo(filename);
 }
 
 

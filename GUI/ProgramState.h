@@ -99,9 +99,9 @@ public:
 	bool loadProject(std::string filename);
 	bool saveToFile(std::string filename);
 	bool saveScreenshot(std::string filename);
-	bool createMeshFromOutline(int triangleCount);
+	bool createProjectFromOutline(int triangleCount);
 	void editOutline();
-	bool setTexture(std::string textureFile);
+	bool loadTexture(std::string textureFile);
 	bool loadKeyframe(std::string file);
 
 	/*  Editor calls this when it edited the current model
@@ -136,14 +136,13 @@ public:
 	void setProgress(int value);
 	void updateGUI();
 
-	bool createVideo(QString file);
+	bool saveVideo(QString file);
 signals:
 	/* Informs all the users that parts of the state changed */
 	void programStateUpdated(int flags, void *param);
 
 private slots:
 	void onAnimationTimer();
-
 private:
 	void clearStatusBar();
 	void unloadAll();
@@ -161,7 +160,6 @@ private:
 	/* Video encoding task*/
 	QVideoEncoder* videoEncoder;
 	uint8_t* imagebuffer;
-
 };
 
 /***********************************************************************************************************/

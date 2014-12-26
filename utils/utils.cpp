@@ -1,18 +1,22 @@
 #include <algorithm>
 #include <string>
+#include <iostream>
 #include "utils.h"
 
 /******************************************************************************************************************************/
 
-bool ends_with(std::string const & value, std::string const & ending)
+bool ends_with(std::string const & file, std::string const & ending)
 {
-    if (ending.size() > value.size()) return false;
-    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+	std::string filename_lower = file;
+	std::transform(file.begin(), file.end(), filename_lower.begin(), ::tolower);
+
+    if (ending.size() > filename_lower.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), filename_lower.rbegin());
 }
 /******************************************************************************************************************************/
 
 
-double planeSign (Point2 p1, Point2 p2, Point2 p3)
+static double planeSign (Point2 p1, Point2 p2, Point2 p3)
 {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
 }

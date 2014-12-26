@@ -110,7 +110,7 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 /******************************************************************************************************************************/
 bool QVideoEncoder::encodeImageBGRA(uint8_t* image)
 {
-	if(!isOk()) return false;
+	if(!ok) return false;
 
 	TimeMeasurment t;
 
@@ -151,7 +151,7 @@ bool QVideoEncoder::encodeImageBGRA(uint8_t* image)
 /******************************************************************************************************************************/
 bool QVideoEncoder::close()
 {
-	if(!isOk()) return false;
+	if(!ok) return false;
 
 	AVPacket pkt = { 0 };
 	av_init_packet(&pkt);

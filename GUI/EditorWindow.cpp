@@ -286,12 +286,13 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 			disps.insert(DisplacedVertex(touchToVertex[touchPoints[i].id()], displacement));
 			touchPointLocations[touchPoints[i].id()] = touchPoints[i].pos();
 		}
+
 		if (disps.size() > 0)
 		{
-			kvfModel->calculateVF(disps);
-
-			if (!programstate->showVF && !programstate->showVForig)
-				kvfModel->applyVFLogSpiral();
+			if (programstate->showVF || programstate->showVForig)
+				kvfModel->calculateVF(disps);
+			else
+				kvfModel->displaceMesh(disps);
 
 			programstate->FPS = 1000.0 / (kvfModel->lastVFApplyTime + kvfModel->lastVFCalcTime);
 			programstate->onUpdateModel();
@@ -425,8 +426,7 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
     {
 		bool deformMode =
 				programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS
-				&& kvfModel && kvfModel->getPinnedVertexes().size() &&
-				!programstate->pinMode && !(mods & Qt::ShiftModifier);
+				&& kvfModel && !programstate->pinMode && !(mods & Qt::ShiftModifier);
 
 		if (deformMode)
 		{
@@ -440,10 +440,11 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 
 			std::set<DisplacedVertex> disps;
 			disps.insert(DisplacedVertex(selectedVertex, Vector2(diff.x(),diff.y())));
-			kvfModel->calculateVF(disps);
 
-			if (!programstate->showVF && !programstate->showVForig)
-				kvfModel->applyVFLogSpiral();
+			if (programstate->showVF || programstate->showVForig)
+				kvfModel->calculateVF(disps);
+			else
+				kvfModel->displaceMesh(disps);
 
 			programstate->FPS = 1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime);
 			programstate->onUpdateModel();

@@ -43,6 +43,7 @@ SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), programstate(NULL)
 	sliderMeshDensity->setSliderPosition(1000);
 	sliderAlpha->setValue(5);
 	sliderAlpha->setMaximum(10000);
+	sliderAlpha->setMinimum(0);
 	sliderAlpha->setTickPosition(QSlider::NoTicks); /* I don't want ticks, these are awful I heard*/
 }
 
@@ -135,20 +136,20 @@ void SidePanel::onChooseTexture()
     if (filename == NULL)
 		return;
 
-    programstate->setTexture(filename.toStdString());
+    programstate->loadTexture(filename.toStdString());
 }
 
 /*****************************************************************************************************/
 void SidePanel::onResetTexture()
 {
-	programstate->setTexture("");
+	programstate->loadTexture("");
 }
 
 /*****************************************************************************************************/
 void SidePanel::onMeshCreateButtonPressed()
 {
 	int density = sliderMeshDensity->value();
-	programstate->createMeshFromOutline(density);
+	programstate->createProjectFromOutline(density);
 }
 
 /******************************************************************************************************************************/

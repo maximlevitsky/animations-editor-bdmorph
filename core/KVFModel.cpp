@@ -45,11 +45,11 @@ KVFModel::KVFModel(MeshModel* model) :
 	boundaryVertices = model->boundaryVertices;
 	initialVertexes = model->vertices;
 
-	vf = new Point2[numVertices];
-	vfOrig = new Point2[numVertices];
+	vf = new Point2[getNumVertices()];
+	vfOrig = new Point2[getNumVertices()];
 
-	newPoints.resize(numVertices);
-    counts.resize(numVertices);
+	newPoints.resize(getNumVertices());
+    counts.resize(getNumVertices());
 
 	historyReset();
 
@@ -71,10 +71,29 @@ KVFModel::~KVFModel()
 }
 
 /*****************************************************************************************************/
+
+void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
+{
+	if ((pinnedVertexes.empty() || alpha1 == 0) && displacements.size() == 1) {
+		Vector2 disp = displacements.begin()->displacement;
+
+	    for (unsigned int i = 0; i < getNumVertices(); i++)
+	    	vertices[i] += disp;
+		return;
+	}
+
+	calculateVF(displacements);
+	applyVFLogSpiral();
+}
+
+/*****************************************************************************************************/
 void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 {
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
+
+    unsigned int numFaces = getNumFaces();
+    unsigned int numVertices = getNumVertices();
 
     this->disps = disps;
     std::set<DisplacedVertex> allDisplacements = disps;
@@ -237,7 +256,7 @@ void KVFModel::applyVFLogSpiral()
 	if(!pinnedVertexes.size())
 		return;
 
-    for (unsigned int i = 0; i < numVertices; i++)
+    for (unsigned int i = 0; i < getNumVertices(); i++)
     {
         counts[i] = 0;
         newPoints[i] = Point2(0,0);
@@ -285,7 +304,7 @@ void KVFModel::applyVFLogSpiral()
     lastVFApplyTime  = t.measure_msec();
     printf("KVF: Log spiral  time: %f msec\n", lastVFApplyTime);
 
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		vertices[i] = newPoints[i] / counts[i];
 
 	double create_time = lastVFCalcTime + lastVFApplyTime;
@@ -298,12 +317,12 @@ void KVFModel::applyVFLogSpiral()
 /*****************************************************************************************************/
 void KVFModel::applyVF()
 {
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 			vertices[i] += vf[i] * 0.5;
 }
 
 /*****************************************************************************************************/
-void KVFModel::renderVFOrig()
+void KVFModel::renderVFOrig() const
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glColor3f(0,0,1);
@@ -312,7 +331,7 @@ void KVFModel::renderVFOrig()
 }
 
 /*****************************************************************************************************/
-void KVFModel::renderVF()
+void KVFModel::renderVF() const
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glColor3f(0,.5,0);
@@ -321,7 +340,7 @@ void KVFModel::renderVF()
 }
 
 /*****************************************************************************************************/
-void KVFModel::renderOverlay(double scale)
+void KVFModel::renderOverlay(double scale) const
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glLineWidth(1.5);
@@ -332,7 +351,7 @@ void KVFModel::renderOverlay(double scale)
     glPopAttrib();
 }
 /*****************************************************************************************************/
-void KVFModel::renderVF_common(Vector2* VF)
+void KVFModel::renderVF_common(Vector2* VF) const
 {
 	#define VF_SCALE 1
 
@@ -340,12 +359,12 @@ void KVFModel::renderVF_common(Vector2* VF)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	double totalNorm = 0;
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		totalNorm += VF[i].normSquared();
 	totalNorm = sqrt(totalNorm);
 
 	glBegin(GL_LINES);
-	for (unsigned int i = 0; i < numVertices; i++) {
+	for (unsigned int i = 0; i < getNumVertices(); i++) {
 		glVertex2f(vertices[i][0], vertices[i][1]);
 		glVertex2f(vertices[i][0]+VF[i][0]/totalNorm*VF_SCALE, vertices[i][1]+VF[i][1]/totalNorm*VF_SCALE);
 	}
@@ -428,9 +447,8 @@ bool KVFModel::historyRedo()
 }
 
 /******************************************************************************************************************************/
-void KVFModel::historySaveToFile(std::ofstream& outfile)
+void KVFModel::historySaveToFile(std::ofstream& outfile) const
 {
-
 	std::vector<LogItem> wholeLog;
 	for (auto iter = undo.begin() ; iter != undo.end() ; iter++)
 		wholeLog.insert(wholeLog.end(), iter->actions.begin(),iter->actions.end());
@@ -456,7 +474,6 @@ void KVFModel::historySaveToFile(std::ofstream& outfile)
         for (auto iter = item.displacedVertexes.begin(); iter != item.displacedVertexes.end() ; iter++)
         	outfile << iter->v << ' ' << iter->displacement[0] << ' ' << iter->displacement[1] << std::endl;
     }
-
 }
 /******************************************************************************************************************************/
 
@@ -530,7 +547,7 @@ bool KVFModel::mousePressAction(Point2 pos, double radius)
 }
 /******************************************************************************************************************************/
 
-Vertex KVFModel::getClosestPin(Point2 point, double radius)
+Vertex KVFModel::getClosestPin(Point2 point, double radius) const
 {
 	Vertex result = -1;
 	double distance = radius;
@@ -553,6 +570,7 @@ void KVFModel::clearPins()
 	cholmod_free_factor(&L1, cholmod_get_common());
 }
 
+/******************************************************************************************************************************/
 
 bool KVFModel::saveVOBJ(std::ofstream& ofile)
 {
@@ -566,6 +584,7 @@ bool KVFModel::saveVOBJ(std::ofstream& ofile)
 	return saveVOBJVertices(ofile);
 }
 
+/******************************************************************************************************************************/
 
 bool KVFModel::loadVOBJ(std::ifstream& ifile)
 {
@@ -577,10 +596,11 @@ bool KVFModel::loadVOBJ(std::ifstream& ifile)
 	unsigned int pincount;
 	ifile >> pincount;
 
-	if (pincount > numVertices)
+	if (pincount > getNumVertices())
 		return false;
 
-	for (unsigned int i = 0 ; i < pincount ; i++) {
+	for (unsigned int i = 0 ; i < pincount ; i++)
+	{
 		int pin;
 		ifile >> pin;
 		pinnedVertexes.insert(pin);

@@ -88,7 +88,7 @@ if (NOT APPLE AND UNIX) # <- this is the way it should be
 		/usr/include/suitesparse
 	)
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-reorder -Woverloaded-virtual")
 endif(NOT APPLE AND UNIX)
 
 ###################################################################################################

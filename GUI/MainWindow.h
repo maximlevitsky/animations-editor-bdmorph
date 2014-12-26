@@ -25,9 +25,7 @@ class MainWindow : public QMainWindow, public Ui_MainWindow
 public:
 	MainWindow();
 	virtual ~MainWindow();
-	void clearStatusBar();
 public slots:
-
 	void programStateUpdated(int flags, void *param);
 	void onSaveScreenShot();
 	void onSaveVideo();
@@ -35,7 +33,6 @@ public slots:
 	void onInterpolationTest();
 	void onToggleDebugConsole(bool on);
 	void onNewProject();
-
 private:
 	SidePanel* sidePanel;
 	AnimationPanel* animationPanel;
