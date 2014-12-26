@@ -32,3 +32,4 @@ Personally I advice you that if you are using Windows, to get a real OS, like
 Linux or at least OSX.
 
 
+Project site at http://maximlevitsky.github.io/animations-editor-bdmorph/
