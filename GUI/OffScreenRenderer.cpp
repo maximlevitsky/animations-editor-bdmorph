@@ -17,6 +17,8 @@ OffScreenRenderer::OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, in
 	if (result == false)
 		printf("Failed to bind thumbnail FBO");
 
+	textureRef = 0;
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -29,18 +31,50 @@ OffScreenRenderer::OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, in
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
-
 /*****************************************************************************************************/
 
-void OffScreenRenderer::renderToImage(MeshModel* model, QImage &out, int stripeSize, double scale)
+OffScreenRenderer::~OffScreenRenderer()
 {
-	setupTransform(model,false,stripeSize,scale);
 	makeCurrent();
-    model->renderFaces();
-    out = fbo->toImage();
+	fbo->release();
+	deleteTexture(textureRef);
+	delete fbo;
 }
 
 /*****************************************************************************************************/
+
+void OffScreenRenderer::setTexture(QPixmap &texture)
+{
+	makeCurrent();
+	deleteTexture(textureRef);
+	textureRef = bindTexture(texture,GL_TEXTURE_2D,GL_RGBA);
+}
+
+/*****************************************************************************************************/
+
+void OffScreenRenderer::renderToQImage(MeshModel* model, QImage &out, int stripeSize, double scale)
+{
+	TimeMeasurment t;
+	makeCurrent();
+	setupTransform(model,false,stripeSize,scale);
+    model->renderFaces();
+    out = fbo->toImage();
+    printf("Offscreen renderer: took %f msec to render\n", t.measure_msec());
+}
+
+/*****************************************************************************************************/
+void OffScreenRenderer::renderToBufferBGRA(MeshModel* model, void* out)
+{
+	TimeMeasurment t;
+	makeCurrent();
+    glClearColor(1.,1.,1., 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+	model->renderFaces();
+	glReadPixels(0, 0, width, height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)out);
+
+    printf("Offscreen renderer: took %f msec to render to buffer\n", t.measure_msec());
+}
+
 void OffScreenRenderer::setupTransform(MeshModel* model,bool flip,int stripeSize,double scale)
 {
 	int height1 = height - stripeSize;
@@ -69,12 +103,3 @@ void OffScreenRenderer::setupTransform(MeshModel* model,bool flip,int stripeSize
 }
 
 /*****************************************************************************************************/
-void OffScreenRenderer::renderBGRA(MeshModel* model, void* out)
-{
-	makeCurrent();
-    glClearColor(1.,1.,1., 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-	model->renderFaces();
-	glReadPixels(0, 0, width, height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)out);
-}
-

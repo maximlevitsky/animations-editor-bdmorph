@@ -66,3 +66,15 @@ int getTime(std::string time)
 	result += fraction;
 	return result;
 }
+
+TimeMeasurment::TimeMeasurment()
+{
+	timer.start();
+}
+
+double TimeMeasurment::measure_msec()
+{
+	double retval = (double)timer.nsecsElapsed() / 1000000.0;
+	timer.restart();
+	return retval;
+}

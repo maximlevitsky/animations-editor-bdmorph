@@ -26,10 +26,12 @@ QVideoEncoder::QVideoEncoder(int FPS) : FPS(FPS)
 	swsCtx=0;
 	currrent_frame = 0;
 	av_register_all();
+	swsCtx = NULL;
 }
 /******************************************************************************************************************************/
 QVideoEncoder::~QVideoEncoder()
 {
+	sws_freeContext(swsCtx);
 	close();
 }
 
@@ -95,6 +97,10 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 
 	avpicture_fill((AVPicture *)avFrame, picture_buf,avCodecCtx->pix_fmt, avCodecCtx->width, avCodecCtx->height);
 
+	swsCtx = sws_getContext(Width,Height,
+			PIX_FMT_BGRA,Width,Height,PIX_FMT_YUV420P,SWS_FAST_BILINEAR, NULL, NULL, NULL);
+	if (swsCtx == NULL) return false;
+
 	ok=true;
 	currrent_frame = 0;
 	return true;
@@ -102,7 +108,7 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 
 
 /******************************************************************************************************************************/
-bool QVideoEncoder::encodeImage(uint8_t* image)
+bool QVideoEncoder::encodeImageBGRA(uint8_t* image)
 {
 	if(!isOk()) return false;
 
@@ -113,9 +119,10 @@ bool QVideoEncoder::encodeImage(uint8_t* image)
 	if (swsCtx == NULL) return false;
 
 
-	int srcstride =Width*4;
-	uint8_t* srcplane = (uint8_t*)image;
-	sws_scale(swsCtx, &srcplane, &srcstride,0, Height, avFrame->data, avFrame->linesize);
+	uint8_t* srcplane[4] = {image,NULL,NULL,NULL};
+	int     srcstride[4] = {(int)(Width*4),0,0,0};
+
+	sws_scale(swsCtx, srcplane, srcstride,0, Height, avFrame->data, avFrame->linesize);
 	avFrame->pts = currrent_frame++;
 
 	printf("Took %f msec to convert the image\n", t.measure_msec());
@@ -159,29 +166,25 @@ bool QVideoEncoder::close()
 	} while(got_packet);
 
 	av_write_trailer(avFormatContext);
+
 	avcodec_close(avStream->codec);
+	avCodecCtx=0;
+	avCodec = 0;
+
+	avformat_close_input(&avFormatContext);
+	avFormatContext=0;
+	avOutputFormat=0;
+	avStream=0;
 
 	delete[] picture_buf;
 	picture_buf=0;
 	av_free(avFrame);
 	avFrame=0;
 
-	for(unsigned int i = 0; i < avFormatContext->nb_streams; i++) {
-		av_freep(&avFormatContext->streams[i]->codec);
-		av_freep(&avFormatContext->streams[i]);
-	}
-
-	avio_close(avFormatContext->pb);
-	av_free(avFormatContext);
+	sws_freeContext(swsCtx);
+	swsCtx=0;
 
 	ok=false;
-	avFormatContext=0;
-	avOutputFormat=0;
-	avCodecCtx=0;
-	avStream=0;
-	avFrame=0;
-	picture_buf=0;
-	swsCtx=0;
 	return true;
 }
 

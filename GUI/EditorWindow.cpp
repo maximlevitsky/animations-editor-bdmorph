@@ -16,7 +16,8 @@
 /******************************************************************************************************************************/
 EditorWindow::EditorWindow(QWidget* parent) :
 			programstate(NULL),
-			QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+			QGLWidget(QGLFormat(QGL::SampleBuffers), parent),
+			textureRef(0)
 {
     setAttribute(Qt::WA_AcceptTouchEvents);
     setAttribute(Qt::WA_StaticContents);
@@ -24,7 +25,16 @@ EditorWindow::EditorWindow(QWidget* parent) :
     setMouseTracking(true);
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
+
 /******************************************************************************************************************************/
+
+EditorWindow::~EditorWindow()
+{
+	deleteTexture(textureRef);
+}
+
+/******************************************************************************************************************************/
+
 void EditorWindow::programStateUpdated(int flags, void *param)
 {
 	if (!programstate) return;
@@ -52,7 +62,8 @@ void EditorWindow::programStateUpdated(int flags, void *param)
 
 	if (flags & ProgramState::TEXTURE_CHANGED) {
 		makeCurrent();
-		glBindTexture(GL_TEXTURE_2D, programstate->textureRef);
+		deleteTexture(textureRef);
+		textureRef = bindTexture(programstate->texture,GL_TEXTURE_2D,GL_RGBA);
 		need_repaint = true;
 	}
 
@@ -104,6 +115,8 @@ void EditorWindow::paintGL()
 
     if (!renderModel)
     	return;
+
+    TimeMeasurment t;
 
     double ratio = (renderModel->getWidth()) / modelWidth;
 
@@ -170,6 +183,8 @@ void EditorWindow::paintGL()
 			bdmodel->modela->renderWireframe();
 		}
 	}
+
+	printf("Editor: took %f msec to render\n",t.measure_msec());
 }
 
 /******************************************************************************************************************************/

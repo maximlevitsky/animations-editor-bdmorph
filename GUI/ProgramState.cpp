@@ -15,7 +15,6 @@ ProgramState::ProgramState() :
 	selectedFace(-1),
 	selectedVertex(-1),
 	currentModel(NULL),
-	textureRef(0),
 	mode(PROGRAM_MODE_NONE),
 	thumbnailRenderer(NULL),
 	currentAnimationTime(0),
@@ -31,6 +30,9 @@ ProgramState::ProgramState() :
 	animationTimer->setSingleShot(true);
 	connect_(animationTimer, timeout (), this, onAnimationTimer());
 	imagebuffer = (uint8_t*)malloc(1024*768*4);
+
+	thumbnailRenderer = new OffScreenRenderer(NULL, NULL,128,128);
+	imageRenderer = new OffScreenRenderer(NULL, NULL, 1024,768);
 }
 
 /***********************************************************************************************************/
@@ -38,6 +40,8 @@ ProgramState::~ProgramState()
 {
 	delete videoModel;
 	delete outlineModel;
+	delete thumbnailRenderer;
+	delete imageRenderer;
 	free(imagebuffer);
 }
 
@@ -178,7 +182,7 @@ bool ProgramState::saveScreenshot(std::string filename)
 {
 	if (!currentModel) return false;
 	QImage img;
-	imageRenderer->renderToImage(currentModel, img,0,0.9);
+	imageRenderer->renderToQImage(currentModel, img,0,0.9);
 
 	bool result = img.save(QString::fromStdString(filename));
 	if (!result) {
@@ -216,11 +220,11 @@ bool ProgramState::createVideo(QString file)
 		FPS = 1000.0 / duration;
 
 		TimeMeasurment t;
-		imageRenderer->renderBGRA(pFrame,imagebuffer);
+		imageRenderer->renderToBufferBGRA(pFrame,imagebuffer);
 		printf("Took %f msec to render the image\n", t.measure_msec());
 
 
-		if (!videoEncoder->encodeImage(imagebuffer)) {
+		if (!videoEncoder->encodeImageBGRA(imagebuffer)) {
 			QMessageBox::critical(NULL, "Error", "Failure during encoding");
 			delete videoEncoder;
 			videoEncoder = NULL;
@@ -233,6 +237,7 @@ bool ProgramState::createVideo(QString file)
 	}
 
 	videoEncoder->close();
+	delete videoEncoder;
 	mode = PROGRAM_MODE_DEFORMATIONS;
 	progressValue = 0;
 	statusbarMessage.clear();
@@ -343,10 +348,15 @@ void ProgramState::switchToKeyframe(int newIndex)
 	VideoKeyFrame* newFrame = videoModel->getKeyframeByIndex(newIndex);
 	if (newFrame != currentModel)
 	{
+
+		if (mode != PROGRAM_MODE_DEFORMATIONS) {
+			mode = PROGRAM_MODE_DEFORMATIONS;
+			emit programStateUpdated(MODE_CHANGED,NULL);
+		}
+
 		currentModel = newFrame;
-		mode = PROGRAM_MODE_DEFORMATIONS;
 		currentAnimationTime = videoModel->getKeyFrameTimeMsec(newFrame);
-		emit programStateUpdated(CURRENT_MODEL_CHANGED|MODE_CHANGED,NULL);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED,NULL);
 	}
 }
 /***********************************************************************************************************/
@@ -388,7 +398,7 @@ void ProgramState::createKeyframeFromPFrame()
 		currentKeyframe->duration = nextDuration;
 
 		mode = PROGRAM_MODE_DEFORMATIONS;
-		emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED|MODE_CHANGED|KEYFRAME_EDITED,NULL);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED|MODE_CHANGED,NULL);
 	}
 
 }
@@ -448,7 +458,7 @@ void ProgramState::setKeyframeTime(int id, int newTime)
 	newTime = std::max(1,newTime);
 	VideoKeyFrame* keyframe = videoModel->getKeyframeByIndex(id);
 	keyframe->duration = newTime;
-	emit programStateUpdated(KEYFRAME_EDITED, NULL);
+	emit programStateUpdated(KEYFRAME_LIST_EDITED, NULL);
 }
 
 /***********************************************************************************************************/
@@ -659,13 +669,10 @@ void ProgramState::updateTexture()
 			outlineModel->setScale(1,(double)y/x);
 	}
 
+	thumbnailRenderer->setTexture(texture);
+	imageRenderer->setTexture(texture);
 
 	/* Bind it and in darkness grind it....*/
-	textureRef = thumbnailRenderer->bindTexture(texture,GL_TEXTURE_2D);
-	thumbnailRenderer->makeCurrent();
-	glBindTexture(GL_TEXTURE_2D, textureRef);
-	imageRenderer->makeCurrent();
-	glBindTexture(GL_TEXTURE_2D, textureRef);
 	emit programStateUpdated(TEXTURE_CHANGED, NULL);
 }
 

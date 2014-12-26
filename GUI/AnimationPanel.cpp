@@ -71,7 +71,7 @@ void AnimationPanel::programStateUpdated(int flags, void *param)
 {
 	if (!programstate) return;
 
-	if (flags & (ProgramState::KEYFRAME_EDITED | ProgramState::KEYFRAME_LIST_EDITED))
+	if (flags & ProgramState::KEYFRAME_LIST_EDITED)
 	{
 		/* See if one of our keyframes got updated
 		 * If so, update list items for it and all following keyframes */
@@ -82,6 +82,13 @@ void AnimationPanel::programStateUpdated(int flags, void *param)
 			updateTimeSlider();
 		}
 	}
+
+	if (flags & ProgramState::KEYFRAME_EDITED )
+	{
+		int updated_index = programstate->getCurrentKeyframeId();
+		updateListItem(updated_index);
+	}
+
 
 	if (flags & ProgramState::TEXTURE_CHANGED)
 	{
@@ -284,7 +291,7 @@ void AnimationPanel::updateListItem(int id)
 
 	/* This code is gross... yuck and I wrote it*/
 	QImage im;
-	programstate->thumbnailRenderer->renderToImage(frame, im,30,1);
+	programstate->thumbnailRenderer->renderToQImage(frame, im,30,1);
 	QPixmap p = QPixmap::fromImage(im);
 
 	QPainter painter(&p);

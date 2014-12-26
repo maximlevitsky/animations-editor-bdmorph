@@ -23,7 +23,7 @@ class EditorWindow : public QGLWidget
     Q_OBJECT
 public:
     EditorWindow(QWidget* parent);
-    virtual ~EditorWindow() {}
+    virtual ~EditorWindow();
         
 public slots:
 	void programStateUpdated(int flags, void *param);
@@ -71,6 +71,8 @@ private:
 
     double getRadius(MeshModel *model);
 	Point2 screenToModel(MeshModel *model, QPointF v);
+
+	GLuint textureRef;
 
 };
 #endif // DEFORMATIONSCENE_H

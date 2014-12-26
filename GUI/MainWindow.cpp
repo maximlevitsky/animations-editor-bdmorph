@@ -42,8 +42,6 @@ MainWindow::MainWindow()
 	addDockWidget(Qt::BottomDockWidgetArea, animationPanel);
 
 	programstate = new ProgramState();
-	programstate->thumbnailRenderer = new OffScreenRenderer(NULL, editorWindow,128,128);
-	programstate->imageRenderer = new OffScreenRenderer(NULL, editorWindow, 1024,768);
 
 	/* --------------------------------------------------------------------------------*/
 	/* Make everyone listen to program state */
@@ -127,16 +125,11 @@ MainWindow::MainWindow()
 	lblSelectedVertex->hide();
 	progressIndicator->hide();
 	programstate->initialize();
-	show();
 }
 
 /*****************************************************************************************************/
 MainWindow::~MainWindow()
 {
-
-	delete programstate->thumbnailRenderer;
-	delete programstate->imageRenderer;
-
 	delete editorWindow;
 	delete animationPanel;
 	delete sidePanel;

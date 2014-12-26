@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "vector2d.h"
 #include <stdarg.h>
+#include <qelapsedtimer.h>
 
 typedef int Vertex;
 #define connect_(a,b,c,d) connect(a, SIGNAL(b), c, SLOT(d))
@@ -15,15 +16,10 @@ typedef int Vertex;
 
 class TimeMeasurment
 {
-	time_t last_time;
+	QElapsedTimer timer;
 public:
-	TimeMeasurment(): last_time(clock()) {}
-	double measure_msec() {
-		time_t now = clock();
-		time_t last_time_saved = last_time;
-		last_time = now;
-		return ((double)(now - last_time_saved)) / (CLOCKS_PER_SEC / 1000);
-	}
+	TimeMeasurment();
+	double measure_msec();
 };
 
 /***********************************************************************************************/
@@ -151,7 +147,7 @@ public:
 
 	~CmdStream()
 	{
-		if (!shared) delete stream;
+		if (!shared) free(stream);
 		end = NULL;
 	}
 

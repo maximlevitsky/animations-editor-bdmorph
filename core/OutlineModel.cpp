@@ -335,6 +335,7 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount)
 	for (int i = 0 ; i < out.numberoftriangles ; i++)
 		output->faces->push_back(Face(out.trianglelist[i*3],out.trianglelist[i*3+1],out.trianglelist[i*3+2] ));
 
+	trifree((VOID*)in.pointlist);
 	trifree((VOID*)out.pointlist);
 	trifree((VOID*)out.trianglelist);
 	trifree((VOID*)out.pointmarkerlist);

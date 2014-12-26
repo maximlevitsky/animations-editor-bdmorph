@@ -376,13 +376,24 @@ bool  MeshModel::loadOBJ(std::ifstream& infile)
 		{
 			numFaces++;
 			issLine >> a >> b >> c;
-			char* a_dup = strdup(a.c_str()); char* b_dup = strdup(b.c_str()); char* c_dup = strdup(c.c_str());
+			char* a_dup = strdup(a.c_str());
+			char* b_dup = strdup(b.c_str());
+			char* c_dup = strdup(c.c_str());
+
 			char* aa = strtok(a_dup,"/");
 			char* bb = strtok(b_dup,"/");
 			char* cc = strtok(c_dup,"/");
 			Face fa;
-			fa.f[0] = atoi(aa)-1; fa.f[1] = atoi(bb)-1; fa.f[2] = atoi(cc)-1;
+			fa.f[0] = atoi(aa)-1;
+			fa.f[1] = atoi(bb)-1;
+			fa.f[2] = atoi(cc)-1;
+
 			faces->push_back(fa);
+
+			free(a_dup);
+			free(b_dup);
+			free(c_dup);
+
 			continue;
 		}
 		if (linetype == "#") continue;

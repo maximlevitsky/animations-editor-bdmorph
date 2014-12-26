@@ -49,7 +49,7 @@ class QVideoEncoder
       virtual ~QVideoEncoder();
 
       bool createFile(QString filename,unsigned width,unsigned height);
-      bool encodeImage(uint8_t* image);
+      bool encodeImageBGRA(uint8_t* image);
       bool close();
       bool isOk() { return ok; }
 

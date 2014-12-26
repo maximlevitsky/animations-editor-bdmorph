@@ -80,7 +80,6 @@ public:
 
     /* Texture and texture file */
 	std::string textureFile;
-	GLuint textureRef;
 	QPixmap texture;
 
 	/* Animation settings */
