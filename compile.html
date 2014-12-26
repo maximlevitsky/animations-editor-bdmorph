@@ -31,27 +31,31 @@
       <section>
       </section>
 
-      <h1>Ubuntu 14.14</h1>
+      <h1>Ubuntu 14.04</h1>
 
       This is easy.
 
         <ol>
 
         <li>You need to install the following packages:<br/>
-        <code># sudo apt-get install cmake libqt4-dev libqt4-dev-bin
-        libsuitesparse-metis-dev
-        libavcodec-dev libavformat-dev libavutil-dev libswscale-dev</code>
+        <code># sudo apt-get install cmake libqt4-dev libqt4-dev-bin libsuitesparse-metis-dev libavcodec-dev libavformat-dev 
+                libavutil-dev libswscale-dev libopenblas-dev libqt4-opengl-dev</code>
         </li>
 
         <li>
+            You might need also openGL library if not installed. This depends if you use closed drivers or not.<br/>
+            If cmake can't find openGL try this <br/>
+            <code>sudo apt-get install libgl1-mesa-dev</code><br/>
+        </li>
 
+        <li>
         Now download the source, unpack it to some directory and run cmake in it<br/>
         <code>#  cmake . </code>
         </li>
 
         <li>
         Now compile the source<br/>
-        <code>make</code>
+        <code># make</code>
         </ol>
 
       <h1>Windows</h1>
