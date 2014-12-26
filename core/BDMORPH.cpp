@@ -77,7 +77,7 @@ BDMORPH_BUILDER::BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& bou
 }
 
 /*****************************************************************************************************/
-Vertex BDMORPH_BUILDER::getNeighbourVertex(Vertex v1, Vertex v2)
+Vertex BDMORPH_BUILDER::getNeighbourVertex(Vertex v1, Vertex v2) const
 {
 	auto iter = edgeNeighbour.find(OrderedEdge(v1, v2));
 	if (iter != edgeNeighbour.end())
@@ -87,7 +87,7 @@ Vertex BDMORPH_BUILDER::getNeighbourVertex(Vertex v1, Vertex v2)
 
 /*****************************************************************************************************/
 
-void BDMORPH_BUILDER::getNeighbourVertices(Vertex v0, std::set<Vertex>& result)
+void BDMORPH_BUILDER::getNeighbourVertices(Vertex v0, std::set<Vertex>& result) const
 {
 	auto iter1 = vertexNeighbours.lower_bound(v0);
 	auto iter2 = vertexNeighbours.upper_bound(v0);
@@ -317,7 +317,7 @@ bool BDMORPHModel::initialize()
 	{
 		printf("BRMORPH: WARNING: Center of mesh is empty space - picking first non boundary edge\n");
 
-		for (unsigned int i = 0 ; i < numVertices ; i++) {
+		for (unsigned int i = 0 ; i < getNumVertices() ; i++) {
 			if (boundaryVertices->count(i) == 0) {
 				p0 = i;
 			}
@@ -487,7 +487,7 @@ bool BDMORPHModel::initialize()
 	}
 
 
-	if((visitedVertices.size() != numVertices) || (mappedVertices.size() != numVertices)) {
+	if((visitedVertices.size() != getNumVertices()) || (mappedVertices.size() != getNumVertices())) {
 		printf("BRMORPH: WARNING: didn't cover all mesh - probably not-connected or has bridges\n");
 		printf("BRMORPH: Covered %d vertexes and mapped %d vertexes\n", (int)visitedVertices.size(), (int)mappedVertices.size());
 	}
@@ -540,8 +540,8 @@ void BDMORPHModel::calculate_initial_lengths(MeshModel *a, MeshModel* b, double 
 	{
 		uint32_t vertex1  = commands.dword();
 		uint32_t vertex2  = commands.dword();
-		assert (vertex1 < (uint32_t)numVertices);
-		assert (vertex2 < (uint32_t)numVertices);
+		assert (vertex1 < (uint32_t)getNumVertices());
+		assert (vertex2 < (uint32_t)getNumVertices());
 		assert (vertex1 != vertex2);
 
 		double dist1_squared = a->vertices[vertex1].distanceSquared(a->vertices[vertex2]);
@@ -688,7 +688,6 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			Point2* p1 = &vertices[v1];
 
 			Vertex v2 = cmd.dword();
-			assert(v2 >= 0 && (unsigned int)v2 < numVertices);
 
 			Point2& p2 = vertices[v2];
 
@@ -815,7 +814,7 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 }
 
 /*****************************************************************************************************/
-void BDMORPHModel::renderInitialEdge(double scale)
+void BDMORPHModel::renderInitialEdge(double scale) const
 {
 	/* DEBUG code */
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);

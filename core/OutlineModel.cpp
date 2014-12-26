@@ -62,9 +62,6 @@ OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 		for (auto iter = theirToOurBoundaryVertices.begin() ; iter != theirToOurBoundaryVertices.end() ; iter++) {
 			vertices[iter->second] = (*from->texCoords)[iter->first];
 		}
-
-		numFaces = 0;
-		numVertices = theirToOurBoundaryVertices.size();
 	}
 }
 
@@ -73,203 +70,97 @@ OutlineModel::~OutlineModel()
 {}
 
 /******************************************************************************************************************************/
-bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, bool rightButton)
+
+bool OutlineModel::loadFromFile(const std::string &filename)
 {
-	if (moved) return false;
+	std::ifstream ifile(filename);
+	if (ifile.bad())
+		return false;
 
-	//if (pos.x > 1 || pos.y > 1 || pos.x < 0 || pos.y < 0)
-	//	return false;
+	if (!ends_with(filename, "poly"))
+		return false;
 
-	if (!rightButton)
+	unsigned int dimision, attribNum, markerNum,numVertices;
+	ifile >> numVertices >> dimision >> attribNum >> markerNum;
+	vertices.reserve(numVertices);
+
+	for (unsigned int i = 0 ; i < numVertices ;i++)
 	{
-		/* Left button adds vertexes */
-		Vertex newSelectedVertex = getClosestVertex(pos, false, radius);
-		bool vertexAdded = false;
+		unsigned int v;
+		double x, y;
+		ifile >> v >> x >> y;
+		eatTokens(ifile, attribNum+markerNum);
 
-		if (newSelectedVertex == -1) {
-			newSelectedVertex = addVertex(pos);
-			vertexAdded = true;
+		if (v>= vertices.size()) {
+			vertices.resize(v+1);
 		}
 
-		if (selectedVertex != newSelectedVertex && selectedVertex != -1)
-		{
-			edges.insert(Edge(selectedVertex,newSelectedVertex));
-			selectedVertex = vertexAdded ? newSelectedVertex : -1;
-		} else
-			selectedVertex = selectedVertex != -1 ? -1 : newSelectedVertex;
-		return true;
-
-	} else {
-
-		Vertex toDelete = getClosestVertex(pos, false, radius);
-		if (toDelete == -1)
-			return false;
-		deleteVertex(toDelete);
-		return true;
-	}
-}
-/******************************************************************************************************************************/
-
-bool OutlineModel::moveAction(Point2 pos1, Point2 pos2, double radius)
-{
-
-	Vertex oldVertex = getClosestVertex(pos1, false, radius);
-	if (oldVertex != -1) {
-		vertices[oldVertex] = pos2;
-		return true;
-	}
-	return false;
-}
-
-/******************************************************************************************************************************/
-
-void OutlineModel::renderFaces()
-{
-
-	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-	glEnable(GL_TEXTURE_2D);
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	renderInternal();
-
-	glDisable(GL_TEXTURE_2D);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glColor3f(0,0,0);
-	glLineWidth(1.5);
-	renderInternal();
-
-	glPopAttrib();
-}
-
-
-void OutlineModel::renderWireframe()
-{
-}
-
-/******************************************************************************************************************************/
-
-void OutlineModel::renderOverlay(double scale)
-{
-	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
-
-	glLineWidth(1.5);
-	glColor4f(0,0,0,1);
-
-	glBegin(GL_LINES);
-	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
-		glVertex2f(vertices[iter->v0].x,vertices[iter->v0].y);
-		glVertex2f(vertices[iter->v1].x,vertices[iter->v1].y);
-	}
-	glEnd();
-
-	glColor3f(1,1,0);
-	for (Vertex v = 0 ; v < (int)numVertices ; v++)
-		renderVertex(v,scale/1.4);
-
-	if (selectedVertex != -1) {
-		glColor3f(0,1,0);
-		renderVertex(selectedVertex,scale);
+		vertices[v] = Point2(x,y);
 	}
 
+	unsigned int edgesCount;
+	ifile >> edgesCount >> markerNum;
 
-	glPopAttrib();
-}
+	for (unsigned int i = 0 ; i < edgesCount ;i++) {
+		int e;
+		int a,b;
 
-/******************************************************************************************************************************/
+		ifile >> e >> a >> b;
+		eatTokens(ifile, markerNum);
+		edges.insert(Edge(a,b));
+	}
 
-Vertex OutlineModel::addVertex(Point2 p)
-{
-	Vertex retval;
-	retval = numVertices++;
-	vertices.push_back(p);
-	return retval;
-}
-/******************************************************************************************************************************/
+	unsigned int holesCount;
+	ifile >> holesCount;
 
-void OutlineModel::deleteVertex(Vertex v)
-{
-	std::set<Edge> editedEdges;
-
-	for (auto iter = edges.begin() ; iter != edges.end();)
+	for (unsigned int i = 0 ; i < holesCount ;i++)
 	{
-		if (iter->v0 == v || iter->v1 == v)
-			edges.erase(iter++);
-		else 
-		{
-			Edge e = *iter;
-
-			if (e.v0 < v && e.v1 < v) {
-				iter++;
-			} else {
-
-				if (e.v0 >= v)
-					e.v0--;
-
-				if (e.v1 >= v)
-					e.v1--;
-
-				editedEdges.insert(Edge(e.v0,e.v1));
-				iter = edges.erase(iter);
-			}
-		}
+		unsigned int v;
+		double x, y;
+		ifile >> v >> x >> y;
+		vertices.push_back(Point2(x,y));
 	}
 
-	edges.insert(editedEdges.begin(),editedEdges.end());
-	vertices.erase(vertices.begin()+v);
 	numVertices = vertices.size();
-
-	if (selectedVertex == v)
-		selectedVertex = -1;
+	return true;
 }
 /******************************************************************************************************************************/
 
-void OutlineModel::historySnapshot()
+bool OutlineModel::saveToFile(std::string filename) const
 {
-	/* TODO*/
-}
-/******************************************************************************************************************************/
+	/* We write here .poly file but only for now, later we will use triangle directly */
+	std::ofstream ofile(filename);
 
-void OutlineModel::historyReset()
-{
-	edges.clear();
-	vertices.clear();
-	numVertices = 0;
-	/* TODO*/
-}
-/******************************************************************************************************************************/
+	std::set<Vertex> standaloneVertices;
+	std::set<Vertex> normalVertexes;
+	getVertices(standaloneVertices,normalVertexes);
 
-bool OutlineModel::historyRedo()
-{
-	/* TODO*/
-	return false;
-}
-/******************************************************************************************************************************/
+	/* First section - vertices */
+	ofile << normalVertexes.size() << " 2 0 1" << std::endl;
+	for (auto iter = normalVertexes.begin() ; iter != normalVertexes.end() ; iter++)
+		ofile << *iter << " " << vertices[*iter].x << " " << vertices[*iter].y  << " 1" << std::endl;
 
-bool OutlineModel::historyUndo()
-{
-	/* TODO*/
-	return false;
-}
-
-/******************************************************************************************************************************/
-void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Vertex> &normalVertices)
-{
-
-	for (unsigned int i= 0 ; i < numVertices ;i++)
-			standaloneVertices.insert(i);
-
+	/* Second section - edges */
+	ofile << edges.size() << " 1" << std::endl;
+	int i = 0;
 	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
-		standaloneVertices.erase(iter->v0);
-		standaloneVertices.erase(iter->v1);
+		ofile << i << " " << iter->v0 << " " << iter->v1 <<  " 1" << std::endl;
 	}
 
-	for (unsigned int i = 0 ; i < numVertices ; i++)
-		if (standaloneVertices.count(i) == 0)
-			normalVertices.insert(i);
+	/* Third section - holes */
+	ofile << standaloneVertices.size() << std::endl;
+	i = 0;
+	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++)
+	{
+		ofile << i << " " << vertices[*iter].x << " " << vertices[*iter].y << std::endl;
+	}
+
+	return true;
 }
 
 /******************************************************************************************************************************/
-bool OutlineModel::createMesh(MeshModel *output,int triCount)
+
+bool OutlineModel::createMesh(MeshModel *output,int triCount) const
 {
 	struct triangulateio in, out;
 	memset(&in,0,sizeof(triangulateio));
@@ -288,10 +179,10 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount)
 	std::set<Vertex> normalVertexes;
 	getVertices(standaloneVertices,normalVertexes);
 
-	if (numVertices < 3 || edges.size() == 0)
+	if (getNumVertices() < 3 || edges.size() == 0)
 		return false;
 
-	in.numberofpoints = numVertices;
+	in.numberofpoints = getNumVertices();
 	in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
 
 	for (int i = 0 ; i < in.numberofpoints ; i++)
@@ -340,12 +231,12 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount)
 	trifree((VOID*)out.trianglelist);
 	trifree((VOID*)out.pointmarkerlist);
 
-	output->numVertices = out.numberofpoints;
-	output->numFaces = out.numberoftriangles;
+	output->vertices.resize(out.numberofpoints);
+	output->faces->resize(out.numberoftriangles);
 
 	output->identityTexCoords();
 
-	for (unsigned int i = 0 ; i < output->numVertices ;i++)
+	for (unsigned int i = 0 ; i < output->getNumVertices() ;i++)
 	{
 		(*output->texCoords)[i][0] /= scaleX;
 		(*output->texCoords)[i][1] /= scaleY;
@@ -355,96 +246,212 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount)
 }
 
 /******************************************************************************************************************************/
-bool OutlineModel::saveToFile(std::string filename)
+
+bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, bool rightButton)
 {
-	/* We write here .poly file but only for now, later we will use triangle directly */
-	std::ofstream ofile(filename);
+	if (moved) return false;
 
-	std::set<Vertex> standaloneVertices;
-	std::set<Vertex> normalVertexes;
-	getVertices(standaloneVertices,normalVertexes);
-
-	/* First section - vertices */
-	ofile << normalVertexes.size() << " 2 0 1" << std::endl;
-	for (auto iter = normalVertexes.begin() ; iter != normalVertexes.end() ; iter++)
-		ofile << *iter << " " << vertices[*iter].x << " " << vertices[*iter].y  << " 1" << std::endl;
-
-	/* Second section - edges */
-	ofile << edges.size() << " 1" << std::endl;
-	int i = 0;
-	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
-		ofile << i << " " << iter->v0 << " " << iter->v1 <<  " 1" << std::endl;
-	}
-
-	/* Third section - holes */
-	ofile << standaloneVertices.size() << std::endl;
-	i = 0;
-	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++)
+	if (!rightButton)
 	{
-		ofile << i << " " << vertices[*iter].x << " " << vertices[*iter].y << std::endl;
-	}
+		/* Left button adds vertexes */
+		Vertex newSelectedVertex = getClosestVertex(pos, false, radius);
+		bool vertexAdded = false;
 
-	return true;
-}
-
-/******************************************************************************************************************************/
-bool OutlineModel::loadFromFile(const std::string &filename)
-{
-	std::ifstream ifile(filename);
-	if (ifile.bad())
-		return false;
-
-	if (!ends_with(filename, "poly"))
-		return false;
-
-	int dimision, attribNum, markerNum;
-	ifile >> numVertices >> dimision >> attribNum >> markerNum;
-	vertices.reserve(numVertices);
-
-	for (unsigned int i = 0 ; i < numVertices ;i++)
-	{
-		unsigned int v;
-		double x, y;
-		ifile >> v >> x >> y;
-		eatTokens(ifile, attribNum+markerNum);
-
-		if (v>= vertices.size()) {
-			vertices.resize(v+1);
+		if (newSelectedVertex == -1) {
+			newSelectedVertex = addVertex(pos);
+			vertexAdded = true;
 		}
 
-		vertices[v] = Point2(x,y);
+		if (selectedVertex != newSelectedVertex && selectedVertex != -1)
+		{
+			edges.insert(Edge(selectedVertex,newSelectedVertex));
+			selectedVertex = vertexAdded ? newSelectedVertex : -1;
+		} else
+			selectedVertex = selectedVertex != -1 ? -1 : newSelectedVertex;
+		return true;
+
+	} else {
+
+		Vertex toDelete = getClosestVertex(pos, false, radius);
+		if (toDelete == -1)
+			return false;
+		deleteVertex(toDelete);
+		return true;
 	}
+}
+/******************************************************************************************************************************/
 
-	unsigned int edgesCount;
-	ifile >> edgesCount >> markerNum;
+bool OutlineModel::moveAction(Point2 pos1, Point2 pos2, double radius)
+{
 
-	for (unsigned int i = 0 ; i < edgesCount ;i++) {
-		int e;
-		int a,b;
-
-		ifile >> e >> a >> b;
-		eatTokens(ifile, markerNum);
-		edges.insert(Edge(a,b));
+	Vertex oldVertex = getClosestVertex(pos1, false, radius);
+	if (oldVertex != -1) {
+		vertices[oldVertex] = pos2;
+		return true;
 	}
-
-	unsigned int holesCount;
-	ifile >> holesCount;
-
-	for (unsigned int i = 0 ; i < holesCount ;i++)
-	{
-		unsigned int v;
-		double x, y;
-		ifile >> v >> x >> y;
-		vertices.push_back(Point2(x,y));
-	}
-
-	numVertices = vertices.size();
-	return true;
+	return false;
 }
 
+/******************************************************************************************************************************/
+
+void OutlineModel::renderFaces() const
+{
+
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+	glEnable(GL_TEXTURE_2D);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	renderInternal();
+
+	glDisable(GL_TEXTURE_2D);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glColor3f(0,0,0);
+	glLineWidth(1.5);
+	renderInternal();
+
+	glPopAttrib();
+}
 
 /******************************************************************************************************************************/
-Point2 OutlineModel::adjustAspectRatioMul(Point2 in)
+
+void OutlineModel::renderWireframe() const
+{
+}
+
+/******************************************************************************************************************************/
+
+void OutlineModel::renderOverlay(double scale) const
+{
+	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
+
+	glLineWidth(1.5);
+	glColor4f(0,0,0,1);
+
+	glBegin(GL_LINES);
+	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+		glVertex2f(vertices[iter->v0].x,vertices[iter->v0].y);
+		glVertex2f(vertices[iter->v1].x,vertices[iter->v1].y);
+	}
+	glEnd();
+
+	glColor3f(1,1,0);
+	for (Vertex v = 0 ; v < (int)getNumVertices() ; v++)
+		renderVertex(v,scale/1.4);
+
+	if (selectedVertex != -1) {
+		glColor3f(0,1,0);
+		renderVertex(selectedVertex,scale);
+	}
+
+
+	glPopAttrib();
+}
+
+void OutlineModel::setScale(double sX, double sY)
+{
+	for (unsigned int i=0 ; i < getNumVertices() ; i++) {
+		vertices[i].x = (vertices[i].x/scaleX)*sX;
+		vertices[i].y = (vertices[i].y/scaleY)*sY;
+	}
+
+	scaleX = sX;
+	scaleY = sY;
+
+}
+
+/******************************************************************************************************************************/
+
+Vertex OutlineModel::addVertex(Point2 p)
+{
+	Vertex retval;
+	retval = getNumVertices();
+	vertices.push_back(p);
+	return retval;
+}
+/******************************************************************************************************************************/
+
+void OutlineModel::deleteVertex(Vertex v)
+{
+	std::set<Edge> editedEdges;
+
+	for (auto iter = edges.begin() ; iter != edges.end();)
+	{
+		if (iter->v0 == v || iter->v1 == v)
+			edges.erase(iter++);
+		else 
+		{
+			Edge e = *iter;
+
+			if (e.v0 < v && e.v1 < v) {
+				iter++;
+			} else {
+
+				if (e.v0 >= v)
+					e.v0--;
+
+				if (e.v1 >= v)
+					e.v1--;
+
+				editedEdges.insert(Edge(e.v0,e.v1));
+				iter = edges.erase(iter);
+			}
+		}
+	}
+
+	edges.insert(editedEdges.begin(),editedEdges.end());
+	vertices.erase(vertices.begin()+v);
+
+	if (selectedVertex == v)
+		selectedVertex = -1;
+}
+/******************************************************************************************************************************/
+
+void OutlineModel::historySnapshot()
+{
+	/* TODO*/
+}
+/******************************************************************************************************************************/
+
+void OutlineModel::historyReset()
+{
+	edges.clear();
+	vertices.clear();
+	/* TODO*/
+}
+/******************************************************************************************************************************/
+
+bool OutlineModel::historyRedo()
+{
+	/* TODO*/
+	return false;
+}
+/******************************************************************************************************************************/
+
+bool OutlineModel::historyUndo()
+{
+	/* TODO*/
+	return false;
+}
+
+/******************************************************************************************************************************/
+void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Vertex> &normalVertices) const
+{
+
+	for (unsigned int i= 0 ; i < getNumVertices() ;i++)
+			standaloneVertices.insert(i);
+
+	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+		standaloneVertices.erase(iter->v0);
+		standaloneVertices.erase(iter->v1);
+	}
+
+	for (unsigned int i = 0 ; i < getNumVertices() ; i++)
+		if (standaloneVertices.count(i) == 0)
+			normalVertices.insert(i);
+}
+
+/******************************************************************************************************************************/
+Point2 OutlineModel::adjustAspectRatio(Point2 in) const
 {
 	Point2 out = in;
 	out.x *= scaleX;
@@ -454,13 +461,13 @@ Point2 OutlineModel::adjustAspectRatioMul(Point2 in)
 
 
 /******************************************************************************************************************************/
-void OutlineModel::renderInternal()
+void OutlineModel::renderInternal() const
 {
 	Point2 point1(0,0);
 	Point2 point2(1,1);
 
-	point1 = adjustAspectRatioMul(point1);
-	point2 = adjustAspectRatioMul(point2);
+	point1 = adjustAspectRatio(point1);
+	point2 = adjustAspectRatio(point2);
 
 	glBegin(GL_QUADS);
 

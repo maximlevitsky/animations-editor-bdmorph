@@ -57,8 +57,8 @@ public:
 	BDMORPH_BUILDER(std::vector<Face> &faces, std::set<Vertex>& boundary_vertexes);
 
 	/* Mesh helpers */
-	Vertex getNeighbourVertex(Vertex v1, Vertex v2);
-	void getNeighbourVertices(Vertex v1, std::set<Vertex>& result);
+	Vertex getNeighbourVertex(Vertex v1, Vertex v2) const;
+	void getNeighbourVertices(Vertex v1, std::set<Vertex>& result) const;
 
 	/* Main phase */
 	VertexK allocate_K(Vertex vertex);
@@ -76,8 +76,8 @@ public:
 
 
 	/* output */
-	unsigned int getK_count() { return external_vertex_id_to_K.size(); }
-	unsigned int getL_count() { return edge_L_locations.size(); }
+	unsigned int getK_count() const { return external_vertex_id_to_K.size(); }
+	unsigned int getL_count() const { return edge_L_locations.size(); }
 
 	std::set<Vertex>& boundary_vertexes_set;
 
@@ -86,7 +86,6 @@ public:
 
 	/* Stores for each vertex one of its neighbors */
 	std::multimap<Vertex,Vertex> vertexNeighbours;
-
 
 	/* information on K array - we will have here all the vertexes excluding boundary ones */
 	std::map<Vertex,VertexK> external_vertex_id_to_K;
@@ -113,11 +112,11 @@ class BDMORPHModel : public MeshModel
 public:
 	BDMORPHModel(BDMORPHModel* orig);
 	BDMORPHModel(MeshModel* orig);
-	bool initialize();
 	~BDMORPHModel();
+	bool initialize();
 
 	double interpolate_frame(MeshModel *a, MeshModel* b, double t);
-	void renderInitialEdge(double scale);
+	void renderInitialEdge(double scale) const;
 
 	MeshModel *modela;
 	MeshModel *modelb;
@@ -150,17 +149,12 @@ private:
 	CmdStream *iteration_cmd_stream;
 	CmdStream *extract_solution_cmd_stream;
 	TmpMemory mem;
-
+	cholmod_factor *LL;
 private:
 	void calculate_initial_lengths(MeshModel *a, MeshModel* b, double t);
 	void calculate_grad_and_hessian(int iteration);
 	void calculate_new_vertex_positions();
-	double getK(Vertex index) { return index == -1 ? 0 : K[index]; }
-
-
-	cholmod_factor *LL;
-
-
+	double getK(Vertex index) const { return index == -1 ? 0 : K[index]; }
 };
 
 

@@ -183,6 +183,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnResetPins">
+           <property name="toolTip">
+            <string>Removes all control points</string>
+           </property>
            <property name="text">
             <string>Reset control points</string>
            </property>

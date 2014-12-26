@@ -20,7 +20,6 @@ MeshModel::MeshModel() :
 		texCoords(new std::vector<Point2>),
 		created(true),
 		width(0),height(0),
-		numVertices(0), numFaces(0),
 		center(0,0)
 {
 }
@@ -31,8 +30,6 @@ MeshModel::MeshModel(const MeshModel& other):
 		boundaryVertices(other.boundaryVertices),
 		texCoords(other.texCoords),
 		width(other.width),height(other.height),
-		numVertices(other.numVertices),
-		numFaces(other.numFaces),
 		vertices(other.vertices),
 		created(false),
 		center(other.center)
@@ -59,13 +56,13 @@ bool MeshModel::loadFromFile(const std::string &filename)
 		result = loadOFF(infile);
 
 	if (result == true) {
-		printf("model loaded: numVertices = %d, numFaces = %d\n", numVertices, numFaces);
+		printf("Model loaded: numVertices = %d, numFaces = %d\n", getNumVertices(), getNumFaces());
 	}
 
 	return result;
 }
 
-bool MeshModel::saveToFile(const std::string filename)
+bool MeshModel::saveToFile(const std::string filename) const
 {
     std::ofstream outfile(filename);
 
@@ -95,12 +92,12 @@ MeshModel::~MeshModel()
 
 bool MeshModel::updateMeshInfo()
 {
-	if (numVertices == 0) {
+	if (getNumVertices() == 0) {
 		printf("Loaded mesh has no vertices!\n");
 		return false;
 	}
 
-	if (numFaces == 0) {
+	if (getNumFaces() == 0) {
 		printf("Loaded mesh has no faces!\n");
 		return false;
 	}
@@ -131,7 +128,7 @@ bool MeshModel::updateMeshInfo()
         normalVertices.insert(c);
     }
 
-	if (normalVertices.size() != numVertices) {
+	if (normalVertices.size() != getNumVertices()) {
 		printf("Mesh has standalone vertices, aborting\n");
 		return false;
 	}
@@ -158,38 +155,34 @@ bool MeshModel::updateMeshInfo()
 
     return true;
 }
+/******************************************************************************************************************************/
 
 void MeshModel::moveMesh(Vector2 newCenter)
 {
 	Vector2 move = newCenter - center;
-
-    for (unsigned int i = 0; i < numVertices; i++)
-    {
+    for (unsigned int i = 0; i < getNumVertices(); i++)
     	vertices[i] += move;
-    }
-
     center += move;
 }
 
 
 /******************************************************************************************************************************/
-void MeshModel::renderFaces()
+void MeshModel::renderFaces() const
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glEnable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glBegin(GL_TRIANGLES);
-	for (unsigned int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < getNumFaces(); i++)
 		renderFaceInternal(i);
 	glEnd();
-
 	glPopAttrib();
 }
 
 /******************************************************************************************************************************/
 
-void MeshModel::renderWireframe()
+void MeshModel::renderWireframe() const
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glDisable(GL_TEXTURE_2D);
@@ -197,26 +190,25 @@ void MeshModel::renderWireframe()
 	glLineWidth(1.5);
 
 	glBegin(GL_TRIANGLES);
-	for (unsigned int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < getNumFaces(); i++)
 		renderFaceInternal(i);
 	glEnd();
 	glPopAttrib();
 }
 
 /******************************************************************************************************************************/
-void MeshModel::renderVertex(unsigned int v, double scale)
+void MeshModel::renderVertex(unsigned int v, double scale) const
 {
-	if (v >= numVertices)
+	if (v >= getNumVertices())
 		return;
 
-	#define VERTEX_SIZE 3
 	glPushAttrib(GL_LINE_BIT);
     glLineWidth(1);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     Point2D<double> p = vertices[v];
 
-    float s = VERTEX_SIZE * scale;
+    float s = 3 * scale;
     glBegin(GL_QUADS);
         glVertex2f(p[0]-s,p[1]-s);
         glVertex2f(p[0]-s,p[1]+s);
@@ -227,7 +219,7 @@ void MeshModel::renderVertex(unsigned int v, double scale)
     glPopAttrib();
 }
 
-void MeshModel::renderFace(unsigned int fnum)
+void MeshModel::renderFace(unsigned int fnum) const
 {
 	glBegin(GL_TRIANGLES);
 	renderFaceInternal(fnum);
@@ -236,18 +228,14 @@ void MeshModel::renderFace(unsigned int fnum)
 }
 
 
-void MeshModel::renderFaceInternal(unsigned int fnum)
+void MeshModel::renderFaceInternal(unsigned int fnum) const
 {
-	if (fnum >= numFaces)
+	if (fnum >= getNumFaces())
 		return;
 
 	std::vector<Point2> &coords = *texCoords;
 
-	if (fnum >= numFaces)
-		return;
-
 	Face &f = (*faces)[fnum];
-
 	for (unsigned int j = 0; j < 3; j++) {
 		glTexCoord2f(coords[f[j]].x, coords[f[j]].y);
 		glVertex2f(vertices[f[j]].x, vertices[f[j]].y);
@@ -255,12 +243,12 @@ void MeshModel::renderFaceInternal(unsigned int fnum)
 }
 
 /******************************************************************************************************************************/
-int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex, double radius)
+int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex, double radius) const
 {
     int closest = -1;
     double closestDistance = radius;
 
-    for (unsigned int i = 0; i < numVertices; i++)
+    for (unsigned int i = 0; i < getNumVertices(); i++)
     {
         double distance = vertices[i].distance(point);
         if (distance < closestDistance)
@@ -275,9 +263,9 @@ int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex, double radiu
     return closest;
 }
 
-int MeshModel::getFaceUnderPoint(Point2 point)
+int MeshModel::getFaceUnderPoint(Point2 point) const
 {
-	for (unsigned int i=0; i < numFaces ; i++) {
+	for (unsigned int i=0; i < getNumFaces() ; i++) {
 		Face& face = (*faces)[i];
 		if (PointInTriangle(point, vertices[face.a()],vertices[face.b()],vertices[face.c()]))
 			return i;
@@ -287,7 +275,7 @@ int MeshModel::getFaceUnderPoint(Point2 point)
 }
 
 /******************************************************************************************************************************/
-BBOX MeshModel::getActualBBox()
+BBOX MeshModel::getActualBBox() const
 {
 	return BBOX(vertices);
 }
@@ -297,6 +285,7 @@ bool  MeshModel::loadOFF(std::ifstream& infile)
 {
 	std::string temp;
 	infile >> temp;
+	unsigned int numVertices,numFaces;
 	infile >> numVertices >> numFaces >> temp;
 
 	if (infile.eof())
@@ -304,6 +293,7 @@ bool  MeshModel::loadOFF(std::ifstream& infile)
 
 	vertices.resize(numVertices);
 	double z;
+
 	for (unsigned int i = 0; i < numVertices; i++) {
 		if (infile.eof()) return false;
 		infile >> vertices[i].x >> vertices[i].y >> z;
@@ -312,6 +302,7 @@ bool  MeshModel::loadOFF(std::ifstream& infile)
 
 	int three;
 	faces->resize(numFaces);
+
 	for (unsigned int i = 0; i < numFaces; i++) {
 		if (infile.eof()) return false;
 		infile >> three >> (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
@@ -322,15 +313,15 @@ bool  MeshModel::loadOFF(std::ifstream& infile)
 }
 
 /******************************************************************************************************************************/
-bool  MeshModel::saveOFF(std::ofstream& ofile)
+bool  MeshModel::saveOFF(std::ofstream& ofile) const
 {
 	ofile << "OFF\n";
-	ofile << numVertices << ' ' << numFaces << " 0\n"; // don't bother counting edges
+	ofile << getNumVertices() << ' ' << getNumFaces() << " 0\n"; // don't bother counting edges
 
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		ofile << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
 
-	for (unsigned int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < getNumFaces(); i++)
 		ofile << "3 " << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
 
 	return true;
@@ -339,8 +330,6 @@ bool  MeshModel::saveOFF(std::ofstream& ofile)
 /******************************************************************************************************************************/
 bool  MeshModel::loadOBJ(std::ifstream& infile)
 {
-	numVertices = 0;
-	numFaces = 0;
 	double x,y,z;
 	bool hasUV = false;
 	std::string a,b,c;
@@ -358,7 +347,6 @@ bool  MeshModel::loadOBJ(std::ifstream& infile)
 
 		if (linetype == "v")
 		{
-			numVertices++;
 			issLine >> x >> y >> z;
 			Point2 p(x,y);
 			vertices.push_back(p);
@@ -374,7 +362,6 @@ bool  MeshModel::loadOBJ(std::ifstream& infile)
 		}
 		if (linetype == "f")
 		{
-			numFaces++;
 			issLine >> a >> b >> c;
 			char* a_dup = strdup(a.c_str());
 			char* b_dup = strdup(b.c_str());
@@ -407,15 +394,15 @@ bool  MeshModel::loadOBJ(std::ifstream& infile)
 
 }
 /******************************************************************************************************************************/
-bool  MeshModel::saveOBJ(std::ofstream& ofile)
+bool  MeshModel::saveOBJ(std::ofstream& ofile) const
 {
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		ofile << "v " << vertices[i][0] << ' ' << vertices[i][1] << " 0\n";
 
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		ofile << "vt " << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
 
-	for (unsigned int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < getNumFaces(); i++)
 		ofile << "f " <<
 			(*faces)[i][0]+1 << '/' << (*faces)[i][0]+1 << ' ' <<
 			(*faces)[i][1]+1 << '/' << (*faces)[i][1]+1 << ' ' <<
@@ -427,33 +414,33 @@ bool  MeshModel::saveOBJ(std::ofstream& ofile)
 /******************************************************************************************************************************/
 void MeshModel::identityTexCoords()
 {
-	texCoords->resize(numVertices);
-	for (unsigned int i = 0; i < numVertices; i++)
+	texCoords->resize(getNumVertices());
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 	(*texCoords)[i] = vertices[i];
 
 }
 
 /******************************************************************************************************************************/
-bool MeshModel::saveVOBJFaces(std::ofstream& ofile)
+bool MeshModel::saveVOBJFaces(std::ofstream& ofile) const
 {
-	for (unsigned int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < getNumFaces(); i++)
 		ofile << (*faces)[i][0] << ' ' << (*faces)[i][1] << ' ' << (*faces)[i][2] << std::endl;
 	return true;
 }
 /******************************************************************************************************************************/
 
-bool MeshModel::saveVOBJTexCoords(std::ofstream& ofile)
+bool MeshModel::saveVOBJTexCoords(std::ofstream& ofile) const
 {
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		ofile << (*texCoords)[i][0] << ' ' << (*texCoords)[i][1] << std::endl;
 	return true;
 }
 
 /******************************************************************************************************************************/
 
-bool MeshModel::saveVOBJVertices(std::ofstream& ofile)
+bool MeshModel::saveVOBJVertices(std::ofstream& ofile) const
 {
-	for (unsigned int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < getNumVertices(); i++)
 		ofile << vertices[i][0] << ' ' << vertices[i][1] << std::endl;
 	return true;
 }
@@ -461,8 +448,7 @@ bool MeshModel::saveVOBJVertices(std::ofstream& ofile)
 /******************************************************************************************************************************/
 bool MeshModel::loadVOBJFaces(std::ifstream& infile)
 {
-	faces->resize(numFaces);
-	for (unsigned int i = 0; i < numFaces; i++)
+	for (unsigned int i = 0; i < getNumFaces(); i++)
 	{
 		if (infile.eof()) return false;
 		infile >>  (*faces)[i][0] >> (*faces)[i][1] >> (*faces)[i][2];
@@ -473,8 +459,7 @@ bool MeshModel::loadVOBJFaces(std::ifstream& infile)
 /******************************************************************************************************************************/
 bool MeshModel::loadVOBJVertices(std::ifstream& infile)
 {
-	vertices.resize(numVertices);
-	for (unsigned int i = 0; i < numVertices; i++) {
+	for (unsigned int i = 0; i < getNumVertices(); i++) {
 		if (infile.eof()) return false;
 		infile >> vertices[i].x >> vertices[i].y;
 	}
@@ -484,8 +469,8 @@ bool MeshModel::loadVOBJVertices(std::ifstream& infile)
 /******************************************************************************************************************************/
 bool MeshModel::loadVOBJTexCoords(std::ifstream& infile)
 {
-	texCoords->resize(numVertices);
-	for (unsigned int i = 0; i < numVertices; i++) {
+	texCoords->resize(getNumVertices());
+	for (unsigned int i = 0; i < getNumVertices(); i++) {
 		if (infile.eof()) return false;
 		infile >> (*texCoords)[i][0] >> (*texCoords)[i][1];
 	}

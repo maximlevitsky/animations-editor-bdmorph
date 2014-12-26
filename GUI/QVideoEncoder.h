@@ -51,8 +51,6 @@ class QVideoEncoder
       bool createFile(QString filename,unsigned width,unsigned height);
       bool encodeImageBGRA(uint8_t* image);
       bool close();
-      bool isOk() { return ok; }
-
       double getFrameTimeMsec() { return (1.0 / FPS) * 1000; }
 };
 
