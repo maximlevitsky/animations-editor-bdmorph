@@ -267,7 +267,7 @@ void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex 
 /*****************************************************************************************************/
 BDMORPHModel::BDMORPHModel(MeshModel *orig) :
 		MeshModel(*orig), L(NULL), L0(NULL), LL(NULL),
-		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL),
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL),last_t(0),
 		init_cmd_stream(NULL),iteration_cmd_stream(NULL),extract_solution_cmd_stream(NULL)
 {
 	mem.memory = NULL;
@@ -582,7 +582,7 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 
 			assert (k1 < kCount && k2 < kCount);
 			assert(edge_num < edgeCount);
-			L[edge_num] = iteration ? edge_len(L0[edge_num],getK(k1),getK(k2)) : L0[edge_num];
+			L[edge_num] = edge_len(L0[edge_num],getK(k1),getK(k2));
 			edge_num++;
 			break;
 
@@ -717,17 +717,25 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	TimeMeasurment t1,t2;
 	int iteration = 0;
 
+	/* cache initial guess or reser it */
+	if (a != modela || b != modelb || std::fabs(t-last_t) > 0.2) 
+	{
+		printf("BDMORPH: initializing K values to zero\n");
+		for (int i = 0 ; i < kCount ;i++)
+			K[i] = 0;
+	} else {
+		printf("BDMORPH: reusing K values from older run\n");
+	}
+
 	modela = a;
 	modelb = b;
 	last_t = t;
+
 
 	/* Calculate the interpolated metric */
 	calculate_initial_lengths(a,b,t);
 	printf("BDMORPH: initial lengths evaluations took: %f msec\n", t2.measure_msec());
 
-	/* Start with initial guess for variables */
-	for (int i = 0 ; i < kCount ;i++)
-		K[i] = 0;
 
 	for (iteration = 0; iteration < NEWTON_MAX_ITERATIONS  ; iteration++)
 	{
