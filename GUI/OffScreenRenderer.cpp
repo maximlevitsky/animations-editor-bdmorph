@@ -11,11 +11,11 @@ OffScreenRenderer::OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, in
 		width(width)
 {
 	makeCurrent();
-	fbo = new QGLFramebufferObject(width,height);
+	fbo = new QGLFramebufferObject(width,height, QGLFramebufferObject::NoAttachment,GL_TEXTURE_2D,GL_RGBA8 );
 	bool result = fbo->bind();
 
 	if (result == false)
-		printf("Failed to bind thumbnail FBO");
+		printf("Failed to bind thumbnail FBO\n");
 
 	textureRef = 0;
 
@@ -47,7 +47,7 @@ void OffScreenRenderer::setTexture(QPixmap &texture)
 {
 	makeCurrent();
 	deleteTexture(textureRef);
-	textureRef = bindTexture(texture,GL_TEXTURE_2D,GL_RGBA);
+	textureRef = bindTexture(texture,GL_TEXTURE_2D,GL_RGBA8);
 }
 
 /*****************************************************************************************************/
