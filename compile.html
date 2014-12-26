@@ -35,12 +35,13 @@
         <ol>
 
         <li>You need to install the following packages:<br/>
-        <code># sudo apt-get install cmake libqt4-dev libqt4-dev-bin libsuitesparse-metis-dev libavcodec-dev libavformat-dev 
-                libavutil-dev libswscale-dev libopenblas-dev libqt4-opengl-dev</code>
+        <code># sudo apt-get install cmake libqt4-dev libqt4-dev-bin libqt4-opengl-dev libsuitesparse-metis-dev libopenblas-dev
+                libavcodec-dev libavformat-dev libavutil-dev libswscale-dev  </code>
         </li>
 
         <li>
-            You might need also openGL library if not installed. This depends if you use closed drivers or not.<br/>
+            You might need also openGL library if not installed. <br/>
+            This depends if you use closed drivers or not.<br/>
             If cmake can't find openGL try this <br/>
             <code>sudo apt-get install libgl1-mesa-dev</code><br/>
         </li>
@@ -53,17 +54,19 @@
         <li>
         Now compile the source<br/>
         <code># make</code>
-        </ol>
+        
 		
 		<li>
 		Now you can run bdmorph in the directory
 		</li>
 
+        </ol>
+
       <h1>Windows</h1>
 		<ol>
 		
 		<li>
-			Install Visual Studio (prepare the $$$ to be handled over...)
+			Install Visual Studio (prepare the $$$ to be handed over...)
 		</li>
 		
 		<li>
@@ -77,14 +80,13 @@
 		
 		<li>
 			Install FFMPEG and SuiteSparse libraries<br/>
-			Libaries are 32 bit but should work with most visual studio versions
-			To help with install, you can download precompiled version of these from <a href="data/precompiled.zip">here</a>			
+            To help with install, you can download 32 bit precompiled version of these from <a href="data/precompiled.zip">here</a><br/>
 		</li>
 		
 		<li>
 			Download the source and edit CMakefile.txt:<br/>
-			find the <code>SET(ROOT C:/Users/mlevtsky/Workspace/external)</code>
-			replace this path with where you extracted the precompiled version or edit this to point where you have the libs
+			find the <code>SET(ROOT C:/Users/mlevtsky/Workspace/external)</code><br/>
+			replace this path with where you extracted the precompiled version or edit this to point where you have the libs<br/>
 		</li>
 		
 		<li>
@@ -96,23 +98,26 @@
 		
 		<li>
 			Now create an empty directory and place there:</br>
-			<li>
-				bdmorph.exe you compiled
-			</li>
-			<li>
-				QtCore4.dll
-				QtGui4.dll
-				QtOpenGL4.dll
-				(from QT bin dirctory, or add it to PATH)
-			</li>
-			<li>
-				all the libaries from dll folder of precomiled download you did
-			</li>
-			
-			<li>
-				start bdmorph.exe
-			</li>
-				
+
+            <ol>
+			    <li>
+				    bdmorph.exe you compiled
+			    </li>
+			    <li>
+				    QtCore4.dll
+				    QtGui4.dll
+				    QtOpenGL4.dll
+				    (from QT bin dirctory, or add it to PATH)
+			    </li>
+			    <li>
+				    all the libaries from dll folder of precomiled download you did
+			    </li>				
+            </ol>
+
+		    <li>
+			    start bdmorph.exe
+		    </li>
+
 		</ol>
 			
 		</section>
@@ -120,7 +125,6 @@
         
     </div>
     <footer>
-      <p>Project maintained by <a href="https://github.com/maximlevitsky">maximlevitsky</a></p>
       <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
     </footer>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
