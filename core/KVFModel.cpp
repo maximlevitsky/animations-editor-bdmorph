@@ -92,6 +92,8 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
 /*****************************************************************************************************/
 void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 {
+	printf("\n");
+
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
 

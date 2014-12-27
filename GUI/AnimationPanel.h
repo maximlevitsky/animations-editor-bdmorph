@@ -13,6 +13,7 @@ class VideoModel;
 class KVFModel;
 class VideoKeyFrame;
 class MeshModel;
+class OffScreenRenderer;
 
 /*****************************************************************************************/
 class AnimationPanel : public QDockWidget, public Ui_AnimationPanel
@@ -20,7 +21,7 @@ class AnimationPanel : public QDockWidget, public Ui_AnimationPanel
 	Q_OBJECT
 public:
 	AnimationPanel(QWidget* parent);
-	virtual ~AnimationPanel() {  }
+	virtual ~AnimationPanel();
 public slots:
 	void programStateUpdated(int flags, void *param);
 	void programStateCreated(ProgramState* state) { programstate = state; }
@@ -48,4 +49,5 @@ private:
 	QIcon plusIcon;
 	QLineEdit *timeEdit;
 	ProgramState* programstate;
+	OffScreenRenderer *thumbnailRenderer;
 };

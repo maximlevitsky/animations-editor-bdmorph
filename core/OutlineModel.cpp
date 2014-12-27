@@ -16,6 +16,8 @@ void eatTokens(std::ifstream &ifile, int count)
 		ifile >> dummy;
 }
 
+/******************************************************************************************************************************/
+
 OutlineModel::OutlineModel() : selectedVertex(-1)
 {
 	width = 1;
@@ -66,6 +68,7 @@ OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 }
 
 /******************************************************************************************************************************/
+
 OutlineModel::~OutlineModel()
 {}
 
@@ -346,6 +349,8 @@ void OutlineModel::renderOverlay(double scale) const
 
 	glPopAttrib();
 }
+
+/******************************************************************************************************************************/
 
 void OutlineModel::setScale(double sX, double sY)
 {

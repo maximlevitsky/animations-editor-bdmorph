@@ -14,6 +14,7 @@ public:
 
 public slots:
 	void programStateUpdated(int flags, void *param);
+	void onShowHide(bool show);
 
 	void onImportProject();
 	void onLoadProject();
@@ -22,6 +23,7 @@ public slots:
 	void onResetTexture();
 	void onMeshCreateButtonPressed();
 	void onEditOutlinePressed();
+	void onAutoOutlineCreate();
 
 	void onUndoModel();
 	void onRedoModel();
@@ -41,18 +43,13 @@ public slots:
     void onRunLog();
     void onResetTransform();
 
-	void onShowHide(bool show);
 
 	void onShowBdmorphEdgeClicked(bool checked);
 	void onBdmorphOrigModel(bool checked);
 	void onBdmorphConvertToKeyframe();
-
 	void onTargetFPSChanged(int newValue);
-
-	void onAutoOutlineCreate();
 
 private:
 	ProgramState* programstate;
-
 	void closeEvent (QCloseEvent *event);
 };

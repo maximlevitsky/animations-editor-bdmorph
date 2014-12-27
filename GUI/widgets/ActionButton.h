@@ -8,6 +8,8 @@
 #include <QPushButton>
 #include <QAction>
 
+/******************************************************************************************************************************/
+
 class ActionCheckBox : public QCheckBox
 {
     Q_OBJECT
@@ -20,6 +22,7 @@ public slots:
     void updateButtonStatusFromAction();
 };
 
+/******************************************************************************************************************************/
 
 class ActionButton : public QPushButton
 {

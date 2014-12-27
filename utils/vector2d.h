@@ -14,7 +14,7 @@ class Vector2D {
         T   y;
 
         void print(const char *tag = "") const {
-            qWarning("%s %g %g", tag, x, y);
+            printf("%s %g %g\n", tag, x, y);
         }
 
         QPointF toQPoint() const {

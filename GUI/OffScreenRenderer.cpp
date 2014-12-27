@@ -5,6 +5,7 @@
 #include "OffScreenRenderer.h"
 #include "MeshModel.h"
 
+/*****************************************************************************************************/
 OffScreenRenderer::OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, int width, int height) :
 		QGLWidget(parent, shareWidget) ,
 		height(height),
@@ -75,6 +76,7 @@ void OffScreenRenderer::renderToBufferBGRA(MeshModel* model, void* out)
     printf("Offscreen renderer: took %f msec to render to buffer\n", t.measure_msec());
 }
 
+/*****************************************************************************************************/
 void OffScreenRenderer::setupTransform(MeshModel* model,bool flip,int stripeSize,double scale)
 {
 	int height1 = height - stripeSize;

@@ -43,7 +43,7 @@ public:
 	int getKeyFrameTimeMsec(VideoKeyFrame* frame) const;
 	int getTotalTime() const;
 
-	/* master frame */
+	/* interpolated frame */
 	BDMORPHModel *pFrame;
 
 	virtual bool saveToFile(const std::string filename) const;

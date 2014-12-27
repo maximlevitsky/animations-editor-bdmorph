@@ -234,14 +234,17 @@ void MainWindow::onSaveScreenShot()
     if ( filename == "") return;
     programstate->saveScreenshot(filename.toStdString());
 }
+
+/*****************************************************************************************************/
 void MainWindow::onSaveVideo()
 {
 	if ( !programstate) return;
     QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Video file (*.avi *.mp4)"));
     if ( filename == "") return;
-    programstate->saveVideo(filename);
+    programstate->saveVideo(filename.toStdString());
 }
 
+/*****************************************************************************************************/
 
 void MainWindow::onAbout()
 {
@@ -271,7 +274,7 @@ void MainWindow::onToggleDebugConsole(bool on)
 {
 #ifdef _WIN32
 
-	// This shit is made excusive for Windows(R) (TM)
+	// This shit is made exclusive for Windows(R) (TM)
 
 	if (on)
 	{
@@ -303,3 +306,5 @@ void MainWindow::onToggleDebugConsole(bool on)
 	}
 #endif
 }
+
+/*****************************************************************************************************/

@@ -1,7 +1,10 @@
-#include "ProgramState.h"
+
 #include <QMessageBox>
-#include <algorithm>
 #include <QApplication>
+#include <algorithm>
+
+#include "OffScreenRenderer.h"
+#include "ProgramState.h"
 
 /***********************************************************************************************************/
 ProgramState::ProgramState() :
@@ -16,23 +19,17 @@ ProgramState::ProgramState() :
 	selectedVertex(-1),
 	currentModel(NULL),
 	mode(PROGRAM_MODE_NONE),
-	thumbnailRenderer(NULL),
 	currentAnimationTime(0),
 	animationRepeat(false),
 	videoModel(NULL),
 	outlineModel(NULL),
 	showBDmorphEdge(false),
 	showBDmorphOrigMesh(false),
-	targetFPS(30),
-	videoEncoder(NULL)
+	targetFPS(30)
 {
 	animationTimer = new QTimer(this);
 	animationTimer->setSingleShot(true);
 	connect_(animationTimer, timeout (), this, onAnimationTimer());
-	imagebuffer = (uint8_t*)malloc(1024*768*4);
-
-	thumbnailRenderer = new OffScreenRenderer(NULL, NULL,128,128);
-	imageRenderer = new OffScreenRenderer(NULL, NULL, 1024,768);
 }
 
 /***********************************************************************************************************/
@@ -40,12 +37,9 @@ ProgramState::~ProgramState()
 {
 	delete videoModel;
 	delete outlineModel;
-	delete thumbnailRenderer;
-	delete imageRenderer;
-	free(imagebuffer);
 }
 
-
+/***********************************************************************************************************/
 void ProgramState::initialize()
 {
 	mode = PROGRAM_MODE_NONE;
@@ -261,21 +255,27 @@ bool ProgramState::saveScreenshot(std::string filename)
 {
 	if (!currentModel) return false;
 	QImage img;
+
+	OffScreenRenderer *imageRenderer = new OffScreenRenderer(NULL, NULL, 1024,768);
+	imageRenderer->setTexture(texture);
 	imageRenderer->renderToQImage(currentModel, img,0,0.9);
+	delete imageRenderer;
 
 	bool result = img.save(QString::fromStdString(filename));
 	if (!result) {
 		QMessageBox::warning(NULL, "Error", "Error on screenshot save");
 		return false;
 	}
+
 	return true;
 }
 
 /***********************************************************************************************************/
-bool ProgramState::saveVideo(QString file)
+bool ProgramState::saveVideo(std::string filename)
 {
-	videoEncoder = new QVideoEncoder(30);
-	if (!videoEncoder->createFile(file, 1024,768)) {
+	FFMpegEncoder* videoEncoder = new FFMpegEncoder(30);
+
+	if (!videoEncoder->createFile(filename, 1024,768)) {
 		delete videoEncoder;
 		videoEncoder = NULL;
 		QMessageBox::warning(NULL, "Error", "Error initializing video encoding");
@@ -284,13 +284,15 @@ bool ProgramState::saveVideo(QString file)
 
 	switchToKeyframe(0);
 	mode = PROGRAM_MODE_BUSY;
-	emit programStateUpdated(MODE_CHANGED, NULL);
-
 	maxAnimationTime = videoModel->getTotalTime();
-	imageRenderer->setupTransform(videoModel,true,0,0.9);
-
-
 	statusbarMessage = "Creating video...";
+	emit programStateUpdated(MODE_CHANGED|STATUSBAR_UPDATED, NULL);
+
+	uint8_t* imagebuffer = (uint8_t*)malloc(1024*768*4);
+
+	OffScreenRenderer *imageRenderer = new OffScreenRenderer(NULL, NULL, 1024,768);
+	imageRenderer->setTexture(texture);
+	imageRenderer->setupTransform(videoModel,true,0,0.9);
 
 	for (double position = 0; position < maxAnimationTime ; position += videoEncoder->getFrameTimeMsec())
 	{
@@ -317,6 +319,9 @@ bool ProgramState::saveVideo(QString file)
 
 	videoEncoder->close();
 	delete videoEncoder;
+	delete imageRenderer;
+	free(imagebuffer);
+
 	mode = PROGRAM_MODE_DEFORMATIONS;
 	progressValue = 0;
 	statusbarMessage.clear();
@@ -513,10 +518,9 @@ void ProgramState::startAnimations(int time)
 	mode = PROGRAM_MODE_BUSY;
 	currentAnimationTime = time;
 	maxAnimationTime = videoModel->getTotalTime();
-	animationReferenceTimer.start();
-
-	/* TODO: kick animation thread here*/
 	emit programStateUpdated(MODE_CHANGED,NULL);
+
+	animationReferenceTimer.start();
 	animationTimer->start(0);
 }
 
@@ -528,8 +532,8 @@ void ProgramState::stopAnimations()
 	emit programStateUpdated(MODE_CHANGED,NULL);
 }
 
-
 /***********************************************************************************************************/
+
 void ProgramState::resetTransform()
 {
 	emit programStateUpdated(TRANSFORM_RESET,NULL);
@@ -591,6 +595,7 @@ void ProgramState::interpolateFrame(int time)
 }
 
 /***********************************************************************************************************/
+
 void ProgramState::setAnimationRepeat(bool enabled)
 {
 	animationRepeat = enabled;
@@ -609,7 +614,6 @@ void ProgramState::clearStatusBar()
 	emit programStateUpdated(STATUSBAR_UPDATED, NULL);
 }
 /***********************************************************************************************************/
-
 
 void ProgramState::unloadAll()
 {
@@ -664,6 +668,7 @@ bool ProgramState::loadTextureFile(std::string file, QPixmap &out)
 }
 
 /***********************************************************************************************************/
+
 void ProgramState::updateTexture()
 {
 	if (mode == PROGRAM_MODE_OUTLINE) {
@@ -675,9 +680,6 @@ void ProgramState::updateTexture()
 		else
 			outlineModel->setScale(1,(double)y/x);
 	}
-
-	thumbnailRenderer->setTexture(texture);
-	imageRenderer->setTexture(texture);
 
 	/* Bind it and in darkness grind it....*/
 	emit programStateUpdated(TEXTURE_CHANGED, NULL);
@@ -692,7 +694,6 @@ void ProgramState::updateGUI()
 
 /***********************************************************************************************************/
 
-
 void ProgramState::tryToGuessLoadTexture(std::string file)
 {
 	/* now try to load texture with same name */
@@ -706,5 +707,3 @@ void ProgramState::tryToGuessLoadTexture(std::string file)
 }
 
 /***********************************************************************************************************/
-
-

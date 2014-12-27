@@ -1,5 +1,4 @@
 #include "vector2d.h"
-#include <QDebug>
 #include <math.h>
 
 template<class T>

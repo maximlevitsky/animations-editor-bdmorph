@@ -3,18 +3,16 @@
 // Adapted from https://code.google.com/p/qtffmpegwrapper/
 // Modified to work with modern ffmpeg
 
-#include <qimage.h>
-#include <qstring.h>
-#include <QVideoEncoder.h>
+
+#include "ffmpeg_encoder.h"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <new>
-#include <string>
 #include "utils.h"
 
 /******************************************************************************************************************************/
-QVideoEncoder::QVideoEncoder(int FPS) : FPS(FPS)
+FFMpegEncoder::FFMpegEncoder(int FPS) : FPS(FPS)
 {
 	ok=false;
 	avFormatContext=0;
@@ -29,14 +27,14 @@ QVideoEncoder::QVideoEncoder(int FPS) : FPS(FPS)
 	swsCtx = NULL;
 }
 /******************************************************************************************************************************/
-QVideoEncoder::~QVideoEncoder()
+FFMpegEncoder::~FFMpegEncoder()
 {
 	sws_freeContext(swsCtx);
 	close();
 }
 
 /******************************************************************************************************************************/
-bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
+bool FFMpegEncoder::createFile(std::string filename, unsigned width,unsigned height)
 {
 	// If we had an open video, close it.
 	close();
@@ -46,16 +44,16 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 	fileName = filename;
 
 	/* -----------------------------------------------------------------------------------*/
-	avOutputFormat = av_guess_format(NULL, fileName.toStdString().c_str(), NULL);
+	avOutputFormat = av_guess_format(NULL, fileName.c_str(), NULL);
 	if (!avOutputFormat) return false;
 
 	avFormatContext=avformat_alloc_context();
 	if(!avFormatContext) return false;
 
 	avFormatContext->oformat = avOutputFormat;
-	sprintf(avFormatContext->filename, "%s", fileName.toStdString().c_str());
+	sprintf(avFormatContext->filename, "%s", fileName.c_str());
 
-	if (avio_open(&avFormatContext->pb, fileName.toStdString().c_str(), AVIO_FLAG_WRITE) < 0)
+	if (avio_open(&avFormatContext->pb, fileName.c_str(), AVIO_FLAG_WRITE) < 0)
 		return false;
 
 	/* -----------------------------------------------------------------------------------*/
@@ -108,7 +106,7 @@ bool QVideoEncoder::createFile(QString filename, unsigned width,unsigned height)
 
 
 /******************************************************************************************************************************/
-bool QVideoEncoder::encodeImageBGRA(uint8_t* image)
+bool FFMpegEncoder::encodeImageBGRA(uint8_t* image)
 {
 	if(!ok) return false;
 
@@ -149,7 +147,7 @@ bool QVideoEncoder::encodeImageBGRA(uint8_t* image)
 }
 
 /******************************************************************************************************************************/
-bool QVideoEncoder::close()
+bool FFMpegEncoder::close()
 {
 	if(!ok) return false;
 

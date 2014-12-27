@@ -717,7 +717,9 @@ double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 	TimeMeasurment t1,t2;
 	int iteration = 0;
 
-	/* cache initial guess or reser it */
+	printf("\n");
+
+	/* cache initial guess or reset it */
 	if (a != modela || b != modelb || std::fabs(t-last_t) > 0.2) 
 	{
 		printf("BDMORPH: initializing K values to zero\n");

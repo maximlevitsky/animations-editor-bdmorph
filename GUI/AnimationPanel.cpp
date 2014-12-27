@@ -61,6 +61,14 @@ AnimationPanel::AnimationPanel(QWidget* parent) :
 	sliderAnimationTime->setMinimum(0);
 	sliderAnimationTime->setTickPosition(QSlider::NoTicks);
 
+	thumbnailRenderer = new OffScreenRenderer(NULL, NULL,128,128);
+}
+
+/******************************************************************************************************************************/
+
+AnimationPanel::~AnimationPanel()
+{
+	delete thumbnailRenderer;
 }
 
 /******************************************************************************************************************************/
@@ -93,6 +101,7 @@ void AnimationPanel::programStateUpdated(int flags, void *param)
 	if (flags & ProgramState::TEXTURE_CHANGED)
 	{
 		/* Texture changed - need to re-render everything */
+		thumbnailRenderer->setTexture(programstate->texture);
 		updateItems(0);
 	}
 
@@ -291,7 +300,7 @@ void AnimationPanel::updateListItem(int id)
 
 	/* This code is gross... yuck and I wrote it*/
 	QImage im;
-	programstate->thumbnailRenderer->renderToQImage(frame, im,30,1);
+	thumbnailRenderer->renderToQImage(frame, im,30,1);
 	QPixmap p = QPixmap::fromImage(im);
 
 	QPainter painter(&p);

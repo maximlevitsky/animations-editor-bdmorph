@@ -9,11 +9,12 @@
 
 #define ABS(x) (((x)<0)?-(x):(x))
 
-
 /******************************************************************************************************************************/
 CholmodSparseMatrix::CholmodSparseMatrix(CholmodSparseMatrix::Type type)
     : nr(0), nc(0), numNonzero(0), values(NULL), rowStart(NULL), column(NULL), type(type), capacity(0),rowCapacity(0)
 {}
+
+/******************************************************************************************************************************/
 
 CholmodSparseMatrix::CholmodSparseMatrix(CholmodSparseMatrix::Type type, int r, int c, int nz)
     : nr(r), nc(c), numNonzero(0), capacity(nz), type(type), values(NULL), rowStart(NULL), column(NULL)
@@ -104,7 +105,7 @@ void CholmodSparseMatrix::transpose(CholmodSparseMatrix &result)
         exit(0);
     }
 
-    // now, reuse colSize to tell us now many things we've written
+    // now, reuse colSize to tell us how many things we've written
     memset(colSize, 0, nc*sizeof(int));
     for (unsigned int i = 0; i < nr; i++)
         for (unsigned int j = rowStart[i]; j < rowEnd(i); j++) {
@@ -263,6 +264,7 @@ void CholmodSparseMatrix::multiply(CholmodVector &x, CholmodVector &b)
 }
 
 /******************************************************************************************************************************/
+
 void CholmodSparseMatrix::transposeMultiply(CholmodVector &x, CholmodVector &b)
 {
 	for (unsigned int i = 0; i < nc; i++)
@@ -273,6 +275,7 @@ void CholmodSparseMatrix::transposeMultiply(CholmodVector &x, CholmodVector &b)
 }
 
 /******************************************************************************************************************************/
+
 void CholmodSparseMatrix::zeroOutColumns(std::set<int>& cols, int shift)
 {
 	for (unsigned int i = 0; i < numNonzero; i++)
@@ -281,6 +284,7 @@ void CholmodSparseMatrix::zeroOutColumns(std::set<int>& cols, int shift)
 }
 
 /******************************************************************************************************************************/
+
 void CholmodSparseMatrix::copy(CholmodSparseMatrix& m)
 {
 	reshape(m.nr, m.nc, m.capacity);

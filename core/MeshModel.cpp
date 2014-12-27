@@ -11,9 +11,8 @@
 #include "OutlineModel.h"
 #include "utils.h"
 
-#define LINE_WIDTH 2
-
 /******************************************************************************************************************************/
+
 MeshModel::MeshModel() :
 		faces(new std::vector<Face>),
 		boundaryVertices(new std::set<Vertex>),
@@ -25,6 +24,7 @@ MeshModel::MeshModel() :
 }
 
 /******************************************************************************************************************************/
+
 MeshModel::MeshModel(const MeshModel& other):
 		faces(other.faces),
 		boundaryVertices(other.boundaryVertices),
@@ -61,6 +61,7 @@ bool MeshModel::loadFromFile(const std::string &filename)
 
 	return result;
 }
+/******************************************************************************************************************************/
 
 bool MeshModel::saveToFile(const std::string filename) const
 {
@@ -78,6 +79,7 @@ bool MeshModel::saveToFile(const std::string filename) const
 }
 
 /******************************************************************************************************************************/
+
 MeshModel::~MeshModel()
 {
 	if (created)
@@ -219,6 +221,7 @@ void MeshModel::renderVertex(unsigned int v, double scale) const
     glPopAttrib();
 }
 
+/******************************************************************************************************************************/
 void MeshModel::renderFace(unsigned int fnum) const
 {
 	glBegin(GL_TRIANGLES);
@@ -227,6 +230,7 @@ void MeshModel::renderFace(unsigned int fnum) const
 
 }
 
+/******************************************************************************************************************************/
 
 void MeshModel::renderFaceInternal(unsigned int fnum) const
 {
@@ -243,6 +247,7 @@ void MeshModel::renderFaceInternal(unsigned int fnum) const
 }
 
 /******************************************************************************************************************************/
+
 int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex, double radius) const
 {
     int closest = -1;
@@ -263,6 +268,8 @@ int MeshModel::getClosestVertex(Point2 point, bool onlyInnerVertex, double radiu
     return closest;
 }
 
+/******************************************************************************************************************************/
+
 int MeshModel::getFaceUnderPoint(Point2 point) const
 {
 	for (unsigned int i=0; i < getNumFaces() ; i++) {
@@ -281,6 +288,7 @@ BBOX MeshModel::getActualBBox() const
 }
 
 /******************************************************************************************************************************/
+
 bool  MeshModel::loadOFF(std::ifstream& infile)
 {
 	std::string temp;
@@ -313,6 +321,7 @@ bool  MeshModel::loadOFF(std::ifstream& infile)
 }
 
 /******************************************************************************************************************************/
+
 bool  MeshModel::saveOFF(std::ofstream& ofile) const
 {
 	ofile << "OFF\n";
@@ -328,6 +337,7 @@ bool  MeshModel::saveOFF(std::ofstream& ofile) const
 }
 
 /******************************************************************************************************************************/
+
 bool  MeshModel::loadOBJ(std::ifstream& infile)
 {
 	double x,y,z;
@@ -394,6 +404,7 @@ bool  MeshModel::loadOBJ(std::ifstream& infile)
 
 }
 /******************************************************************************************************************************/
+
 bool  MeshModel::saveOBJ(std::ofstream& ofile) const
 {
 	for (unsigned int i = 0; i < getNumVertices(); i++)
@@ -412,6 +423,7 @@ bool  MeshModel::saveOBJ(std::ofstream& ofile) const
 }
 
 /******************************************************************************************************************************/
+
 void MeshModel::identityTexCoords()
 {
 	texCoords->resize(getNumVertices());
@@ -421,6 +433,7 @@ void MeshModel::identityTexCoords()
 }
 
 /******************************************************************************************************************************/
+
 bool MeshModel::saveVOBJFaces(std::ofstream& ofile) const
 {
 	for (unsigned int i = 0; i < getNumFaces(); i++)
@@ -446,6 +459,7 @@ bool MeshModel::saveVOBJVertices(std::ofstream& ofile) const
 }
 
 /******************************************************************************************************************************/
+
 bool MeshModel::loadVOBJFaces(std::ifstream& infile)
 {
 	for (unsigned int i = 0; i < getNumFaces(); i++)
@@ -457,6 +471,7 @@ bool MeshModel::loadVOBJFaces(std::ifstream& infile)
 }
 
 /******************************************************************************************************************************/
+
 bool MeshModel::loadVOBJVertices(std::ifstream& infile)
 {
 	for (unsigned int i = 0; i < getNumVertices(); i++) {
@@ -467,6 +482,7 @@ bool MeshModel::loadVOBJVertices(std::ifstream& infile)
 	return true;
 }
 /******************************************************************************************************************************/
+
 bool MeshModel::loadVOBJTexCoords(std::ifstream& infile)
 {
 	texCoords->resize(getNumVertices());
@@ -476,6 +492,7 @@ bool MeshModel::loadVOBJTexCoords(std::ifstream& infile)
 	}
 	return true;
 }
+/******************************************************************************************************************************/
 
 
 

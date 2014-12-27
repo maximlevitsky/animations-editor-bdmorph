@@ -83,6 +83,7 @@ void EditorWindow::programStateUpdated(int flags, void *param)
 }
 
 /******************************************************************************************************************************/
+
 void EditorWindow::initializeGL()
 {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -103,7 +104,9 @@ void EditorWindow::resizeGL(int w, int h)
 {
 	repaint();
 }
+
 /******************************************************************************************************************************/
+
 void EditorWindow::paintGL()
 {
     glViewport(0,0,(GLint)width(), (GLint)height());
@@ -435,8 +438,6 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 			diff *= kvfModel->getWidth() / modelWidth;
 			if (diff.rx() == 0 && diff.ry() == 0)
 				return;
-
-			std::cout << "Mouse move delta:(" << diff.rx() << "," << diff.ry() << ")" << std::endl;
 
 			std::set<DisplacedVertex> disps;
 			disps.insert(DisplacedVertex(selectedVertex, Vector2(diff.x(),diff.y())));

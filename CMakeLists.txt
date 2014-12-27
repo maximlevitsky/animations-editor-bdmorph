@@ -103,13 +103,13 @@ SET(bdmorph_SOURCES
 	GUI/EditorWindow.cpp GUI/Main.cpp  GUI/MainWindow.cpp 
 	GUI/SidePanel.cpp GUI/AnimationPanel.cpp GUI/OffScreenRenderer.cpp
 	GUI/widgets/ActionButton.cpp GUI/ProgramState.cpp
-	GUI/QVideoEncoder.cpp
 
 	core/MeshModel.cpp core/KVFModel.cpp core/VideoModel.cpp
 	core/BDMORPH.cpp core/OutlineModel.cpp
 
 	utils/cholmod_matrix.cpp utils/cholmod_common.cpp utils/vector2d.cpp 
-	utils/triangle.c utils/utils.cpp
+	utils/triangle.c utils/utils.cpp utils/ffmpeg_encoder.cpp
+	
 )
 
 SET(bdmorph_HEADERS_QT
@@ -120,11 +120,12 @@ SET(bdmorph_HEADERS_QT
 
 SET(bdmorph_HEADERS
 	${bdmorph_HEADERS_QT}
-	GUI/QVideoEncoder.h
 	core/MeshModel.h core/KVFModel.h core/VideoModel.h
 	core/BDMORPH.h core/OutlineModel.h
+	
 	utils/cholmod_matrix.h utils/cholmod_common.h utils/vector2d.h 
 	utils/triangle.h utils/utils.h
+	utils/ffmpeg_encoder.h
 )
 	
 SET(bdmorph_FORMS 

@@ -85,7 +85,6 @@ private:
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
 	unsigned int lastDispsSize;
-
 	double alpha1;
 
     /* vector field of last transformation  */
@@ -112,7 +111,6 @@ private:
     std::deque<UndoItem> undo;
     std::deque<UndoItem> redo;
     std::vector<LogItem> currentDeformLog;
-public:
 };
 
 #endif
