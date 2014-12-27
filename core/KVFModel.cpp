@@ -74,26 +74,32 @@ KVFModel::~KVFModel()
 
 void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
 {
-	if ((pinnedVertexes.empty() || alpha1 == 0) && displacements.size() == 1) {
+	printf("\n");
+
+	if ((pinnedVertexes.empty() || alpha1 == 0) && displacements.size() == 1)
+	{
 		Vector2 disp = displacements.begin()->displacement;
 
 	    for (unsigned int i = 0; i < getNumVertices(); i++)
 	    	vertices[i] += disp;
-
 		lastVFCalcTime = 1;
 		lastVFApplyTime = 1;
+		historyAdd(displacements);
 		return;
 	}
 
 	calculateVF(displacements);
 	applyVFLogSpiral();
+
+	double create_time = lastVFCalcTime + lastVFApplyTime;
+	double FPS = 1000.0 / (create_time);
+	printf("KVF: Total solve time: %f msec (%f FPS)\n\n", create_time, FPS);
+    historyAdd(disps);
 }
 
 /*****************************************************************************************************/
 void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
 {
-	printf("\n");
-
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
 
@@ -311,12 +317,6 @@ void KVFModel::applyVFLogSpiral()
 
 	for (unsigned int i = 0; i < getNumVertices(); i++)
 		vertices[i] = newPoints[i] / counts[i];
-
-	double create_time = lastVFCalcTime + lastVFApplyTime;
-	double FPS = 1000.0 / (create_time);
-	printf("KVF: Total solve time: %f msec (%f FPS)\n\n", create_time, FPS);
-
-    historyAdd(disps);
 }
 
 /*****************************************************************************************************/
@@ -509,8 +509,7 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
     		displacements.insert(v);
     }
 
-    calculateVF(displacements);
-    applyVFLogSpiral();
+    displaceMesh(displacements);
 }
 /******************************************************************************************************************************/
 
