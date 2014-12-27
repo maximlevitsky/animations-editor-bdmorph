@@ -141,7 +141,12 @@ bool OutlineModel::saveToFile(std::string filename) const
 	/* First section - vertices */
 	ofile << normalVertexes.size() << " 2 0 1" << std::endl;
 	for (auto iter = normalVertexes.begin() ; iter != normalVertexes.end() ; iter++)
-		ofile << *iter << " " << vertices[*iter].x << " " << vertices[*iter].y  << " 1" << std::endl;
+	{
+		Point2 p = vertices[*iter];
+		p.x /= scaleX;
+		p.y /= scaleY;
+		ofile << *iter << " " << p.x << " " << p.y  << " 1" << std::endl;
+	}
 
 	/* Second section - edges */
 	ofile << edges.size() << " 1" << std::endl;
@@ -155,7 +160,10 @@ bool OutlineModel::saveToFile(std::string filename) const
 	i = 0;
 	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++)
 	{
-		ofile << i << " " << vertices[*iter].x << " " << vertices[*iter].y << std::endl;
+		Point2 p = vertices[*iter];
+		p.x /= scaleX;
+		p.y /= scaleY;
+		ofile << i << " " << p.x << " " << p.y << std::endl;
 	}
 
 	return true;
