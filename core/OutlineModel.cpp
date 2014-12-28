@@ -311,14 +311,26 @@ void OutlineModel::renderFaces() const
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 	glEnable(GL_TEXTURE_2D);
 
+	/* render texture */
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	renderInternal();
 
+	/* render rectangle  */
 	glDisable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glColor3f(0,0,0);
 	glLineWidth(1.5);
 	renderInternal();
+
+	/* render edges */
+	glLineWidth(1.5);
+	glColor4f(0,0,0,1);
+	glBegin(GL_LINES);
+	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+		glVertex2f(vertices[iter->v0].x,vertices[iter->v0].y);
+		glVertex2f(vertices[iter->v1].x,vertices[iter->v1].y);
+	}
+	glEnd();
 
 	glPopAttrib();
 }
@@ -335,16 +347,6 @@ void OutlineModel::renderOverlay(double scale) const
 {
 	glPushAttrib(GL_ENABLE_BIT|GL_CURRENT_BIT|GL_LINE_BIT);
 
-	glLineWidth(1.5);
-	glColor4f(0,0,0,1);
-
-	glBegin(GL_LINES);
-	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
-		glVertex2f(vertices[iter->v0].x,vertices[iter->v0].y);
-		glVertex2f(vertices[iter->v1].x,vertices[iter->v1].y);
-	}
-	glEnd();
-
 	glColor3f(1,1,0);
 	for (Vertex v = 0 ; v < (int)getNumVertices() ; v++)
 		renderVertex(v,scale/1.4);
@@ -353,8 +355,6 @@ void OutlineModel::renderOverlay(double scale) const
 		glColor3f(0,1,0);
 		renderVertex(selectedVertex,scale);
 	}
-
-
 	glPopAttrib();
 }
 
