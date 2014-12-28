@@ -671,7 +671,8 @@ bool ProgramState::loadTextureFile(std::string file, QPixmap &out)
 
 void ProgramState::updateTexture()
 {
-	if (mode == PROGRAM_MODE_OUTLINE) {
+	if (mode == PROGRAM_MODE_OUTLINE)
+	{
 		int x = texture.width();
 		int y = texture.height();
 
@@ -704,6 +705,83 @@ void ProgramState::tryToGuessLoadTexture(std::string file)
 		textureFile = rawname;
 		updateTexture();
 	}
+}
+
+/***********************************************************************************************************/
+
+void ProgramState::autoCreateOutline()
+{
+	if (!outlineModel || mode != PROGRAM_MODE_OUTLINE)
+		return;
+
+	QImage image = texture.scaled(350,350,Qt::KeepAspectRatio).toImage();
+	image = image.mirrored(false,true);
+
+	delete outlineModel;
+	outlineModel = new OutlineModel;
+
+	const int stroke = 2;
+	int Vmap[350+4*2][350+4*2] = {{0}}; //added stroke 2 in each side of the map
+	for (int i=stroke; i<image.width()+stroke; i++)
+	{
+		for (int j=stroke; j<image.height()+stroke; j++)
+		{
+			if ( (image.hasAlphaChannel() && qAlpha(image.pixel(i-stroke,j-stroke)) > 200) ||
+				 (!image.hasAlphaChannel() && qGray(image.pixel(i-stroke,j-stroke)) > 200))
+			{
+				for (int k=i-stroke; k<=i+stroke; k++) {
+					for (int l=j-stroke; l<=j+stroke; l++) {
+						Vmap[k][l] = -1;
+					}
+				}
+			}
+		}
+	}
+
+	int count = 0;
+	for (int i=0; i<image.width()+2*stroke; i++) {
+		for (int j=0; j<image.height()+2*stroke; j++) {
+			if (Vmap[i][j] == -1)
+			{
+				if (Vmap[std::max(0,i-1)][j] == 0 ||
+					Vmap[i][std::max(0,j-1)] == 0 ||
+					Vmap[std::min(image.width()+2*stroke-1,i+1)][j] == 0 ||
+					Vmap[i][std::min(image.height()+2*stroke-1,j+1)] == 0 ||
+					Vmap[std::max(0,i-1)][std::max(0,j-1)] == 0 ||
+					Vmap[std::max(0,i-1)][std::min(image.height()+2*stroke-1,j+1)] == 0 ||
+					Vmap[std::min(image.width()+2*stroke-1,i+1)][std::max(0,j-1)] == 0 ||
+					Vmap[std::min(image.width()+2*stroke-1,i+1)][std::min(image.height()+2*stroke-1,j+1)] == 0)
+				{
+						Vmap[i][j] = count++;
+
+						Point2 p;
+						p.x = (double)i / (image.width()+stroke);
+						p.y = (double)j / (image.height()+stroke);
+
+						outlineModel->vertices.push_back(p);
+				}
+			}
+		}
+	}
+
+	for (int i=0; i<image.width()+2*stroke; i++)
+	{
+		for (int j=0; j<image.height()+2*stroke; j++) {
+			if (j+1 < image.height()+2*stroke && Vmap[i][j] > 0 && Vmap[i][j+1] > 0)
+			{
+				outlineModel->edges.insert(Edge(Vmap[i][j],Vmap[i][j+1]));
+			}
+			if (i+1 < image.width()+2*stroke && Vmap[i][j] > 0 && Vmap[i+1][j] > 0)
+			{
+				outlineModel->edges.insert(Edge(Vmap[i][j],Vmap[i+1][j]));
+			}
+		}
+	}
+
+	outlineModel->updateMeshInfo();
+	updateTexture();
+	emit programStateUpdated(KEYFRAME_EDITED|TRANSFORM_RESET,NULL);
+
 }
 
 /***********************************************************************************************************/

@@ -288,6 +288,8 @@ void SidePanel::onDrawOrigVFModeChanged(bool m)
 	programstate->updateSettings();
 }
 
+/******************************************************************************************************************************/
+
 void SidePanel::onShowSelectionChanged(bool m)
 {
 	programstate->showSelection = m;
@@ -366,9 +368,9 @@ void SidePanel::closeEvent (QCloseEvent *event)
 	hide();
 	programstate->updateGUI();
 }
-
+/******************************************************************************************************************************/
 void SidePanel::onAutoOutlineCreate()
 {
-	QMessageBox::information(this, "Message", "Not implemented yet");
+	programstate->autoCreateOutline();
 }
 

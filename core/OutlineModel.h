@@ -26,8 +26,9 @@ public:
 
 	void setScale(double sX, double sY);
 
-private:
 	std::set<Edge> edges;
+
+private:
 	Vertex selectedVertex;
 	double scaleX;
 	double scaleY;

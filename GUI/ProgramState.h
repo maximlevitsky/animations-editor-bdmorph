@@ -74,6 +74,7 @@ public:
 	bool saveVideo(std::string file);
 	bool createProjectFromOutline(int triangleCount);
 	void editOutline();
+	void autoCreateOutline();
 	bool loadTexture(std::string textureFile);
 	bool loadKeyframe(std::string file);
 
