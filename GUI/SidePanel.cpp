@@ -78,7 +78,7 @@ void SidePanel::programStateUpdated(int flags, void *param)
 		frameKVF->setVisible(deformations);
 		frameBDMorph->setVisible(animations || video);
 		frameEdit->setVisible(outline || deformations);
-		frameWireframe->setVisible(!nothing);
+		frameWireframe->setVisible(!nothing && !outline);
 		btnCreateMesh->setEnabled(outline);
 		btnEditOutline->setEnabled(!outline && !nothing);
 
