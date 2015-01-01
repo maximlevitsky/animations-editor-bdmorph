@@ -3,15 +3,7 @@
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="0.1558628891">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.1558628891" moduleId="org.eclipse.cdt.core.settings" name="Default">
-				<externalSettings>
-					<externalSetting>
-						<entry flags="RESOLVED" kind="includePath" name="/usr/include/qt4/QtOpenGL"/>
-						<entry flags="RESOLVED" kind="includePath" name="/usr/include/qt4/QtCore"/>
-						<entry flags="RESOLVED" kind="includePath" name="/usr/include/qt4/QtGui"/>
-						<entry flags="RESOLVED" kind="includePath" name="/usr/share/qt4/mkspecs/linux-g++"/>
-						<entry flags="RESOLVED" kind="includePath" name="/usr/include/qt4"/>
-					</externalSetting>
-				</externalSettings>
+				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
@@ -26,7 +18,11 @@
 					<folderInfo id="0.1558628891." name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.base.1711323753" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.base">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.290934192" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
-							<builder buildPath="/home/maxim/Technion/kvf_debug" command="make" id="cdt.managedbuild.target.gnu.builder.base.2911108" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.base"/>
+							<builder buildPath="/home/maxim/Technion/kvf_debug" command="make" id="cdt.managedbuild.target.gnu.builder.base.2911108" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.base">
+								<outputEntries>
+									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name=""/>
+								</outputEntries>
+							</builder>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1861836652" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.1040620787" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
 								<option id="gnu.cpp.compiler.option.include.paths.1769643046" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
@@ -35,10 +31,10 @@
 									<listOptionValue builtIn="false" value="/usr/include/qt4/QtGui"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4/QtCore"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4/QtOpenGL"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/core}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/GUI}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/GUI/widgets}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/2DNearIsometricDeformations/utils}&quot;"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/core"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/GUI"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/GUI/widgets"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/utils"/>
 									<listOptionValue builtIn="false" value="/usr/include/eigen3"/>
 									<listOptionValue builtIn="false" value="/usr/include/suitesparse"/>
 								</option>
@@ -46,6 +42,16 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1559177820" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
 								<option id="gnu.c.compiler.option.include.paths.260254260" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
+									<listOptionValue builtIn="false" value="/usr/share/qt4/mkspecs/linux-g++"/>
+									<listOptionValue builtIn="false" value="/usr/include/qt4/QtGui"/>
+									<listOptionValue builtIn="false" value="/usr/include/qt4/QtCore"/>
+									<listOptionValue builtIn="false" value="/usr/include/qt4/QtOpenGL"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/core"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/GUI"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/GUI/widgets"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/utils"/>
+									<listOptionValue builtIn="false" value="/usr/include/eigen3"/>
 									<listOptionValue builtIn="false" value="/usr/include/suitesparse"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1537000948" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
@@ -58,12 +64,25 @@
 								</inputType>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.assembler.base.123649650" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.base">
+								<option id="gnu.both.asm.option.include.paths.333796031" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
+									<listOptionValue builtIn="false" value="/usr/share/qt4/mkspecs/linux-g++"/>
+									<listOptionValue builtIn="false" value="/usr/include/qt4/QtGui"/>
+									<listOptionValue builtIn="false" value="/usr/include/qt4/QtCore"/>
+									<listOptionValue builtIn="false" value="/usr/include/qt4/QtOpenGL"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/core"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/GUI"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/GUI/widgets"/>
+									<listOptionValue builtIn="false" value="../2DNearIsometricDeformations/utils"/>
+									<listOptionValue builtIn="false" value="/usr/include/eigen3"/>
+									<listOptionValue builtIn="false" value="/usr/include/suitesparse"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1201126132" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="cmake/external" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="cmake/external|qt4-x11-4.8.5+git192-g085f851+dfsg" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

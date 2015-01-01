@@ -12,7 +12,7 @@ OffScreenRenderer::OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, in
 		width(width)
 {
 	makeCurrent();
-	fbo = new QGLFramebufferObject(width,height, QGLFramebufferObject::NoAttachment,GL_TEXTURE_2D,GL_RGBA8 );
+	fbo = new QGLFramebufferObject(width,height, QGLFramebufferObject::Depth,GL_TEXTURE_2D,GL_RGBA8 );
 	bool result = fbo->bind();
 
 	if (result == false)
@@ -25,9 +25,6 @@ OffScreenRenderer::OffScreenRenderer(QWidget* parent, QGLWidget* shareWidget, in
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_DONT_CARE);
-    glEnable(GL_POLYGON_SMOOTH);
-    /* Setup texture */
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -57,7 +54,11 @@ void OffScreenRenderer::renderToQImage(MeshModel* model, QImage &out, int stripe
 {
 	TimeMeasurment t;
 	makeCurrent();
-	setupTransform(model,false,stripeSize,scale);
+    glClearColor(1.,1.,1., 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    setupTransform(model,false,stripeSize,scale);
+
     model->renderFaces();
     out = fbo->toImage();
     printf("Offscreen renderer: took %f msec to render\n", t.measure_msec());
@@ -83,8 +84,6 @@ void OffScreenRenderer::setupTransform(MeshModel* model,bool flip,int stripeSize
 	makeCurrent();
 
     glViewport(0,stripeSize,width, height - stripeSize);
-    glClearColor(1.,1.,1., 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     BBOX b = model->getActualBBox();
 
