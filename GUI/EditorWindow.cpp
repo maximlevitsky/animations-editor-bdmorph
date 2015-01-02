@@ -317,7 +317,6 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 void EditorWindow::keyPressEvent(QKeyEvent *e)
 {
 	if (!programstate) return;
-	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
 
     switch(e->key()) {
     case Qt::Key_Up:
@@ -345,11 +344,6 @@ void EditorWindow::keyPressEvent(QKeyEvent *e)
     case Qt::Key_Underscore:
     	zoomOut();
     	repaint();
-    	break;
-    case Qt::Key_V:
-    	if (programstate->getCurrentMode() != ProgramState::PROGRAM_MODE_DEFORMATIONS) break;
-    	if (kvfModel) kvfModel->applyVF();
-    	programstate->onUpdateModel();
     	break;
     }
 }

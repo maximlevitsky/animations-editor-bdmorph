@@ -173,10 +173,16 @@
    <property name="text">
     <string>Undo</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
   </action>
   <action name="actionRedo">
    <property name="text">
     <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
    </property>
   </action>
   <action name="actionSave_model">
@@ -213,6 +219,9 @@
   <action name="actionPlay">
    <property name="text">
     <string>Play / Pause</string>
+   </property>
+   <property name="shortcut">
+    <string>Space</string>
    </property>
   </action>
   <action name="actionPause">
@@ -290,6 +299,9 @@
    <property name="text">
     <string>Reapply last VF</string>
    </property>
+   <property name="shortcut">
+    <string>V</string>
+   </property>
   </action>
   <action name="actionLoad_keyframe">
    <property name="text">
@@ -307,6 +319,9 @@
   <action name="actionNew">
    <property name="text">
     <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
   </action>
  </widget>

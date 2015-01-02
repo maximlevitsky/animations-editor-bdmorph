@@ -100,8 +100,7 @@ public:
 	int  getKeyframeTime(int id);
 
 	/* Animations controls */
-	void startAnimations(int time);
-	void stopAnimations();
+	void startStopAnimations();
 	void interpolateFrame(int time);
 	void setAnimationRepeat(bool enabled);
 

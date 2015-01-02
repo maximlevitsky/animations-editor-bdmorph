@@ -237,12 +237,7 @@ void AnimationPanel::onTimeTextFinished()
 void AnimationPanel::onPlayPauseButtonPressed()
 {
 	if (!programstate) return;
-	ProgramState::PROGRAM_MODE mode = programstate->getCurrentMode();
-
-	if (mode == ProgramState::PROGRAM_MODE_BUSY)
-		programstate->stopAnimations();
-	else
-		programstate->startAnimations(sliderAnimationTime->value());
+	programstate->startStopAnimations();
 }
 /******************************************************************************************************************************/
 

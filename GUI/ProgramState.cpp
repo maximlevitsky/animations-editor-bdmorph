@@ -113,8 +113,8 @@ bool ProgramState::createProject(std::string file)
 		currentModel = videoModel->getKeyframeByIndex(1);
 		vertexCount = videoModel->getNumVertices();
 		facesCount = videoModel->getNumFaces();
-	    currentAnimationTime = videoModel->getTotalTime();
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED,NULL);
+	    currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED,NULL);
 	}
 	else {
 		QMessageBox::warning(NULL, "Error", "Unknown file type selected");
@@ -147,8 +147,8 @@ bool ProgramState::createProjectFromOutline(int triangleCount)
     facesCount = currentModel->getNumFaces();
     mode = PROGRAM_MODE_DEFORMATIONS;
     wireframeTransparency = 0.5;
-    currentAnimationTime = videoModel->getTotalTime();
-    emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|EDIT_SETTINGS_CHANGED,NULL);
+    currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
+    emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|EDIT_SETTINGS_CHANGED|KEYFRAME_LIST_EDITED,NULL);
     return true;
 }
 
@@ -171,8 +171,8 @@ bool ProgramState::loadProject(std::string filename)
 		currentModel = videoModel->getKeyframeByIndex(0);
 		vertexCount = videoModel->getNumVertices();
 		facesCount = videoModel->getNumFaces();
-	    currentAnimationTime = videoModel->getTotalTime();
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED, NULL);
+	    currentAnimationTime = 0;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED, NULL);
     } else {
     	QMessageBox::warning(NULL, "Error", "Unknown file type selected");
     	return false;
@@ -512,24 +512,23 @@ enum ProgramState::PROGRAM_MODE ProgramState::getCurrentMode()
 }
 
 /***********************************************************************************************************/
-void ProgramState::startAnimations(int time)
+void ProgramState::startStopAnimations()
 {
 	if (!videoModel) return;
-	mode = PROGRAM_MODE_BUSY;
-	currentAnimationTime = time;
-	maxAnimationTime = videoModel->getTotalTime();
-	emit programStateUpdated(MODE_CHANGED,NULL);
 
-	animationReferenceTimer.start();
-	animationTimer->start(0);
-}
-
-/***********************************************************************************************************/
-void ProgramState::stopAnimations()
-{
-	animationTimer->stop();
-	mode = PROGRAM_MODE_ANIMATION;
-	emit programStateUpdated(MODE_CHANGED,NULL);
+	if (mode != PROGRAM_MODE_BUSY)
+	{
+		mode = PROGRAM_MODE_BUSY;
+		maxAnimationTime = videoModel->getTotalTime();
+		emit programStateUpdated(MODE_CHANGED,NULL);
+		animationReferenceTimer.start();
+		animationTimer->start(0);
+	} else
+	{
+		animationTimer->stop();
+		mode = PROGRAM_MODE_ANIMATION;
+		emit programStateUpdated(MODE_CHANGED,NULL);
+	}
 }
 
 /***********************************************************************************************************/
@@ -549,7 +548,7 @@ void ProgramState::onAnimationTimer()
 		if (animationRepeat)
 			currentAnimationTime = 0;
 		else {
-			stopAnimations();
+			startStopAnimations();
 			return;
 		}
 	}
