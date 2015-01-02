@@ -403,12 +403,20 @@ Vertex OutlineModel::addVertex(Point2 p)
 void OutlineModel::deleteVertex(Vertex v)
 {
 	std::set<Edge> editedEdges;
+	std::vector<Vertex> neigbourVertexes;
 
 	for (auto iter = edges.begin() ; iter != edges.end();)
 	{
 		if (iter->v0 == v || iter->v1 == v)
+		{
+			if (iter->v1 != v)
+				neigbourVertexes.push_back(iter->v1);
+			if (iter->v0 != v)
+				neigbourVertexes.push_back(iter->v0);
+
 			edges.erase(iter++);
-		else 
+
+		} else
 		{
 			Edge e = *iter;
 
@@ -426,6 +434,16 @@ void OutlineModel::deleteVertex(Vertex v)
 
 	edges.insert(editedEdges.begin(),editedEdges.end());
 	vertices.erase(vertices.begin()+v);
+
+	if (neigbourVertexes.size() == 2) {
+		Vertex v0 = neigbourVertexes[0];
+		Vertex v1 = neigbourVertexes[1];
+
+		if (v0 > v) v0--;
+		if (v1 > v) v1--;
+
+		edges.insert(Edge(v0,v1));
+	}
 
 	if (selectedVertex == v)
 		selectedVertex = -1;
