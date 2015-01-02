@@ -256,6 +256,7 @@ private:
 
 bool ends_with(std::string const & value, std::string const & ending);
 bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3);
+double edgeDistance(Point2 p1, Point2 p2, Point2 p);
 void debug_printf(const char* string, ...);
 std::string printTime(int time);
 int getTime(std::string time);

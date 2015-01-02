@@ -425,6 +425,7 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
         QPointF diff = curPos - oldPos;
 		move(QPointF(diff.x(),diff.y()));
 		repaint();
+		mouseMoved = true;
 		return;
 	}
 
@@ -475,11 +476,13 @@ void EditorWindow::mouseReleaseEvent(QMouseEvent *event)
 	MeshModel *model = programstate->currentModel;
 	if (!model) return;
 
-	model->historySnapshot();
     QPointF curPos = event->pos();
     curPos.setY(height()-curPos.y()-1);
+
     model->mouseReleaseAction(screenToModel(model,curPos),mouseMoved, getRadius(model), !mouseLeft);
-    update();
+	model->historySnapshot();
+
+	update();
     mouseMoved = false;
 }
 

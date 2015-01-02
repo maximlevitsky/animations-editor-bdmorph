@@ -380,7 +380,7 @@ void KVFModel::renderVF_common(Vector2* VF) const
 void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
 {
 	/* add item to undo log */
-	LogItem item;
+	KVFModel::LogItem item;
 	item.alpha = alpha1;
 	item.pinnedVertexes = pinnedVertexes;
 	item.displacedVertexes = disps;
@@ -394,14 +394,14 @@ void KVFModel::historySnapshot()
 
 	if (undo.size() >= UNDOSIZE)
 	{
-		UndoItem &toremove = *undo.begin();
-		UndoItem &last = *(undo.begin()+1);
+		KVFModel::UndoItem &toremove = *undo.begin();
+		KVFModel::UndoItem &last = *(undo.begin()+1);
 		toremove.actions.insert(toremove.actions.end(), last.actions.begin(),last.actions.end());
 		last.actions.swap(toremove.actions);
 		undo.pop_front();
 	}
 
-	UndoItem newItem;
+	KVFModel::UndoItem newItem;
 	newItem.vertices = vertices;
 	newItem.actions = currentDeformLog;
 	currentDeformLog.clear();
@@ -424,8 +424,8 @@ bool KVFModel::historyUndo()
 		return true;
 	}
 
-	UndoItem &top = undo.back();
-	LogItem &topLogItem = top.actions.back();
+	KVFModel::UndoItem &top = undo.back();
+	KVFModel::LogItem &topLogItem = top.actions.back();
 
 	vertices = top.vertices;
 	alpha1 = topLogItem.alpha;
@@ -442,8 +442,8 @@ bool KVFModel::historyRedo()
 	redo.pop_front();
 
 
-	UndoItem &top = undo.back();
-	LogItem &topLogItem = top.actions.back();
+	KVFModel::UndoItem &top = undo.back();
+	KVFModel::LogItem &topLogItem = top.actions.back();
 
 	vertices = top.vertices;
 	alpha1 = topLogItem.alpha;
@@ -454,7 +454,7 @@ bool KVFModel::historyRedo()
 /******************************************************************************************************************************/
 void KVFModel::historySaveToFile(std::ofstream& outfile) const
 {
-	std::vector<LogItem> wholeLog;
+	std::vector<KVFModel::LogItem> wholeLog;
 	for (auto iter = undo.begin() ; iter != undo.end() ; iter++)
 		wholeLog.insert(wholeLog.end(), iter->actions.begin(),iter->actions.end());
 
@@ -462,7 +462,7 @@ void KVFModel::historySaveToFile(std::ofstream& outfile) const
 
     for (unsigned int i = 0; i < wholeLog.size(); i++)
     {
-    	LogItem &item = wholeLog[i];
+    	KVFModel::LogItem &item = wholeLog[i];
 
     	if (item.pinnedVertexes.size() == 0)
     		continue;

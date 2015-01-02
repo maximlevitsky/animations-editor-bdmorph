@@ -186,11 +186,10 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount) const
 	printf("OutlineModel: creating mesh with approximate %d triangles\n",triCount);
 
 	/* Define input points. */
-	std::set<Vertex> standaloneVertices;
-	std::set<Vertex> normalVertexes;
+	std::set<Vertex> standaloneVertices, normalVertexes;
 	getVertices(standaloneVertices,normalVertexes);
 
-	if (getNumVertices() < 3 || edges.size() == 0)
+	if (normalVertexes.size() < 3 || edges.size() == 0)
 		return false;
 
 	in.numberofpoints = getNumVertices();
@@ -213,7 +212,6 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount) const
 		in.segmentlist[2*i+1] = iter->v1;
 	}
 
-
 	/* Define input holes */
 	in.numberofholes = standaloneVertices.size();
 	in.holelist = (REAL*)malloc(in.numberofholes * 2 * sizeof(REAL));
@@ -232,7 +230,16 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount) const
 	output->vertices.clear();
 
 	for (int i = 0 ; i < out.numberofpoints ; i++)
-		output->vertices.push_back(Point2(out.pointlist[2*i],out.pointlist[2*i+1] ));
+	{
+		Point2 p = Point2(out.pointlist[2*i],out.pointlist[2*i+1]);
+
+		output->vertices.push_back(p);
+
+		p.x = p.x / scaleX;
+		p.y = p.y / scaleY;
+
+		output->texCoords->push_back(p);
+	}
 
 	for (int i = 0 ; i < out.numberoftriangles ; i++)
 		output->faces->push_back(Face(out.trianglelist[i*3],out.trianglelist[i*3+1],out.trianglelist[i*3+2] ));
@@ -241,17 +248,6 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount) const
 	trifree((VOID*)out.pointlist);
 	trifree((VOID*)out.trianglelist);
 	trifree((VOID*)out.pointmarkerlist);
-
-	output->vertices.resize(out.numberofpoints);
-	output->faces->resize(out.numberoftriangles);
-
-	output->identityTexCoords();
-
-	for (unsigned int i = 0 ; i < output->getNumVertices() ;i++)
-	{
-		(*output->texCoords)[i][0] /= scaleX;
-		(*output->texCoords)[i][1] /= scaleY;
-	}
 
 	return output->updateMeshInfo();
 }
@@ -271,6 +267,17 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 		if (newSelectedVertex == -1) {
 			newSelectedVertex = addVertex(pos);
 			vertexAdded = true;
+
+			for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+				if (edgeDistance(vertices[iter->v0],vertices[iter->v1], pos ) <= radius)
+				{
+					edges.insert(Edge(iter->v0, newSelectedVertex));
+					edges.insert(Edge(iter->v1, newSelectedVertex));
+					edges.erase(iter);
+					selectedVertex = newSelectedVertex;
+					return true;
+				}
+			}
 		}
 
 		if (selectedVertex != newSelectedVertex && selectedVertex != -1)
@@ -284,17 +291,27 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 	} else {
 
 		Vertex toDelete = getClosestVertex(pos, false, radius);
-		if (toDelete == -1)
-			return false;
-		deleteVertex(toDelete);
-		return true;
+		if (toDelete != -1) {
+			deleteVertex(toDelete);
+			return true;
+		}
+
+
+		for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+			if (edgeDistance(vertices[iter->v0],vertices[iter->v1], pos ) <= radius) {
+				selectedVertex = iter->v0;
+				edges.erase(iter);
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
 /******************************************************************************************************************************/
 
 bool OutlineModel::moveAction(Point2 pos1, Point2 pos2, double radius)
 {
-
 	Vertex oldVertex = getClosestVertex(pos1, false, radius);
 	if (oldVertex != -1) {
 		vertices[oldVertex] = pos2;
@@ -399,12 +416,8 @@ void OutlineModel::deleteVertex(Vertex v)
 				iter++;
 			} else {
 
-				if (e.v0 >= v)
-					e.v0--;
-
-				if (e.v1 >= v)
-					e.v1--;
-
+				if (e.v0 >= v) e.v0--;
+				if (e.v1 >= v) e.v1--;
 				editedEdges.insert(Edge(e.v0,e.v1));
 				iter = edges.erase(iter);
 			}
@@ -417,39 +430,77 @@ void OutlineModel::deleteVertex(Vertex v)
 	if (selectedVertex == v)
 		selectedVertex = -1;
 }
-/******************************************************************************************************************************/
 
+/******************************************************************************************************************************/
 void OutlineModel::historySnapshot()
 {
-	/* TODO*/
-}
-/******************************************************************************************************************************/
+	redo.clear();
 
+	OutlineModel::UndoItem item;
+	item.vertices = vertices;
+	item.edges = edges;
+	item.selectedVertex = selectedVertex;
+	undo.push_back(item);
+
+	if (undo.size() > 100)
+		undo.pop_front();
+}
+
+/******************************************************************************************************************************/
 void OutlineModel::historyReset()
 {
+	undo.clear();
+	redo.clear();
 	edges.clear();
 	vertices.clear();
-	/* TODO*/
+	selectedVertex = -1;
 }
 /******************************************************************************************************************************/
 
 bool OutlineModel::historyRedo()
 {
-	/* TODO*/
-	return false;
+	if (redo.empty())
+		return false;
+
+	undo.push_back(redo.front());
+	redo.pop_front();
+
+	UndoItem &item = undo.back();
+	vertices = item.vertices;
+	edges = item.edges;
+	selectedVertex = item.selectedVertex;
+
+	return true;
 }
+
 /******************************************************************************************************************************/
 
 bool OutlineModel::historyUndo()
 {
-	/* TODO*/
-	return false;
+	if (undo.empty())
+		return false;
+
+	redo.push_front(undo.back());
+	undo.pop_back();
+
+	if (undo.empty())
+	{
+		vertices.clear();
+		edges.clear();
+		selectedVertex = -1;
+		return true;
+	}
+
+	UndoItem &item = undo.back();
+	vertices = item.vertices;
+	edges = item.edges;
+	selectedVertex = item.selectedVertex;
+	return true;
 }
 
 /******************************************************************************************************************************/
 void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Vertex> &normalVertices) const
 {
-
 	for (unsigned int i= 0 ; i < getNumVertices() ;i++)
 			standaloneVertices.insert(i);
 
@@ -464,23 +515,10 @@ void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Ve
 }
 
 /******************************************************************************************************************************/
-Point2 OutlineModel::adjustAspectRatio(Point2 in) const
-{
-	Point2 out = in;
-	out.x *= scaleX;
-	out.y *= scaleY;
-	return out;
-}
-
-
-/******************************************************************************************************************************/
 void OutlineModel::renderInternal() const
 {
 	Point2 point1(0,0);
-	Point2 point2(1,1);
-
-	point1 = adjustAspectRatio(point1);
-	point2 = adjustAspectRatio(point2);
+	Point2 point2(scaleX,scaleY);
 
 	glBegin(GL_QUADS);
 

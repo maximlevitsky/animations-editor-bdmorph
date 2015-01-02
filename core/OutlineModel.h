@@ -5,6 +5,8 @@
 #include "utils.h"
 #include <vector>
 #include <set>
+#include <deque>
+
 
 class OutlineModel: public MeshModel
 {
@@ -42,7 +44,17 @@ private:
 	virtual bool historyUndo();
 
 	void getVertices(std::set<Vertex> &standaloneVertices, std::set<Vertex> &normalVertices) const;
-	Point2 adjustAspectRatio(Point2 in) const;
 	void renderInternal() const;
+
+	struct UndoItem
+	{
+		std::vector<Point2> vertices;
+		std::set<Edge> edges;
+		Vertex selectedVertex;
+	};
+
+	std::deque<UndoItem> undo;
+	std::deque<UndoItem> redo;
+
 };
 #endif /* OUTLINEMODEL_H_ */

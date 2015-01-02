@@ -32,6 +32,37 @@ bool PointInTriangle (Point2 pt, Point2 v1, Point2 v2, Point2 v3)
 }
 /******************************************************************************************************************************/
 
+double edgeDistance(Point2 p1, Point2 p2, Point2 p)
+{
+	double x1 = p1.x;
+	double x2 = p2.x;
+	double y1 = p1.y;
+	double y2 = p2.y;
+
+	double x0 = p.x;
+	double y0 = p.y;
+
+	double den = fabs((y2 - y1)*x0 - (x2-x1)*y0 + x2*y1-y2*x1);
+	double num = sqrt((y2-y1)*(y2-y1) + (x2-x1)*(x2-x1));
+
+
+	double linedist = den / num;
+
+	double p1_dist = p1.distance(p);
+	double p2_dist = p2.distance(p);
+	double edge_len = p1.distance(p2);
+
+	if (p1_dist > edge_len)
+		return p1_dist;
+
+	if (p2_dist > edge_len)
+		return p2_dist;
+
+	return linedist;
+}
+
+/******************************************************************************************************************************/
+
 
 void debug_printf(const char* string, ...)
 {

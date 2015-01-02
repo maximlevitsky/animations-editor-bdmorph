@@ -27,22 +27,6 @@ struct DisplacedVertex
 	}
 };
 
-struct LogItem
-{
-	double alpha;
-	std::set<Vertex> pinnedVertexes;
-	std::set<DisplacedVertex> displacedVertexes;
-};
-
-struct UndoItem
-{
-	/* Vertices snapshot*/
-	std::vector<Point2> vertices;
-
-	/* AKVF deformations that are needed to apply to get to this state from previous state*/
-	std::vector<LogItem> actions;
-};
-
 class KVFModel : public MeshModel
 {
 public:
@@ -106,6 +90,23 @@ private:
     void historyAdd(const std::set<DisplacedVertex> &disps);
 	Vertex getClosestPin(Point2 point, double radius) const;
 	void togglePinVertex(Vertex v);
+
+
+	struct LogItem
+	{
+		double alpha;
+		std::set<Vertex> pinnedVertexes;
+		std::set<DisplacedVertex> displacedVertexes;
+	};
+
+	struct UndoItem
+	{
+		/* Vertices snapshot*/
+		std::vector<Point2> vertices;
+
+		/* AKVF deformations that are needed to apply to get to this state from previous state*/
+		std::vector<LogItem> actions;
+	};
 
     std::vector<Point2> initialVertexes;
     std::deque<UndoItem> undo;
