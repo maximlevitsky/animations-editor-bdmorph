@@ -389,6 +389,15 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 {
 	mouseLeft = event->buttons() & Qt::LeftButton;
 
+	QPointF oldPos = lastMousePos;
+    QPointF curPos = event->pos();
+    curPos.setY(height()-curPos.y()-1);
+
+    if (lastMousePos == curPos)
+    	return;
+
+    lastMousePos = curPos;
+
 	if (!programstate) return;
 	MeshModel *model = programstate->currentModel;
 	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
@@ -396,11 +405,6 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 
     Qt::KeyboardModifiers mods =  QApplication::keyboardModifiers();
 
-	QPointF oldPos = lastMousePos;
-    QPointF curPos = event->pos();
-    curPos.setY(height()-curPos.y()-1);
-
-    lastMousePos = curPos;
 
     /* Plain mouse move */
     if (event->buttons() == Qt::NoButton && programstate->showSelection &&
