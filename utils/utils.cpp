@@ -53,10 +53,10 @@ double edgeDistance(Point2 p1, Point2 p2, Point2 p)
 	double edge_len = p1.distance(p2);
 
 	if (p1_dist > edge_len)
-		return p1_dist;
+		return std::numeric_limits<double>::infinity();
 
 	if (p2_dist > edge_len)
-		return p2_dist;
+		return std::numeric_limits<double>::infinity();
 
 	return linedist;
 }

@@ -264,7 +264,8 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 		Vertex newSelectedVertex = getClosestVertex(pos, false, radius);
 		bool vertexAdded = false;
 
-		if (newSelectedVertex == -1) {
+		if (newSelectedVertex == -1)
+		{
 			newSelectedVertex = addVertex(pos);
 			vertexAdded = true;
 
@@ -274,7 +275,7 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 					edges.insert(Edge(iter->v0, newSelectedVertex));
 					edges.insert(Edge(iter->v1, newSelectedVertex));
 					edges.erase(iter);
-					selectedVertex = newSelectedVertex;
+					selectedVertex = -1;
 					return true;
 				}
 			}
@@ -284,22 +285,31 @@ bool OutlineModel::mouseReleaseAction(Point2 pos, bool moved, double radius, boo
 		{
 			edges.insert(Edge(selectedVertex,newSelectedVertex));
 			selectedVertex = vertexAdded ? newSelectedVertex : -1;
+
 		} else
+		{
 			selectedVertex = selectedVertex != -1 ? -1 : newSelectedVertex;
+
+			if (vertexAdded && getNumVertices() > 1)
+				selectedVertex = -1;
+		}
+
 		return true;
 
 	} else {
 
+		/* Right button erases stuff */
 		Vertex toDelete = getClosestVertex(pos, false, radius);
-		if (toDelete != -1) {
+		if (toDelete != -1)
+		{
 			deleteVertex(toDelete);
+			selectedVertex = -1;
 			return true;
 		}
 
-
 		for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
 			if (edgeDistance(vertices[iter->v0],vertices[iter->v1], pos ) <= radius) {
-				selectedVertex = iter->v0;
+				selectedVertex = -1;
 				edges.erase(iter);
 				return true;
 			}
@@ -444,9 +454,6 @@ void OutlineModel::deleteVertex(Vertex v)
 
 		edges.insert(Edge(v0,v1));
 	}
-
-	if (selectedVertex == v)
-		selectedVertex = -1;
 }
 
 /******************************************************************************************************************************/
