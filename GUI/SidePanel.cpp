@@ -38,7 +38,7 @@ SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), programstate(NULL)
 	connect_(spinFPSBox, valueChanged (int), 					this, onTargetFPSChanged(int));
 	connect_(btnCreateOutline, clicked(),						this, onAutoOutlineCreate());
 
-	sliderMeshDensity->setRange(1,100000);
+	sliderMeshDensity->setRange(0,100000);
 	sliderMeshDensity->setTickPosition(QSlider::NoTicks);
 	sliderMeshDensity->setSliderPosition(1000);
 	sliderAlpha->setValue(5);

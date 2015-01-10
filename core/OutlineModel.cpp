@@ -226,7 +226,12 @@ bool OutlineModel::createMesh(MeshModel *output,int triCount) const
 	}
 
 	char commandline[100];
-	sprintf(commandline, "p -q -a%15.15f -D -j -P -z", triArea);
+
+	if (triCount > 0)
+		sprintf(commandline, "p -q -a%15.15f -D -j -P -z", triArea);
+	else
+		sprintf(commandline, "p -S0 -j -P -z");
+
 	triangulate(commandline, &in, &out, NULL);
 
 	output->faces->clear();

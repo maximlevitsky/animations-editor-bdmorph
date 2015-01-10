@@ -95,6 +95,7 @@ bool ProgramState::createProject(std::string file)
 		currentModel = outlineModel;
 		mode = PROGRAM_MODE_OUTLINE;
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+		tryToGuessLoadTexture(file);
 	}
 
 	else if (ends_with(file, ".obj") || ends_with(file, ".off"))
@@ -115,13 +116,13 @@ bool ProgramState::createProject(std::string file)
 		facesCount = videoModel->getNumFaces();
 	    currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED,NULL);
+		tryToGuessLoadTexture(file);
 	}
 	else {
 		QMessageBox::warning(NULL, "Error", "Unknown file type selected");
 		return false;
 	}
 
-	tryToGuessLoadTexture(file);
 	return true;
 }
 
@@ -700,8 +701,12 @@ void ProgramState::tryToGuessLoadTexture(std::string file)
 	int lastindex = file.find_last_of(".");
 	std::string rawname = file.substr(0, lastindex);
 	rawname += ".png";
-	if (loadTextureFile(rawname, texture)) {
+
+	QPixmap tex;
+
+	if (loadTextureFile(rawname, tex)) {
 		textureFile = rawname;
+		texture.swap(tex);
 		updateTexture();
 	}
 }
@@ -715,6 +720,9 @@ void ProgramState::autoCreateOutline()
 
 	QImage image = texture.scaled(350,350,Qt::KeepAspectRatio).toImage();
 	image = image.mirrored(false,true);
+
+	currentModel = NULL;
+	emit programStateUpdated(CURRENT_MODEL_CHANGED,NULL);
 
 	delete outlineModel;
 	outlineModel = new OutlineModel;
@@ -779,7 +787,9 @@ void ProgramState::autoCreateOutline()
 
 	outlineModel->updateMeshInfo();
 	updateTexture();
-	emit programStateUpdated(KEYFRAME_EDITED|TRANSFORM_RESET,NULL);
+
+	currentModel = outlineModel;
+	emit programStateUpdated(KEYFRAME_EDITED|TRANSFORM_RESET|CURRENT_MODEL_CHANGED,NULL);
 
 }
 
