@@ -207,9 +207,9 @@ void MainWindow::programStateUpdated(int flags, void *param)
 		bool hasKeyframes = mode != ProgramState::PROGRAM_MODE_NONE && mode != ProgramState::PROGRAM_MODE_OUTLINE;
 
 		bool busy = mode == ProgramState::PROGRAM_MODE_BUSY;
-
 		bool deformation = mode == ProgramState::PROGRAM_MODE_DEFORMATIONS;
 		bool editmode = mode == ProgramState::PROGRAM_MODE_DEFORMATIONS || mode == ProgramState::PROGRAM_MODE_OUTLINE;
+		bool nothing = mode == ProgramState::PROGRAM_MODE_NONE;
 
 		if (mode == ProgramState::PROGRAM_MODE_NONE || mode == ProgramState::PROGRAM_MODE_OUTLINE) 
 		{
@@ -237,10 +237,10 @@ void MainWindow::programStateUpdated(int flags, void *param)
 		actionNew->setEnabled(!busy);
 		actionNew_model->setEnabled(!busy);
 		actionLoad_mesh->setEnabled(!busy);
-		actionSave_model->setEnabled(!busy);
-		actionLoad_texture->setEnabled(!busy);
-		actionReset_texture->setEnabled(!busy);
-		actionSave_screenshot->setEnabled(!busy);
+		actionSave_model->setEnabled(!busy && !nothing);
+		actionLoad_texture->setEnabled(!busy && !nothing);
+		actionReset_texture->setEnabled(!busy && !nothing);
+		actionSave_screenshot->setEnabled(!busy && !nothing);
 
 		actionUndo->setEnabled(editmode);
 		actionRedo->setEnabled(editmode);

@@ -124,7 +124,15 @@ void SidePanel::onLoadProject()
 void SidePanel::onSaveProject()
 {
 	if ( !programstate) return;
-    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("Video Project (*.vproject);;Mesh (*.obj);;Outline (*.poly)"));
+
+	QString outputFormat;
+
+	if (programstate->videoModel)
+		outputFormat = "Video Project (*.vproject);;Mesh (*.obj)";
+	else if (programstate->outlineModel)
+		outputFormat="Outline (*.poly)";
+
+    QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), outputFormat);
     if ( filename == "") return;
     programstate->saveToFile(filename.toStdString());
 }
@@ -132,7 +140,7 @@ void SidePanel::onSaveProject()
 /*****************************************************************************************************/
 void SidePanel::onChooseTexture()
 {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Choose image"), QString(), QLatin1String("Texture (*.png *.jpg *.bmp)"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("Choose image"), QString(), QString("Texture (*.png *.jpg *.bmp)"));
     if (filename == NULL)
 		return;
 

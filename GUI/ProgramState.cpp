@@ -373,7 +373,7 @@ void ProgramState::editOutline()
 	if (mode == PROGRAM_MODE_OUTLINE) return;
 
 	 if (QMessageBox::question(NULL,
-		"Warning","This will make you loose all changes in animation project",
+		"Warning","This will make you loose all changes in the animation project",
 		QMessageBox::Cancel|QMessageBox::Ok,QMessageBox::Cancel) != QMessageBox::Ok )
 		return;
 
