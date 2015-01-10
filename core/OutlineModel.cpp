@@ -31,13 +31,8 @@ OutlineModel::OutlineModel() : selectedVertex(-1)
 
 OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 {
-	width = 1;
-	height = 1;
-	center.x = 0.5;
-	center.y = 0.5;
-	setScale(1,1);
-
 	std::map<Vertex,Vertex> theirToOurBoundaryVertices;
+	setScale(1,1);
 
 	for (auto iter = from->boundaryVertices->begin() ; iter != from->boundaryVertices->end() ; iter++)
 	{
@@ -65,6 +60,11 @@ OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 			vertices[iter->second] = (*from->texCoords)[iter->first];
 		}
 	}
+
+	BBOX b = getActualBBox();
+	width = b.width();
+	height = b.height();
+	center = b.center();
 }
 
 /******************************************************************************************************************************/
@@ -124,7 +124,10 @@ bool OutlineModel::loadFromFile(const std::string &filename)
 		vertices.push_back(Point2(x,y));
 	}
 
-	numVertices = vertices.size();
+	BBOX b = getActualBBox();
+	width = b.width();
+	height = b.height();
+	center = b.center();
 	return true;
 }
 /******************************************************************************************************************************/
@@ -151,14 +154,14 @@ bool OutlineModel::saveToFile(std::string filename) const
 	/* Second section - edges */
 	ofile << edges.size() << " 1" << std::endl;
 	int i = 0;
-	for (auto iter = edges.begin() ; iter != edges.end() ; iter++) {
+	for (auto iter = edges.begin() ; iter != edges.end() ; iter++, i++) {
 		ofile << i << " " << iter->v0 << " " << iter->v1 <<  " 1" << std::endl;
 	}
 
 	/* Third section - holes */
 	ofile << standaloneVertices.size() << std::endl;
 	i = 0;
-	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++)
+	for (auto iter = standaloneVertices.begin() ; iter != standaloneVertices.end() ; iter++,i++)
 	{
 		Point2 p = vertices[*iter];
 		p.x /= scaleX;
@@ -397,6 +400,10 @@ void OutlineModel::setScale(double sX, double sY)
 	scaleX = sX;
 	scaleY = sY;
 
+	BBOX b = getActualBBox();
+	width = b.width();
+	height = b.height();
+	center = b.center();
 }
 
 /******************************************************************************************************************************/
@@ -542,21 +549,33 @@ void OutlineModel::getVertices(std::set<Vertex> &standaloneVertices, std::set<Ve
 /******************************************************************************************************************************/
 void OutlineModel::renderInternal() const
 {
-	Point2 point1(0,0);
-	Point2 point2(scaleX,scaleY);
+	BBOX b = getActualBBox();
+	Point2 point1 = b.minP, point2 = b.maxP;
 
 	glBegin(GL_QUADS);
 
-	glTexCoord2f(0,0);
+	glTexCoord2f(point1.x/scaleX,point1.y/scaleY);
 	glVertex2f(point1.x,point1.y);
 
-	glTexCoord2f(1,0);
+	glTexCoord2f(point2.x/scaleX,point1.y/scaleY);
 	glVertex2f(point2.x,point1.y);
 
-	glTexCoord2f(1,1);
+	glTexCoord2f(point2.x/scaleX,point2.y/scaleY);
 	glVertex2f(point2.x,point2.y);
 
-	glTexCoord2f(0,1);
+	glTexCoord2f(point1.x/scaleX,point2.y/scaleY);
 	glVertex2f(point1.x,point2.y);
 	glEnd();
 }
+
+/******************************************************************************************************************************/
+
+BBOX OutlineModel::getActualBBox() const
+{
+	BBOX b;
+	b.minP = Point2(0,0);
+	b.maxP = Point2(scaleX,scaleY);
+	b += BBOX(vertices);
+	return b;
+}
+

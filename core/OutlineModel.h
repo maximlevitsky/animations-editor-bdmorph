@@ -46,6 +46,8 @@ private:
 	void getVertices(std::set<Vertex> &standaloneVertices, std::set<Vertex> &normalVertices) const;
 	void renderInternal() const;
 
+	BBOX getActualBBox() const;
+
 	struct UndoItem
 	{
 		std::vector<Point2> vertices;
