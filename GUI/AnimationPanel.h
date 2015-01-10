@@ -50,4 +50,10 @@ private:
 	QLineEdit *timeEdit;
 	ProgramState* programstate;
 	OffScreenRenderer *thumbnailRenderer;
+
+	QAction *cloneAction;
+	QAction *deleteFramesAction;
+	QAction *changeTimeAction;
+	QAction *loadKeyframe ;
+
 };

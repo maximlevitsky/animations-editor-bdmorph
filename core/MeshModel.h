@@ -36,6 +36,7 @@ public:
     /* undo/redo */
 
     virtual void historySnapshot() {}
+
     virtual void historyReset() {}
     virtual bool historyRedo() { return false;}
     virtual bool historyUndo() { return false;}

@@ -49,12 +49,16 @@ void ProgramState::initialize()
 /***********************************************************************************************************/
 bool ProgramState::createProject(std::string file)
 {
+	if (mode == PROGRAM_MODE_BUSY)
+		return false;
+
 	if (file == "")
 	{
 		unloadAll();
 		outlineModel = new OutlineModel();
 		currentModel = outlineModel;
 		mode = PROGRAM_MODE_OUTLINE;
+		textureFile = "";
 		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
 	}
 
@@ -115,7 +119,8 @@ bool ProgramState::createProject(std::string file)
 		vertexCount = videoModel->getNumVertices();
 		facesCount = videoModel->getNumFaces();
 	    currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED,NULL);
+	    wireframeTransparency = 0;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED|EDIT_SETTINGS_CHANGED,NULL);
 		tryToGuessLoadTexture(file);
 	}
 	else {
@@ -147,7 +152,12 @@ bool ProgramState::createProjectFromOutline(int triangleCount)
     vertexCount = currentModel->getNumVertices();
     facesCount = currentModel->getNumFaces();
     mode = PROGRAM_MODE_DEFORMATIONS;
-    wireframeTransparency = 0.5;
+
+    if (textureFile == "")
+    	wireframeTransparency = 0.5;
+    else
+    	wireframeTransparency = 0;
+
     currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
     emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|EDIT_SETTINGS_CHANGED|KEYFRAME_LIST_EDITED,NULL);
     return true;
@@ -157,6 +167,9 @@ bool ProgramState::createProjectFromOutline(int triangleCount)
 
 bool ProgramState::loadProject(std::string filename)
 {
+	if (mode == PROGRAM_MODE_BUSY)
+		return false;
+
     if (ends_with(filename, ".vproject"))
     {
     	VideoModel *newVideoModel = new VideoModel();
@@ -173,7 +186,8 @@ bool ProgramState::loadProject(std::string filename)
 		vertexCount = videoModel->getNumVertices();
 		facesCount = videoModel->getNumFaces();
 	    currentAnimationTime = 0;
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED, NULL);
+	    wireframeTransparency = 0;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED|EDIT_SETTINGS_CHANGED, NULL);
     } else {
     	QMessageBox::warning(NULL, "Error", "Unknown file type selected");
     	return false;
@@ -186,15 +200,27 @@ bool ProgramState::loadProject(std::string filename)
 /***********************************************************************************************************/
 bool ProgramState::loadTexture(std::string newtextureFile)
 {
+	if (mode == PROGRAM_MODE_BUSY)
+		return false;
+
 	QPixmap newtex;
 	if (!loadTextureFile(newtextureFile, newtex) && newtextureFile != "") {
 		QMessageBox::warning(NULL, "Error", "Can't load texture file");
+		wireframeTransparency = 0.5;
+		emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
 		return false;
 	}
+
+	if (newtextureFile == "")
+		wireframeTransparency = 0.5;
+	else
+		wireframeTransparency = 0;
 
 	textureFile = newtextureFile;
 	texture.swap(newtex);
 	updateTexture();
+
+	emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
 	return true;
 }
 
@@ -234,6 +260,9 @@ bool ProgramState::loadKeyframe(std::string filename)
 
 bool ProgramState::saveToFile(std::string filename)
 {
+	if (mode == PROGRAM_MODE_BUSY)
+		return false;
+
 	bool result;
 
     if (ends_with(filename, ".obj"))
@@ -254,6 +283,9 @@ bool ProgramState::saveToFile(std::string filename)
 
 bool ProgramState::saveScreenshot(std::string filename)
 {
+	if (mode == PROGRAM_MODE_BUSY)
+		return false;
+
 	if (!currentModel) return false;
 	QImage img;
 
@@ -274,6 +306,9 @@ bool ProgramState::saveScreenshot(std::string filename)
 /***********************************************************************************************************/
 bool ProgramState::saveVideo(std::string filename)
 {
+	if (mode == PROGRAM_MODE_BUSY)
+		return false;
+
 	FFMpegEncoder* videoEncoder = new FFMpegEncoder(30);
 
 	if (!videoEncoder->createFile(filename, 1024,768)) {
@@ -334,6 +369,7 @@ bool ProgramState::saveVideo(std::string filename)
 /***********************************************************************************************************/
 void ProgramState::editOutline()
 {
+	if (mode == PROGRAM_MODE_BUSY) return;
 	if (mode == PROGRAM_MODE_OUTLINE) return;
 
 	 if (QMessageBox::question(NULL,
@@ -708,7 +744,11 @@ void ProgramState::tryToGuessLoadTexture(std::string file)
 		textureFile = rawname;
 		texture.swap(tex);
 		updateTexture();
-	}
+		wireframeTransparency = 0;
+	} else
+		wireframeTransparency = 0.5;
+
+	emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
 }
 
 /***********************************************************************************************************/

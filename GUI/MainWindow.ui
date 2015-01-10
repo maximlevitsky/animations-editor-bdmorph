@@ -123,21 +123,6 @@
     <string>Reset texture</string>
    </property>
   </action>
-  <action name="actionVector_field">
-   <property name="text">
-    <string>Vector field</string>
-   </property>
-  </action>
-  <action name="actionDeformation">
-   <property name="text">
-    <string>Deformation</string>
-   </property>
-  </action>
-  <action name="actionWireframe">
-   <property name="text">
-    <string>Wireframe</string>
-   </property>
-  </action>
   <action name="actionReset_model">
    <property name="text">
     <string>Reset</string>
@@ -162,11 +147,6 @@
    </property>
    <property name="text">
     <string>Show dirichlet VF</string>
-   </property>
-  </action>
-  <action name="actionDeformation_mode">
-   <property name="text">
-    <string>Deformation mode</string>
    </property>
   </action>
   <action name="actionUndo">
@@ -224,11 +204,6 @@
     <string>Space</string>
    </property>
   </action>
-  <action name="actionPause">
-   <property name="text">
-    <string>Pause</string>
-   </property>
-  </action>
   <action name="actionSave_video">
    <property name="text">
     <string>Export video...</string>
@@ -275,16 +250,6 @@
     <string>Show VF</string>
    </property>
   </action>
-  <action name="actionRewind">
-   <property name="text">
-    <string>Rewind</string>
-   </property>
-  </action>
-  <action name="actionUnload_model">
-   <property name="text">
-    <string>Unload</string>
-   </property>
-  </action>
   <action name="actionNew_model">
    <property name="text">
     <string>Import...</string>
@@ -301,11 +266,6 @@
    </property>
    <property name="shortcut">
     <string>V</string>
-   </property>
-  </action>
-  <action name="actionLoad_keyframe">
-   <property name="text">
-    <string>Load keyframe...</string>
    </property>
   </action>
   <action name="actionDebug_Console">

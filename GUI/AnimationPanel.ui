@@ -49,6 +49,9 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="toolTip">
+         <string>Press to start/stop the animations</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -63,6 +66,9 @@
       </item>
       <item>
        <widget class="ActionButton" name="btnRepeat">
+        <property name="toolTip">
+         <string>Toggle loop mode (animation restarts when reaches end)</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -80,6 +86,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="btnBackward">
+        <property name="toolTip">
+         <string>Rewind animation to start</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -91,6 +100,9 @@
       </item>
       <item>
        <widget class="QSlider" name="sliderAnimationTime">
+        <property name="toolTip">
+         <string>Shows relative position of current frame to whole animation sequence</string>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>

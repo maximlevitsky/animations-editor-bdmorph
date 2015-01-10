@@ -118,6 +118,8 @@ MainWindow::MainWindow()
 	statusBar()->addPermanentWidget(lblFPS);
 	statusBar()->addPermanentWidget(progressIndicator);
 
+	setContextMenuPolicy(Qt::NoContextMenu);
+
 	lblFPS->hide();
 	lblFacesCount->hide();
 	lblVertexCount->hide();
@@ -199,6 +201,11 @@ void MainWindow::programStateUpdated(int flags, void *param)
 		auto mode = programstate->getCurrentMode();
 		bool hasKeyframes = mode != ProgramState::PROGRAM_MODE_NONE && mode != ProgramState::PROGRAM_MODE_OUTLINE;
 
+		bool busy = mode == ProgramState::PROGRAM_MODE_BUSY;
+
+		bool deformation = mode == ProgramState::PROGRAM_MODE_DEFORMATIONS;
+		bool editmode = mode == ProgramState::PROGRAM_MODE_DEFORMATIONS || mode == ProgramState::PROGRAM_MODE_OUTLINE;
+
 		if (mode == ProgramState::PROGRAM_MODE_NONE || mode == ProgramState::PROGRAM_MODE_OUTLINE) 
 		{
 			animationPanel->setVisible(false);
@@ -212,14 +219,28 @@ void MainWindow::programStateUpdated(int flags, void *param)
 			actionAnimation_panel->setChecked(true);
 		}
 
-		actionNew_keyframe->setEnabled(hasKeyframes);
-		actionDelete_keyframe->setEnabled(hasKeyframes);
+		actionNew_keyframe->setEnabled(deformation);
+		actionDelete_keyframe->setEnabled(deformation);
+		actionReset_pins->setEnabled(deformation);
+		actionPin_edit_mode->setEnabled(deformation);
+
 		actionLoop->setEnabled(hasKeyframes);
-		actionLoad_keyframe->setEnabled(hasKeyframes);
 		actionPlay->setEnabled(hasKeyframes);
-		actionPin_edit_mode->setEnabled(hasKeyframes);
-		actionReset_pins->setEnabled(hasKeyframes);
-		actionSave_video->setEnabled(hasKeyframes);
+		actionSave_video->setEnabled(hasKeyframes && !busy);
+
+
+		actionNew->setEnabled(!busy);
+		actionNew_model->setEnabled(!busy);
+		actionLoad_mesh->setEnabled(!busy);
+		actionSave_model->setEnabled(!busy);
+		actionLoad_texture->setEnabled(!busy);
+		actionReset_texture->setEnabled(!busy);
+		actionSave_screenshot->setEnabled(!busy);
+
+		actionUndo->setEnabled(editmode);
+		actionRedo->setEnabled(editmode);
+		actionReset_model->setEnabled(editmode);
+
 	}
 
 	if (flags & ProgramState::PANEL_VISIBLITIY_CHANGED) {

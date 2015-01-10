@@ -25,10 +25,10 @@ AnimationPanel::AnimationPanel(QWidget* parent) :
 	setupUi(this);
 	plusIcon = QIcon(":/AnimationPanel/add.png");
 
-	QAction *cloneAction        = new QAction("Clone frame...", lstKeyFrames);
-	QAction *deleteFramesAction = new QAction("Delete frame",   lstKeyFrames);
-	QAction *changeTimeAction   = new QAction("Change time...", lstKeyFrames);
-	QAction *loadKeyframe       = new QAction("Load from file...", lstKeyFrames);
+	cloneAction        = new QAction("Clone frame", lstKeyFrames);
+	deleteFramesAction = new QAction("Delete frame",   lstKeyFrames);
+	changeTimeAction   = new QAction("Change time...", lstKeyFrames);
+	loadKeyframe       = new QAction("Load from file...", lstKeyFrames);
 
 	lstKeyFrames->addAction(cloneAction);
 	lstKeyFrames->addAction(deleteFramesAction);
@@ -158,6 +158,9 @@ void AnimationPanel::onItemClicked(QListWidgetItem *item)
 	selectFrame(newID);
 
 	programstate->switchToKeyframe(newID);
+
+	changeTimeAction->setEnabled(newID != 0);
+	deleteFramesAction->setEnabled(programstate->getKeyframeCount() > 1);
 
 	/* If we clicked on + sign, add new as a clone of last one */
 	if (newID == programstate->getKeyframeCount()) {

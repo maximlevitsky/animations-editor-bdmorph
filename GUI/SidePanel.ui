@@ -63,7 +63,7 @@
          <item>
           <widget class="QPushButton" name="btnNewModel">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates new video video project ether from an mesh in obj or off format&lt;/p&gt;&lt;p&gt;or from picture (png or jpg format).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>Creates new video project from picture/mesh/outline</string>
            </property>
            <property name="text">
             <string>Import...</string>
@@ -73,7 +73,7 @@
          <item>
           <widget class="QPushButton" name="btnLoadModel">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load previosly saved video project (.vproject)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>Load previosly saved video project (.vproject)</string>
            </property>
            <property name="text">
             <string>Load project...</string>
@@ -87,7 +87,7 @@
          <item>
           <widget class="QPushButton" name="btnSaveModel">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Saves current video project or current keyframe to an file &lt;/p&gt;&lt;p&gt;(depending on extension of file)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>Saves current video project or current keyframe to an file (depending on extension of file)</string>
            </property>
            <property name="text">
             <string>Save...</string>
@@ -110,6 +110,9 @@
         <layout class="QHBoxLayout" name="horizontalLayout_4">
          <item>
           <widget class="QPushButton" name="btnLoadTexture">
+           <property name="toolTip">
+            <string>Loads an texture file for this mesh</string>
+           </property>
            <property name="text">
             <string>Choose texture...</string>
            </property>
@@ -117,6 +120,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnResetTexture">
+           <property name="toolTip">
+            <string>Resets current texture to blue background</string>
+           </property>
            <property name="text">
             <string>Remove texture</string>
            </property>
@@ -145,6 +151,10 @@
        </item>
        <item>
         <widget class="QSlider" name="sliderAlpha">
+         <property name="toolTip">
+          <string>Specify how much weight should control points have during deformation
+If 0, will move the mesh </string>
+         </property>
          <property name="minimum">
           <number>1</number>
          </property>
@@ -161,6 +171,9 @@
        </item>
        <item>
         <widget class="ActionCheckBox" name="chkPinMode">
+         <property name="toolTip">
+          <string>If set, you can add/remove control points by clicking an vertex. Otherwise do this with Shift pressed</string>
+         </property>
          <property name="text">
           <string>Edit control points</string>
          </property>
@@ -227,6 +240,10 @@
        </item>
        <item>
         <widget class="QSlider" name="sliderMeshDensity">
+         <property name="toolTip">
+          <string>How many triangles mesh will rougly have (1-100,000)
+if 0, try not to add extra triangles to the mesh</string>
+         </property>
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -249,6 +266,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnCreateMesh">
+           <property name="toolTip">
+            <string>This invokes Delaunay triangulation to create a mesh from current outline</string>
+           </property>
            <property name="text">
             <string>Create mesh</string>
            </property>
@@ -256,6 +276,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnCreateOutline">
+           <property name="toolTip">
+            <string>Try to guess outline automatically</string>
+           </property>
            <property name="text">
             <string>Auto create outline</string>
            </property>
@@ -307,6 +330,9 @@
        </item>
        <item>
         <widget class="ActionCheckBox" name="chkShowSelection">
+         <property name="toolTip">
+          <string>Show the vertex/face number under the mouse in statusbar</string>
+         </property>
          <property name="text">
           <string>Highlight selected vertex/face</string>
          </property>
@@ -385,6 +411,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnConvertToKeyframe">
+           <property name="toolTip">
+            <string>Create a new keyframe based on the currently displayed interpolated frame</string>
+           </property>
            <property name="text">
             <string>Convert to keyframe</string>
            </property>
@@ -407,6 +436,9 @@
        </item>
        <item>
         <widget class="QCheckBox" name="chkShowAnchorEdge">
+         <property name="toolTip">
+          <string>Shows what edge is chosen to be the anchor edge for metric embedding of BDMORPH algorithm</string>
+         </property>
          <property name="text">
           <string>Show anchor edge used for layout</string>
          </property>
@@ -414,6 +446,9 @@
        </item>
        <item>
         <widget class="QCheckBox" name="chkShowStartModel">
+         <property name="toolTip">
+          <string>Show wrireframe of first keyframe used to create this interpolated frame</string>
+         </property>
          <property name="text">
           <string>Show starting model</string>
          </property>
@@ -435,6 +470,9 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>FPS that BDMORPH algorithm will try to achieve</string>
            </property>
            <property name="minimum">
             <number>1</number>
@@ -505,6 +543,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="btnResetMesh">
+           <property name="toolTip">
+            <string>Reset vertices of current keyframe</string>
+           </property>
            <property name="text">
             <string>Reset</string>
            </property>
