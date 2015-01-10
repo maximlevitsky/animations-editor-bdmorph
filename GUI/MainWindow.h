@@ -38,6 +38,7 @@ private:
 	AnimationPanel* animationPanel;
 	EditorWindow *editorWindow;
 
+	QLabel* lblMode;
 	QLabel* lblVertexCount;
 	QLabel* lblFacesCount;
 	QLabel* lblFPS;

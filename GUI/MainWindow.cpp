@@ -94,6 +94,10 @@ MainWindow::MainWindow()
 
 	/* setup statusbar*/
 	statusBar()->showMessage(tr("Ready"));
+
+	lblMode = new QLabel(this);
+	lblMode->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+
 	lblVertexCount = new QLabel(this);
 	lblVertexCount->setFrameStyle(QFrame::Panel | QFrame::Sunken);
 
@@ -116,10 +120,12 @@ MainWindow::MainWindow()
 	statusBar()->addPermanentWidget(lblSelectedVertex);
 	statusBar()->addPermanentWidget(lblSelectedFace);
 	statusBar()->addPermanentWidget(lblFPS);
+	statusBar()->addPermanentWidget(lblMode);
 	statusBar()->addPermanentWidget(progressIndicator);
 
 	setContextMenuPolicy(Qt::NoContextMenu);
 
+	lblMode->hide();
 	lblFPS->hide();
 	lblFacesCount->hide();
 	lblVertexCount->hide();
@@ -193,7 +199,6 @@ void MainWindow::programStateUpdated(int flags, void *param)
 			statusBar()->showMessage(programstate->statusbarMessage);
 		else
 			statusBar()->showMessage("Ready");
-
 	}
 
 	if (flags & ProgramState::MODE_CHANGED)
@@ -240,6 +245,26 @@ void MainWindow::programStateUpdated(int flags, void *param)
 		actionUndo->setEnabled(editmode);
 		actionRedo->setEnabled(editmode);
 		actionReset_model->setEnabled(editmode);
+
+
+		switch (programstate->mode) {
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_ANIMATION:
+			lblMode->show();
+			lblMode->setText("Interpolated frame");
+			break;
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_NONE:
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_BUSY:
+			lblMode->hide();
+			break;
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_DEFORMATIONS:
+			lblMode->show();
+			lblMode->setText("Keyframe");
+			break;
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_OUTLINE:
+			lblMode->show();
+			lblMode->setText("Outline");
+		}
+
 
 	}
 
