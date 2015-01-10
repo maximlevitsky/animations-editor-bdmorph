@@ -53,7 +53,7 @@ void SidePanel::programStateUpdated(int flags, void *param)
 	if (flags & ProgramState::ANIMATION_STEPPED)
 	{
 		QString bdmorphTime;
-		bdmorphTime.sprintf("Current time: %s (t = %f)", printTime(programstate->currentAnimationTime).c_str(), programstate->videoModel->pFrame->last_t);
+		bdmorphTime.sprintf("Current time: %s (t = %f)", printTime(programstate->currentAnimationTime).c_str(), programstate->videoModel->pFrame->current_t);
 
 		lblCurrentBDMORPHTime->setText(bdmorphTime);
 	}

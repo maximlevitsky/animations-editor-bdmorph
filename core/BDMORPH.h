@@ -120,7 +120,7 @@ public:
 
 	MeshModel *modela;
 	MeshModel *modelb;
-	double last_t;
+	double current_t;
 private:
 
 	OrderedEdge e0;
@@ -128,13 +128,13 @@ private:
 	int edge1_L_location;
 
 	/* lengths */
-	double* L0;			/* initial lengths of each edge*/
-	double* L;			/* computed lengths of each edge */
+	double* L0;			/* interpolated metric */
+	double* L;			/* Intermediate/final metric  */
 
 	CholmodVector K; 				 	/* array of K coefficients for each non boundary vertex */
-	CholmodVector EnergyGradient;  	/* grad(E(K)) */
+	CholmodVector EnergyGradient;  		/* grad(E(K)) */
 	CholmodVector NewtonRHS;		 	/* right size of newton method iteration linear system*/
-	CholmodSparseMatrix EnergyHessian;	 /* hessain(E(K)) */
+	CholmodSparseMatrix EnergyHessian;	/* hessain(E(K)) */
 
 	double minAngle;
 	double maxAngle;
@@ -151,10 +151,12 @@ private:
 	TmpMemory mem;
 	cholmod_factor *LL;
 private:
-	void calculate_initial_lengths(MeshModel *a, MeshModel* b, double t);
-	void calculate_grad_and_hessian(int iteration);
-	void calculate_new_vertex_positions();
+	void metric_create_interpolated();
+	void calculate_grad_and_hessian();
+	void mertic_embed();
 	double getK(Vertex index) const { return index == -1 ? 0 : K[index]; }
+
+	bool metric_flatten();
 };
 
 

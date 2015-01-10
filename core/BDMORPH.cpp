@@ -267,7 +267,7 @@ void BDMORPH_BUILDER::layout_vertex(Edge d, Edge r1, Edge r0, Vertex p0, Vertex 
 /*****************************************************************************************************/
 BDMORPHModel::BDMORPHModel(MeshModel *orig) :
 		MeshModel(*orig), L(NULL), L0(NULL), LL(NULL),
-		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL),last_t(0),
+		EnergyHessian(CholmodSparseMatrix::LOWER_TRIANGULAR), modela(NULL),modelb(NULL),current_t(0),
 		init_cmd_stream(NULL),iteration_cmd_stream(NULL),extract_solution_cmd_stream(NULL)
 {
 	mem.memory = NULL;
@@ -279,7 +279,7 @@ BDMORPHModel::BDMORPHModel(BDMORPHModel* orig) :
 		init_cmd_stream(orig->init_cmd_stream),
 		iteration_cmd_stream(orig->iteration_cmd_stream),
 		extract_solution_cmd_stream(orig->extract_solution_cmd_stream),
-		last_t(0)
+		current_t(0)
 {
 	L = new double[orig->edgeCount];
 	L0 = new double[orig->edgeCount];
@@ -316,7 +316,6 @@ bool BDMORPHModel::initialize()
 	if (p0 == -1)
 	{
 		printf("BRMORPH: WARNING: Center of mesh is empty space - picking first non boundary edge\n");
-
 		for (unsigned int i = 0 ; i < getNumVertices() ; i++) {
 			if (boundaryVertices->count(i) == 0) {
 				p0 = i;
@@ -324,9 +323,13 @@ bool BDMORPHModel::initialize()
 		}
 	}
 
-	if (p0 == -1) {
-		printf("BRMORPH: ERROR: All vertexes are boundary can't support this\n");
-		return false;
+	if (p0 == -1)
+	{
+		printf("BRMORPH: WARNING: All vertexes are boundary\n");
+		if (getNumVertices() > 0)
+			p0 = 0;
+		else
+			return false;
 	}
 
 	/* And one of its neigbours */
@@ -377,9 +380,24 @@ bool BDMORPHModel::initialize()
 	visitedVertices.insert(e0.v0);
 
 	Vertex v2 = builder.getNeighbourVertex(e0.v0,e0.v1);
-	builder.compute_edge_len(Edge(e0.v1,v2));
-	builder.compute_edge_len(Edge(v2,e0.v0));
-	builder.layout_vertex(Edge(e0.v0,e0.v1),Edge(e0.v1,v2),Edge(v2,e0.v0), e0.v0, e0.v1, v2);
+
+	if (v2 != -1) {
+		builder.compute_edge_len(Edge(e0.v1,v2));
+		builder.compute_edge_len(Edge(v2,e0.v0));
+		builder.layout_vertex(Edge(e0.v0,e0.v1),Edge(e0.v1,v2),Edge(v2,e0.v0), e0.v0, e0.v1, v2);
+	} else
+	{
+		v2 = builder.getNeighbourVertex(e0.v1,e0.v0);
+
+		if (v2 == -1) {
+			printf("BRMORPH: ERROR: Initial edge has no neighbors\n");
+			return false;
+		}
+
+		builder.compute_edge_len(Edge(e0.v1,v2));
+		builder.compute_edge_len(Edge(v2,e0.v0));
+		builder.layout_vertex(Edge(e0.v1,e0.v0),Edge(e0.v0,v2),Edge(v2,e0.v1), e0.v1, e0.v0, v2);
+	}
 
 	mappedVertices.insert(e0.v0);
 	mappedVertices.insert(e0.v1);
@@ -531,9 +549,10 @@ bool BDMORPHModel::initialize()
 	return true;
 }
 /*****************************************************************************************************/
-void BDMORPHModel::calculate_initial_lengths(MeshModel *a, MeshModel* b, double t)
+void BDMORPHModel::metric_create_interpolated()
 {
 	CmdStream commands(*init_cmd_stream);
+	TimeMeasurment t1;
 	int edge_num = 0;
 
 	while (!commands.ended())
@@ -544,10 +563,10 @@ void BDMORPHModel::calculate_initial_lengths(MeshModel *a, MeshModel* b, double 
 		assert (vertex2 < (uint32_t)getNumVertices());
 		assert (vertex1 != vertex2);
 
-		double dist1_squared = a->vertices[vertex1].distanceSquared(a->vertices[vertex2]);
-		double dist2_squared = b->vertices[vertex1].distanceSquared(b->vertices[vertex2]);
+		double dist1_squared = modela->vertices[vertex1].distanceSquared(modela->vertices[vertex2]);
+		double dist2_squared = modelb->vertices[vertex1].distanceSquared(modelb->vertices[vertex2]);
 
-		double dist = sqrt((1.0-t)*dist1_squared+t*dist2_squared);
+		double dist = sqrt((1.0-current_t)*dist1_squared+current_t*dist2_squared);
 
 		assert(dist > 0);
 		L0[edge_num++] = dist;
@@ -555,11 +574,11 @@ void BDMORPHModel::calculate_initial_lengths(MeshModel *a, MeshModel* b, double 
 		assert(edge_num <= edgeCount);
 	}
 
-
 	assert(edge_num == edgeCount);
+	printf("BDMORPH: create of interpolated metric took: %f msec\n", t1.measure_msec());
 }
 /*****************************************************************************************************/
-void BDMORPHModel::calculate_grad_and_hessian(int iteration)
+void BDMORPHModel::calculate_grad_and_hessian()
 {
 	int edge_num = 0;
 	CmdStream commands(*iteration_cmd_stream);
@@ -646,15 +665,102 @@ void BDMORPHModel::calculate_grad_and_hessian(int iteration)
 		}}
 	}
 	grad_norm = sqrt(grad_norm);
-	minAngle = atan(minAngle);
-	maxAngle = atan(maxAngle);
+	minAngle = 2.0 * atan(minAngle);
+	maxAngle = 2.0 * atan(maxAngle);
 }
 
 /*****************************************************************************************************/
-void BDMORPHModel::calculate_new_vertex_positions()
+bool BDMORPHModel::metric_flatten()
 {
+	TimeMeasurment t2;
+
+	if (kCount == 0) {
+		memcpy(L,L0,edgeCount*sizeof(double));
+		printf("BDMORPH: CETM: no inner vertices - no need to flatten metric\n");
+		return true;
+	}
+
+	for (int iteration = 0; iteration < NEWTON_MAX_ITERATIONS  ; iteration++)
+	{
+		calculate_grad_and_hessian();
+
+		printf("BDMORPH: CETM: iteration %i : ||\u2207F||\u2082 = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
+				iteration, grad_norm, minAngle*(180.0/M_PI), maxAngle*(180.0/M_PI));
+		printf("BDMORPH: CETM: iteration %i : \u2207F and H(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
+
+		if (grad_norm < END_ITERATION_VALUE) {
+			debug_printf("BDMORPH: CETM: iteration %i : found solution\n", iteration);
+			return true;
+		}
+
+		EnergyHessian.multiply(K,NewtonRHS);
+		NewtonRHS.sub(EnergyGradient);
+
+		printf("BDMORPH: CETM: iteration %i : right side build time: %f msec\n", iteration, t2.measure_msec());
+
+		cholmod_sparse res;
+		EnergyHessian.getCholmodMatrix(res);
+
+		if (!LL) LL = cholmod_analyze(&res, cholmod_get_common());
+		cholmod_factorize(&res, LL, cholmod_get_common());
+
+		if (cholmod_get_common()->status != 0) {
+			printf("BDMORPH: CETM: iteration %i : cholmod factorize failure\n", iteration);
+			return false;
+		}
+
+		cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, NewtonRHS, cholmod_get_common());
+
+		#ifdef __DEBUG__
+		char filename[50];
+		sdebug_printf(filename, "iteration%d.m", iteration);
+		FILE* file = fopen(filename, "w");
+		EnergyHessian.display("H", file);
+		fdebug_printf(file, "Hf = H + tril(H, -1)';\n\n");
+		EnergyGradient.display("Gf", file);
+		fdebug_printf(file, "\n\n");
+		K.display("K", file);
+		fdebug_printf(file, "\n\n");
+		NewtonRHS.display("NEWTONRHS", file);
+		fdebug_printf(file, "RHS = Hf * K - Gf;\n\n");
+		fclose (file);
+		#endif
+
+		K.setData(Xcholmod);
+
+		#ifdef __DEBUG__
+		K.display("NEWK", file);
+		fclose(file);
+		#endif
+
+		if (cholmod_get_common()->status != 0) {
+			debug_printf("BDMORPH: CETM: iteration %i : cholmod solve failure\n", iteration);
+			return false;
+		}
+
+		printf("BDMORPH: CETM: iteration %i : solve time: %f msec\n", iteration, t2.measure_msec());
+	}
+
+	printf ("BDMORPH: CETM: algorithm doesn't seem to converge, giving up\n");
+	return false;
+}
+
+/*****************************************************************************************************/
+void BDMORPHModel::mertic_embed()
+{
+	TimeMeasurment t;
 	CmdStream cmd(*extract_solution_cmd_stream);
 	TmpMemory mymem = mem;
+
+
+	/* Setup position of first vertex and direction of first edge */
+	Vector2 e0_direction1 = (modela->vertices[e0.v1] - modela->vertices[e0.v0]).normalize();
+	Vector2 e0_direction2 = (modelb->vertices[e0.v1] - modelb->vertices[e0.v0]).normalize();
+	e0_direction = (e0_direction1 * (1.0-current_t) + e0_direction2 * current_t).normalize();
+
+	vertices[e0.v0] = modela->vertices[e0.v0] * (1.0-current_t) + modelb->vertices[e0.v0] * current_t;
+	vertices[e0.v1] = vertices[e0.v0] + e0_direction * L[edge1_L_location];
+
 
 	#ifdef __DEBUG__
 	std::set<Vertex> mappedVertices;
@@ -710,116 +816,44 @@ void BDMORPHModel::calculate_new_vertex_positions()
 			break;
 		}}
 	}
+
+	printf("BDMORPH: metric embed time: %f msec\n", t.measure_msec());
 }
+
 /*****************************************************************************************************/
 double BDMORPHModel::interpolate_frame(MeshModel *a, MeshModel* b, double t)
 {
-	TimeMeasurment t1,t2;
-	int iteration = 0;
+	TimeMeasurment t1;
 
 	printf("\n");
 
 	/* cache initial guess or reset it */
-	if (a != modela || b != modelb || std::fabs(t-last_t) > 0.2) 
+	if (a != modela || b != modelb || std::fabs(t-current_t) > 0.2) 
 	{
 		printf("BDMORPH: initializing K values to zero\n");
 		for (int i = 0 ; i < kCount ;i++)
 			K[i] = 0;
+
 	} else {
 		printf("BDMORPH: reusing K values from older run\n");
 	}
 
 	modela = a;
 	modelb = b;
-	last_t = t;
-
+	current_t = t;
 
 	/* Calculate the interpolated metric */
-	calculate_initial_lengths(a,b,t);
-	printf("BDMORPH: initial lengths evaluations took: %f msec\n", t2.measure_msec());
+	metric_create_interpolated();
 
-
-	for (iteration = 0; iteration < NEWTON_MAX_ITERATIONS  ; iteration++)
-	{
-		calculate_grad_and_hessian(iteration);
-
-		printf("BDMORPH: iteration %i : ||\u2207F||\u2082 = %e, min angle = %f\u00B0, max angle = %f\u00B0\n",
-				iteration, grad_norm, minAngle*2*(180.0/M_PI), maxAngle*2*(180.0/M_PI));
-		printf("BDMORPH: iteration %i : \u2207F and H(F) evaluation time: %f msec\n",iteration, t2.measure_msec());
-
-		if (grad_norm < END_ITERATION_VALUE) {
-			debug_printf("BDMORPH: iteration %i : found solution\n", iteration);
-			 break;
-		}
-
-		EnergyHessian.multiply(K,NewtonRHS);
-		NewtonRHS.sub(EnergyGradient);
-
-		printf("BDMORPH: iteration %i : right side build time: %f msec\n", iteration, t2.measure_msec());
-
-		cholmod_sparse res;
-		EnergyHessian.getCholmodMatrix(res);
-
-		if (!LL) LL = cholmod_analyze(&res, cholmod_get_common());
-		cholmod_factorize(&res, LL, cholmod_get_common());
-
-		if (cholmod_get_common()->status != 0) {
-			printf("BDMORPH: iteration %i : cholmod factorize failure\n", iteration);
-			return -1;
-		}
-
-		cholmod_dense * Xcholmod = cholmod_solve(CHOLMOD_A, LL, NewtonRHS, cholmod_get_common());
-
-		#ifdef __DEBUG__
-		char filename[50];
-		sdebug_printf(filename, "iteration%d.m", iteration);
-		FILE* file = fopen(filename, "w");
-		EnergyHessian.display("H", file);
-		fdebug_printf(file, "Hf = H + tril(H, -1)';\n\n");
-		EnergyGradient.display("Gf", file);
-		fdebug_printf(file, "\n\n");
-		K.display("K", file);
-		fdebug_printf(file, "\n\n");
-		NewtonRHS.display("NEWTONRHS", file);
-		fdebug_printf(file, "RHS = Hf * K - Gf;\n\n");
-		fclose (file);
-		#endif
-
-		K.setData(Xcholmod);
-
-		#ifdef __DEBUG__
-	    K.display("NEWK", file);
-		fclose(file);
-		#endif
-
-		if (cholmod_get_common()->status != 0) {
-			debug_printf("BDMORPH: iteration %i : cholmod solve failure\n", iteration);
-			return -1;
-		}
-
-		printf("BDMORPH: iteration %i : solve time: %f msec\n", iteration, t2.measure_msec());
-	}
-
-	if (iteration == NEWTON_MAX_ITERATIONS) {
-		printf ("BDMORPH: algorithm doesn't seem to converge, giving up\n");
+	/* Flatten it using CETM */
+	if (metric_flatten() == false)
 		return -1;
-	}
 
-	/* Setup position of first vertex and direction of first edge */
-	Vector2 e0_direction1 = (a->vertices[e0.v1] - a->vertices[e0.v0]).normalize();
-	Vector2 e0_direction2 = (b->vertices[e0.v1] - b->vertices[e0.v0]).normalize();
-	e0_direction = (e0_direction1 * (1.0-t) + e0_direction2 * t).normalize();
-
-	vertices[e0.v0] = a->vertices[e0.v0] * (1.0-t) + b->vertices[e0.v0] * t;
-	vertices[e0.v1] = vertices[e0.v0] + e0_direction * L[edge1_L_location];
-
-	calculate_new_vertex_positions();
-
-	printf("BDMORPH: layout time: %f msec\n", t2.measure_msec());
+	/* Embed the metric */
+	mertic_embed();
 
 	double msec = t1.measure_msec();
-	printf("BDMORPH: total time %f msec, %f FPS (%i iterations)\n", msec, 1000.0/msec, iteration);
-	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
+	printf("BDMORPH: total time %f msec, %f FPS\n\n", msec, 1000.0/msec);
 	return msec;
 }
 
