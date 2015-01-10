@@ -771,30 +771,28 @@ void BDMORPHModel::mertic_embed()
 		{
 			Vertex v0 = cmd.dword();
 			Vertex v1 = cmd.dword();
+			Vertex v2 = cmd.dword();
+
+			Point2& p0 = vertices[v0];
+			Point2& p1 = vertices[v1];
+			Point2& p2 = vertices[v2];
 
 			#ifdef __DEBUG__
 			assert(mappedVertices.count(v0));
 			assert(mappedVertices.count(v1));
 			#endif
 
-			Point2* p0 = &vertices[v0];
-			Point2* p1 = &vertices[v1];
-
-			Vertex v2 = cmd.dword();
-
-			Point2& p2 = vertices[v2];
-
-			double d   = p0->distanceSquared(*p1);
+			double d   = p0.distanceSquared(p1);
 			double r0d = mymem[cmd.word()] / d;
 			double r1d = mymem[cmd.word()] / d;
 
 			double ad = 0.5 * ( r0d - r1d) + 0.5;
 			double hd = sqrt(r0d-ad*ad);
 
-			double dx = p1->x - p0->x, dy = p1->y - p0->y;
+			double dx = p1.x - p0.x, dy = p1.y - p0.y;
 
-			p2.x = p0->x + ad * dx - hd * dy;
-			p2.y = p0->y + ad * dy + hd * dx;
+			p2.x = p0.x + ad * dx - hd * dy;
+			p2.y = p0.y + ad * dy + hd * dx;
 
 			#ifdef __DEBUG__
 			assert(mappedVertices.insert(v2).second);
