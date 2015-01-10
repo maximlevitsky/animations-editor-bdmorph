@@ -311,25 +311,12 @@ bool BDMORPHModel::initialize()
 	/*==============================================================*/
 	/* Find good enough start vertex*/
 	Point2 center = getActualBBox().center();
-	Vertex p0 = getClosestVertex(center, true);
+	Vertex p0 = getClosestVertex(center, false);
 
 	if (p0 == -1)
 	{
-		printf("BRMORPH: WARNING: Center of mesh is empty space - picking first non boundary edge\n");
-		for (unsigned int i = 0 ; i < getNumVertices() ; i++) {
-			if (boundaryVertices->count(i) == 0) {
-				p0 = i;
-			}
-		}
-	}
-
-	if (p0 == -1)
-	{
-		printf("BRMORPH: WARNING: All vertexes are boundary\n");
-		if (getNumVertices() > 0)
-			p0 = 0;
-		else
-			return false;
+		printf("BRMORPH: ERROR: No vertices\n");
+		return false;
 	}
 
 	/* And one of its neigbours */
