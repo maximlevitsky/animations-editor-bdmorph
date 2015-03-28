@@ -10,6 +10,38 @@
 #include <QTimer>
 #include <QPixmap>
 
+struct StatusBarState {
+	double FPS;
+	int vertexCount;
+	int facesCount;
+	int progressValue;
+	int selectedVertex;
+	int selectedFace;
+	QString statusbarMessage;
+};
+
+struct RenderSettings
+{
+	/* KVF render settings */
+	bool showVF;
+	bool showVForig;
+	bool showSelection;
+    double wireframeTransparency;
+
+    /* bdmorph settings*/
+    bool showBDmorphEdge;
+    bool showBDmorphOrigMesh;
+    int targetFPS;
+
+	bool pinMode;
+    double alpha;
+
+	std::string textureFile;
+	QPixmap texture;
+
+};
+
+
 class ProgramState: public QObject
 {
 	Q_OBJECT
@@ -20,51 +52,74 @@ public:
 	enum PROGRAM_MODE
 	{
 		PROGRAM_MODE_NONE,
-		PROGRAM_MODE_DEFORMATIONS,
+
+		/* outline editor */
 		PROGRAM_MODE_OUTLINE,
-		PROGRAM_MODE_ANIMATION,
+
+		/* use KVF to edit current frame */
+		PROGRAM_MODE_DEFORMATIONS,
+
+		/* animation running or paused */
+		PROGRAM_MODE_ANIMATION_PAUSED,
+		PROGRAM_MODE_ANIMATION_RUNNING,
+
+		/* busy (saving video or replaying log or whatever)*/
 		PROGRAM_MODE_BUSY,
 	};
-
-	/* Current program mode */
-	ProgramState::PROGRAM_MODE mode;
 
 	/* Models */
 	MeshModel *currentModel;
 	VideoModel *videoModel;
 	OutlineModel *outlineModel;
 
-	/* statusbar statistics*/
-	double FPS;
-	int vertexCount;
-	int facesCount;
-	int progressValue;
-	int selectedVertex;
-	int selectedFace;
-	QString statusbarMessage;
+	/* current mode management */
+	void setCurrentMode(enum PROGRAM_MODE mode);
 
-	/* Editor settings*/
-	bool pinMode;
-	bool showVF;
-	bool showVForig;
-	bool showSelection;
-    double wireframeTransparency;
-    bool multitouchMode;
-    bool showBDmorphEdge;
-    bool showBDmorphOrigMesh;
+	enum PROGRAM_MODE getCurrentMode();
 
-    /* Texture and texture file */
-	std::string textureFile;
-	QPixmap texture;
+	/* is some model loaded*/
+	bool isModelLoaded() {  return mode != PROGRAM_MODE_NONE; }
 
-	/* Animation settings */
-	int currentAnimationTime;
-	bool animationRepeat;
-	int targetFPS;
+	/* are we in busy state where most of GUI should be disabled?
+	 *  (animation is running, or we are saving to file or we are replaying the log)
+	 */
+	bool isBusy() { return mode == PROGRAM_MODE_ANIMATION_RUNNING || mode == PROGRAM_MODE_BUSY; }
+
+	/* do we edit something ?*/
+	bool isOutlineEditor() { return mode == PROGRAM_MODE_OUTLINE; }
+	bool isDeformationEditor() {  return mode == PROGRAM_MODE_DEFORMATIONS; }
+	bool isEditing() { return isOutlineEditor() || isDeformationEditor(); }
+
+	/* do we show animations*/
+	bool isAnimations() { return mode == PROGRAM_MODE_ANIMATION_RUNNING ||  mode == PROGRAM_MODE_ANIMATION_PAUSED; }
+
+	/* Are we in full edit mode ( as opposed to noting or outline)*/
+	bool isFullMode() { return mode != PROGRAM_MODE_OUTLINE && mode != PROGRAM_MODE_NONE; }
+
+
+	/* render setting management */
+	void setRenderSettings(const RenderSettings &newsettings);
+	const RenderSettings& getRenderSettings() { return renderSettings;};
+	const QPixmap& getTexture() const { return renderSettings.texture; }
+	void resetTransform();
+
+	/* editor calls this to inform that current model got updated */
+	void informModelEdited();
+	void updateGUI();
+
+	/* statusbar */
+	void setSelectedVertexAndFace(int selectedVertex, int selectedFace);
+	void setFPS(double newFPS);
+	void showStatusBarMessage(const QString& message);
+	void setProgress(int value);
+	StatusBarState getStatusbarData() { return statusbarState; }
+
+
+	void runLog(std::string filename);
+	void saveLog(std::string filename);
 
 public:
 	void initialize();
-	enum PROGRAM_MODE getCurrentMode();
 
 	/* Load/store parts of the state */
     bool createProject(std::string file);
@@ -77,15 +132,6 @@ public:
 	void autoCreateOutline();
 	bool loadTexture(std::string textureFile);
 	bool loadKeyframe(std::string file);
-
-	/* general updates */
-	void onUpdateModel();
-	void resetTransform();
-	void updateSettings();
-
-	void updateStatistics();
-	void setProgress(int value);
-	void updateGUI();
 
 	/* Animation panel uses this to edit list of keyframes*/
 	void switchToKeyframe(int newIndex);
@@ -101,37 +147,47 @@ public:
 
 	/* Animations controls */
 	void startStopAnimations();
-	void interpolateFrame(int time);
 	void setAnimationRepeat(bool enabled);
+
+	/* Calculate and show on screen an interpolated frame */
+	int getAnimationPosition() { return currentAnimationTime; }
+	void setAnimationPosition(int newPosition);
 
 	enum UPDATE_FLAGS
 	{
-		/*  user edited the keyframe in editor  */
-		KEYFRAME_EDITED 		= 0x01,
-		/* New animation frame was interpolated */
-		ANIMATION_STEPPED		= 0x02,
-		/* textureref got changed */
-		TEXTURE_CHANGED 		= 0x04,
-		/* currentModel is now different model */
-		CURRENT_MODEL_CHANGED 	= 0x08,
-		/* Information in the state to be displayed on statusbar got changed */
-		STATUSBAR_UPDATED 		= 0x10,
 		/* Mode of operation (outline/kvf/pframe/video) got changed */
-		MODE_CHANGED 			= 0x20,
-		/* Settings actuall for edit window got changed */
-		EDIT_SETTINGS_CHANGED   = 0x40,
-		/* Request for scale/move reset */
-		TRANSFORM_RESET 		= 0x80,
+		MODE_CHANGED 			= 0x1,
 
-		KEYFRAME_LIST_EDITED	= 0x100,
+		/* new keyframe created/keyframe deleted/keyframe got time change */
+		KEYFRAME_LIST_EDITED	= 0x2,
+
+		/* currentModel is now different model */
+		CURRENT_MODEL_CHANGED 	= 0x4,
+
+		/*  current model is the same but it got edited (used changed the points using KVF)  */
+		MODEL_EDITED 		    = 0x8,
+
+		/* New animation frame was interpolated */
+		ANIMATION_POSITION_CHANGED		= 0x10,
+
+		/* Settings actuall for edit window got changed */
+		RENDER_SETTINGS_CHANGED   = 0x20,
+
+		/* textureref got changed (this is also part of render settings actually) */
+		TEXTURE_CHANGED 		= 0x40,
+
+		/* Information in the state to be displayed on statusbar got changed */
+		STATUSBAR_UPDATED 		= 0x80,
+
+		/* Request for scale/move reset */
+		TRANSFORM_RESET 		= 0x100,
 
 		PANEL_VISIBLITIY_CHANGED = 0x200,
 	};
 
 signals:
 	/* Informs all the users that parts of the state changed */
-	void programStateUpdated(int flags, void *param);
-
+	void programStateUpdated(int flags);
 private slots:
 	void onAnimationTimer();
 private:
@@ -142,11 +198,23 @@ private:
 	bool loadTextureFile(std::string file, QPixmap &out);
 	void updateTexture();
 	void tryToGuessLoadTexture(std::string file);
+	void interpolateFrame(int time);
 
+
+	/* Current program mode */
+	ProgramState::PROGRAM_MODE mode;
+
+	/* Animation settings */
+	int currentAnimationTime;
+	bool animationRepeat;
 	QTimer *animationTimer;
 	QElapsedTimer animationReferenceTimer;
 	int maxAnimationTime;
-};
 
-/***********************************************************************************************************/
+	/* Render  settings*/
+	RenderSettings renderSettings;
+
+	/* Statusbar settings */
+	StatusBarState statusbarState;
+};
 #endif /* PROGRAMSTATE_H_ */

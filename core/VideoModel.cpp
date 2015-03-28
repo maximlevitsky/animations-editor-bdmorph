@@ -7,6 +7,17 @@
 VideoModel::VideoModel() : pFrame(NULL)
 {}
 
+
+/******************************************************************************************************************************/
+VideoModel::VideoModel(OutlineModel* outlineModel, int trianglecount) : pFrame(NULL)
+{
+	if (!outlineModel->createMesh(this, trianglecount))
+		return;
+    if (!initialize_animations())
+    	return;
+    initialize_keyframes();
+}
+
 /******************************************************************************************************************************/
 VideoModel::~VideoModel()
 {
@@ -71,19 +82,7 @@ bool VideoModel::createFromFile(const std::string &filename)
 	initialize_keyframes();
 	return true;
 }
-/******************************************************************************************************************************/
 
-bool VideoModel::createFromOutline(OutlineModel* outlineModel, int trianglecount)
-{
-	if (!outlineModel->createMesh(this, trianglecount))
-		return false;
-
-    if (!initialize_animations())
-    	return false;
-
-    initialize_keyframes();
-    return true;
-}
 /******************************************************************************************************************************/
 
 bool VideoModel::saveToFile(const std::string filename)  const
@@ -129,7 +128,7 @@ void VideoModel::initialize_keyframes()
 
 /******************************************************************************************************************************/
 
-int VideoModel::count() const
+int VideoModel::keyframesCount() const
 {
 	return keyframes.size();
 }
@@ -196,7 +195,7 @@ int VideoModel::getKeyFrameTimeMsec(VideoKeyFrame* frame)  const
 	return time;
 }
 /******************************************************************************************************************************/
-VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference, MeshModel* newPoints)
+VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
 {
 	/* inserts new keyframe after this one */
 	auto iter = std::find(keyframes.begin(), keyframes.end(),reference);
@@ -205,12 +204,40 @@ VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference, MeshModel* newPoi
 	VideoKeyFrame *frame;
 	frame = new VideoKeyFrame(reference);
 
-	if (newPoints)
-		frame->vertices.swap(newPoints->vertices);
-
 	keyframes.insert(iter + 1, frame);
 	return frame;
 }
+
+
+/******************************************************************************************************************************/
+VideoKeyFrame* VideoModel::insertFrame(int time, MeshModel* points)
+{
+	VideoKeyFrame* FrameA = getLastKeyframeBeforeTime(time);
+	int FrameATime = getKeyFrameTimeMsec(FrameA);
+
+	int newFrameADuration = time - FrameATime;
+
+	if (newFrameADuration <= 1)
+		newFrameADuration = 1;
+
+	int newFrameBDuration = FrameA->duration - newFrameADuration;
+
+	if (newFrameBDuration <= 1)
+		newFrameBDuration = 1;
+
+	VideoKeyFrame* frameB = new VideoKeyFrame(points);
+
+	FrameA->duration = newFrameADuration;
+	frameB->duration = newFrameBDuration;
+
+	/* inserts new keyframe after this one */
+	auto iter = std::find(keyframes.begin(), keyframes.end(),FrameA);
+	assert (iter != keyframes.end());
+	keyframes.insert(iter + 1, frameB);
+
+	return frameB;
+}
+
 /******************************************************************************************************************************/
 VideoKeyFrame* VideoModel::deleteFrame(VideoKeyFrame* frame)
 {

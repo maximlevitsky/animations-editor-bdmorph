@@ -15,7 +15,7 @@ public:
 	virtual ~OffScreenRenderer();
 
 	/* Set texture used for rendering */
-	void setTexture(QPixmap &texture);
+	void setTexture(const QPixmap &texture);
 
 	/* Slow simple render */
 	void renderToQImage(MeshModel* model, QImage& out, int stripSize, double scale);

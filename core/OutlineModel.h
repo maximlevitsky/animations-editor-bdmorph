@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <deque>
+#include <qimage.h>
 
 
 class OutlineModel: public MeshModel
@@ -13,6 +14,7 @@ class OutlineModel: public MeshModel
 public:
 	OutlineModel();
 	OutlineModel(MeshModel *from);
+	OutlineModel(const QImage &from);
 	virtual ~OutlineModel();
 
 	virtual void renderFaces() const;

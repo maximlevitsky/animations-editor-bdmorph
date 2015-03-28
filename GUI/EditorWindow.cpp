@@ -35,7 +35,7 @@ EditorWindow::~EditorWindow()
 
 /******************************************************************************************************************************/
 
-void EditorWindow::programStateUpdated(int flags, void *param)
+void EditorWindow::programStateUpdated(int flags)
 {
 	if (!programstate) return;
 	MeshModel *currentModel = programstate->currentModel;
@@ -43,27 +43,25 @@ void EditorWindow::programStateUpdated(int flags, void *param)
 
 	if (flags & (ProgramState::CURRENT_MODEL_CHANGED))
 	{
-		programstate->selectedFace = -1;
-		programstate->selectedFace = -1;
+		programstate->setSelectedVertexAndFace(-1,-1);
 		need_repaint = true;
 	}
 
-	if (flags & (ProgramState::KEYFRAME_EDITED | ProgramState::ANIMATION_STEPPED)) {
+	if (flags & (ProgramState::MODEL_EDITED | ProgramState::ANIMATION_POSITION_CHANGED)) {
 		need_repaint = true;
 	}
 
-	if (flags & ProgramState::EDIT_SETTINGS_CHANGED)
+	if (flags & ProgramState::RENDER_SETTINGS_CHANGED)
 	{
-		setMouseTracking(programstate->showSelection);
-		programstate->selectedFace = -1;
-		programstate->selectedFace = -1;
+		setMouseTracking(programstate->getRenderSettings().showSelection);
+		programstate->setSelectedVertexAndFace(-1,-1);
 		need_repaint = true;
 	}
 
 	if (flags & ProgramState::TEXTURE_CHANGED) {
 		makeCurrent();
 		deleteTexture(textureRef);
-		textureRef = bindTexture(programstate->texture,GL_TEXTURE_2D,GL_RGBA);
+		textureRef = bindTexture(programstate->getTexture(),GL_TEXTURE_2D,GL_RGBA);
 		need_repaint = true;
 	}
 
@@ -119,6 +117,7 @@ void EditorWindow::paintGL()
 
 	if (!programstate) return;
 	MeshModel *renderModel = programstate->currentModel;
+	const RenderSettings& editSettings = programstate->getRenderSettings();
 
     if (!renderModel)
     	return;
@@ -139,9 +138,9 @@ void EditorWindow::paintGL()
 
 	/* render the model*/
 	renderModel->renderFaces();
-	if (programstate->wireframeTransparency)
+	if (programstate->getRenderSettings().wireframeTransparency)
 	{
-		glColor4f(0,0,0,programstate->wireframeTransparency);
+		glColor4f(0,0,0,editSettings.wireframeTransparency);
 		renderModel->renderWireframe();
 	}
 
@@ -151,16 +150,16 @@ void EditorWindow::paintGL()
 
 	/* Render hovered vertices */
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	if (programstate->selectedFace != -1)
+	if (programstate->getStatusbarData().selectedFace != -1)
 	{
 		glColor4f(0,0,1,0.5);
-		renderModel->renderFace(programstate->selectedFace);
+		renderModel->renderFace(programstate->getStatusbarData().selectedFace);
 	}
 
-	if (programstate->selectedVertex != -1)
+	if (programstate->getStatusbarData().selectedVertex != -1)
 	{
 		glColor3f(0,0,1);
-		renderModel->renderVertex(programstate->selectedVertex, ratio);
+		renderModel->renderVertex(programstate->getStatusbarData().selectedVertex, ratio);
 	}
 
 	/* render selected vertices */
@@ -173,20 +172,20 @@ void EditorWindow::paintGL()
 	KVFModel* kvfModel = dynamic_cast<KVFModel*>(renderModel);
 	if (kvfModel)
 	{
-		if (programstate->showVForig)
+		if (editSettings.showVForig)
 			kvfModel->renderVFOrig();
-		if (programstate->showVF)
+		if (editSettings.showVF)
 			kvfModel->renderVF();
 	}
 
 	BDMORPHModel* bdmodel = dynamic_cast<BDMORPHModel*>(renderModel);
 
 	if (bdmodel) {
-		if (programstate->showBDmorphEdge)
+		if (editSettings.showBDmorphEdge)
 			bdmodel->renderInitialEdge(ratio);
 
-		if (programstate->showBDmorphOrigMesh && bdmodel->modela ) {
-			glColor4f(1,0,0,programstate->wireframeTransparency);
+		if (editSettings.showBDmorphOrigMesh && bdmodel->modela ) {
+			glColor4f(1,0,0,editSettings.wireframeTransparency);
 			bdmodel->modela->renderWireframe();
 		}
 	}
@@ -211,8 +210,8 @@ bool EditorWindow::event(QEvent *event)
 bool EditorWindow::touchEvent(QTouchEvent* te)
 {
 	if (!programstate) return false;
-	if (programstate->pinMode) return false;
-	if (programstate->getCurrentMode() != ProgramState::PROGRAM_MODE_DEFORMATIONS) return false;
+	if (programstate->getRenderSettings().pinMode) return false;
+	if (!programstate->isDeformationEditor()) return false;
 
 	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
     if (!kvfModel) return false;
@@ -296,14 +295,15 @@ bool EditorWindow::touchEvent(QTouchEvent* te)
 
 		if (disps.size() > 0)
 		{
-			if (programstate->showVF || programstate->showVForig)
-				kvfModel->calculateVF(disps);
-			else
-				kvfModel->displaceMesh(disps);
+			RenderSettings settings = programstate->getRenderSettings();
 
-			programstate->FPS = 1000.0 / (kvfModel->lastVFApplyTime + kvfModel->lastVFCalcTime);
-			programstate->onUpdateModel();
-			programstate->updateStatistics();
+			if (settings.showVF || settings.showVForig)
+				kvfModel->calculateVF(disps,settings.alpha);
+			else
+				kvfModel->displaceMesh(disps,settings.alpha);
+
+			programstate->informModelEdited();
+			programstate->setFPS(1000.0 / (kvfModel->lastVFApplyTime + kvfModel->lastVFCalcTime));
 		}
 	}
 
@@ -365,7 +365,7 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
     Point2 modelPos = screenToModel(model,pos);
 
 	if ((QApplication::keyboardModifiers() == Qt::NoModifier) &&
-			!programstate->pinMode && programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS)
+			!programstate->getRenderSettings().pinMode && programstate->isDeformationEditor())
 	{
 		Vertex v = model->getClosestVertex(modelPos);
 		/* Select this vertex */
@@ -375,7 +375,7 @@ void EditorWindow::mousePressEvent(QMouseEvent *event)
 		return;
 	}
 
-	if (programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_BUSY)
+	if (programstate->isBusy())
 		return;
 
 	if (event->buttons() & Qt::LeftButton)
@@ -407,12 +407,13 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 
 
     /* Plain mouse move */
-    if (event->buttons() == Qt::NoButton && programstate->showSelection &&
+    if (event->buttons() == Qt::NoButton && programstate->getRenderSettings().showSelection &&
     		mods == Qt::NoModifier)
     {
-		programstate->selectedVertex = model->getClosestVertex(screenToModel(model,curPos));
-		programstate->selectedFace = model->getFaceUnderPoint(screenToModel(model,curPos));
-		programstate->updateStatistics();
+		programstate->setSelectedVertexAndFace(
+				model->getClosestVertex(screenToModel(model,curPos)),
+				model->getFaceUnderPoint(screenToModel(model,curPos)));
+
 		repaint();
 		return;
     }
@@ -431,8 +432,8 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 	if ((event->buttons() & Qt::LeftButton))
     {
 		bool deformMode =
-				programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS
-				&& kvfModel && !programstate->pinMode && !(mods & Qt::ShiftModifier);
+				programstate->isDeformationEditor()
+				&& kvfModel && !programstate->getRenderSettings().pinMode && !(mods & Qt::ShiftModifier);
 
 		if (deformMode)
 		{
@@ -445,14 +446,15 @@ void EditorWindow::mouseMoveEvent(QMouseEvent *event)
 			std::set<DisplacedVertex> disps;
 			disps.insert(DisplacedVertex(selectedVertex, Vector2(diff.x(),diff.y())));
 
-			if (programstate->showVF || programstate->showVForig)
-				kvfModel->calculateVF(disps);
-			else
-				kvfModel->displaceMesh(disps);
+			RenderSettings settings = programstate->getRenderSettings();
 
-			programstate->FPS = 1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime);
-			programstate->onUpdateModel();
-			programstate->updateStatistics();
+			if (settings.showVF || settings.showVForig)
+				kvfModel->calculateVF(disps,settings.alpha);
+			else
+				kvfModel->displaceMesh(disps,settings.alpha);
+
+			programstate->informModelEdited();
+			programstate->setFPS(1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime));
 			repaint();
 			return;
 		}

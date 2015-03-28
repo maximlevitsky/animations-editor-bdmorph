@@ -31,7 +31,6 @@ struct LogSpiral
 
 /*****************************************************************************************************/
 KVFModel::KVFModel(MeshModel* model) :
-	alpha1(0.5),
 	lastVFCalcTime(0),
 	MeshModel(*model),
 	L2(NULL),
@@ -57,7 +56,6 @@ KVFModel::KVFModel(MeshModel* model) :
 
     if (otherModel) {
     	pinnedVertexes = otherModel->pinnedVertexes;
-    	alpha1 = otherModel->alpha1;
     }
 }
 
@@ -72,7 +70,7 @@ KVFModel::~KVFModel()
 
 /*****************************************************************************************************/
 
-void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
+void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements, double alpha1)
 {
 	printf("\n");
 
@@ -88,7 +86,7 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
 		return;
 	}
 
-	calculateVF(displacements);
+	calculateVF(displacements, alpha1);
 	applyVFLogSpiral();
 
 	double create_time = lastVFCalcTime + lastVFApplyTime;
@@ -98,7 +96,7 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements)
 }
 
 /*****************************************************************************************************/
-void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps)
+void KVFModel::calculateVF(const std::set<DisplacedVertex> &disps, double alpha1)
 {
     TimeMeasurment total,t;
     cholmod_common* cm = cholmod_get_common();
@@ -381,7 +379,6 @@ void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
 {
 	/* add item to undo log */
 	KVFModel::LogItem item;
-	item.alpha = alpha1;
 	item.pinnedVertexes = pinnedVertexes;
 	item.displacedVertexes = disps;
 	currentDeformLog.push_back(item);
@@ -428,7 +425,6 @@ bool KVFModel::historyUndo()
 	KVFModel::LogItem &topLogItem = top.actions.back();
 
 	vertices = top.vertices;
-	alpha1 = topLogItem.alpha;
 	pinnedVertexes = topLogItem.pinnedVertexes;
 	return true;
 }
@@ -446,7 +442,6 @@ bool KVFModel::historyRedo()
 	KVFModel::LogItem &topLogItem = top.actions.back();
 
 	vertices = top.vertices;
-	alpha1 = topLogItem.alpha;
 	pinnedVertexes = topLogItem.pinnedVertexes;
 	return true;
 }
@@ -486,7 +481,6 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
 {
     double alpha;
     infile >> alpha;
-    setAlpha(alpha);
 
     pinnedVertexes.clear();
 
@@ -509,7 +503,7 @@ void KVFModel::historyLoadFromFile(std::ifstream& infile)
     		displacements.insert(v);
     }
 
-    displaceMesh(displacements);
+    displaceMesh(displacements, alpha);
 }
 /******************************************************************************************************************************/
 
@@ -519,12 +513,6 @@ void KVFModel::historyReset()
 	undo.clear();
 	redo.clear();
 	vertices = initialVertexes;
-}
-
-/******************************************************************************************************************************/
-void KVFModel::setAlpha(double alpha)
-{
-	alpha1 = alpha;
 }
 
 /******************************************************************************************************************************/

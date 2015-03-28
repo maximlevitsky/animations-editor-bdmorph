@@ -75,7 +75,7 @@ AnimationPanel::~AnimationPanel()
 /* EXTERNAL EVENTS */
 /******************************************************************************************************************************/
 
-void AnimationPanel::programStateUpdated(int flags, void *param)
+void AnimationPanel::programStateUpdated(int flags)
 {
 	if (!programstate) return;
 
@@ -91,55 +91,42 @@ void AnimationPanel::programStateUpdated(int flags, void *param)
 		}
 	}
 
-	if (flags & ProgramState::KEYFRAME_EDITED )
+	if (flags & ProgramState::MODEL_EDITED )
 	{
 		int updated_index = programstate->getCurrentKeyframeId();
 		updateListItem(updated_index);
 	}
 
-
 	if (flags & ProgramState::TEXTURE_CHANGED)
 	{
 		/* Texture changed - need to re-render everything */
-		thumbnailRenderer->setTexture(programstate->texture);
+		thumbnailRenderer->setTexture(programstate->getTexture());
 		updateItems(0);
 	}
 
-	if ( flags & (ProgramState::ANIMATION_STEPPED))
+	if ( flags & (ProgramState::ANIMATION_POSITION_CHANGED))
 	{
-		sliderAnimationTime->setValue(programstate->currentAnimationTime);
+		sliderAnimationTime->setValue(programstate->getAnimationPosition());
 		int index = programstate->getCurrentKeyframeId();
 		selectFrame(index);
 	}
 
-
-	if (flags & ProgramState::CURRENT_MODEL_CHANGED)
-	{
-		sliderAnimationTime->setValue(programstate->currentAnimationTime);
-	}
-
 	if (flags & ProgramState::MODE_CHANGED)
 	{
-		if (programstate->getCurrentMode() != ProgramState::PROGRAM_MODE_ANIMATION) {
-			updateItems(0);
-			updateTimeSlider();
-		}
+		bool animation_running = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_ANIMATION_RUNNING;
+		bool busy = programstate->isBusy() && !animation_running;
 
-		ProgramState::PROGRAM_MODE mode = programstate->getCurrentMode();
-		lstKeyFrames->setDisabled(mode == ProgramState::PROGRAM_MODE_BUSY);
-		sliderAnimationTime->setDisabled(mode == ProgramState::PROGRAM_MODE_BUSY);
-		btnBackward->setDisabled(mode == ProgramState::PROGRAM_MODE_BUSY);
-
-		if (mode == ProgramState::PROGRAM_MODE_BUSY)
-			btnAnimationPlay->setIcon(QIcon(":/icons/pause.png"));
-		else
-			btnAnimationPlay->setIcon(QIcon(":/icons/play.png"));
-
-
+		lstKeyFrames->setDisabled(busy);
+		sliderAnimationTime->setDisabled(busy);
+		btnBackward->setDisabled(busy);
+		btnAnimationPlay->setIcon(QIcon(animation_running ? ":/icons/pause.png" : ":/icons/play.png"));
+		btnAnimationPlay->setEnabled(!busy);
+		btnRepeat->setEnabled(!busy);
 	}
 
 	if (flags & ProgramState::CURRENT_MODEL_CHANGED)
 	{
+		sliderAnimationTime->setValue(programstate->getAnimationPosition());
 		/* See if one of our frames is selected - if so select it */
 		int newIndex = programstate->getCurrentKeyframeId();
 		if (newIndex != -1)
@@ -254,7 +241,7 @@ void AnimationPanel::onRepeatButtonClicked(bool checked)
 void AnimationPanel::onTimeSliderMoved(int newValue)
 {
 	if (!programstate) return;
-	programstate->interpolateFrame(newValue);
+	programstate->setAnimationPosition(newValue);
 }
 
 /******************************************************************************************************************************/
@@ -348,7 +335,11 @@ void AnimationPanel::onShowHide(bool show)
 void AnimationPanel::onBackwardButtonPressed()
 {
 	if (!programstate) return;
-	programstate->switchToKeyframe(0);
+
+	if (programstate->isAnimations())
+		programstate->setAnimationPosition(0);
+	else
+		programstate->switchToKeyframe(0);
 }
 
 /******************************************************************************************************************************/

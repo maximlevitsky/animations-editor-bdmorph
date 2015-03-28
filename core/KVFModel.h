@@ -34,13 +34,11 @@ public:
     virtual ~KVFModel();
 
 	/* deformation entry points*/
-	void setAlpha(double alpha);
-	double getAlpha() const { return alpha1; }
 	void clearPins();
 	const std::set<Vertex>& getPinnedVertexes() const { return pinnedVertexes; }
 
-	void displaceMesh(const std::set<DisplacedVertex> &displacements);
-	void calculateVF(const std::set<DisplacedVertex> &displacements);
+	void displaceMesh(const std::set<DisplacedVertex> &displacements, double alpha1);
+	void calculateVF(const std::set<DisplacedVertex> &displacements, double alpha1);
 	void applyVFLogSpiral();
 	void applyVF();
 
@@ -69,7 +67,6 @@ private:
 	/* model information */
 	std::set<Vertex> pinnedVertexes;
 	unsigned int lastDispsSize;
-	double alpha1;
 
     /* vector field of last transformation  */
     Vector2 *vf;

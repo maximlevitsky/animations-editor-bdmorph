@@ -45,10 +45,10 @@ MainWindow::MainWindow()
 
 	/* --------------------------------------------------------------------------------*/
 	/* Make everyone listen to program state */
-	connect_(programstate, programStateUpdated(int, void *), editorWindow, programStateUpdated(int, void *));
-	connect_(programstate, programStateUpdated(int, void *), sidePanel, programStateUpdated(int, void *));
-	connect_(programstate, programStateUpdated(int, void *), animationPanel, programStateUpdated(int, void *));
-	connect_(programstate, programStateUpdated(int, void *), this, programStateUpdated(int, void *));
+	connect_(programstate, programStateUpdated(int), editorWindow, programStateUpdated(int));
+	connect_(programstate, programStateUpdated(int), sidePanel, programStateUpdated(int));
+	connect_(programstate, programStateUpdated(int), animationPanel, programStateUpdated(int));
+	connect_(programstate, programStateUpdated(int), this, programStateUpdated(int));
 
 	editorWindow->programStateCreated(programstate);
 	sidePanel->programStateCreated(programstate);
@@ -145,73 +145,68 @@ MainWindow::~MainWindow()
 }
 
 /*****************************************************************************************************/
-void MainWindow::programStateUpdated(int flags, void *param)
+void MainWindow::programStateUpdated(int flags)
 {
 	QString str;
 	if (flags & ProgramState::STATUSBAR_UPDATED)
 	{
-		if (programstate->vertexCount > 0)
+		StatusBarState state = programstate->getStatusbarData();
+
+		if (state.vertexCount > 0)
 		{
-			str.sprintf("Vertexes: %d", programstate->vertexCount);
+			str.sprintf("Vertexes: %d", state.vertexCount);
 			lblVertexCount->setText(str);
 			lblVertexCount->show();
 		} else
 			lblVertexCount->hide();
 
-		if (programstate->facesCount > 0)
+		if (state.facesCount > 0)
 		{
-			str.sprintf("Faces: %d", programstate->facesCount);
+			str.sprintf("Faces: %d", state.facesCount);
 			lblFacesCount->setText(str);
 			lblFacesCount->show();
 		} else
 			lblFacesCount->hide();
 
-		if (programstate->selectedFace >= 0)  {
+		if (state.selectedFace >= 0)  {
 			lblSelectedFace->show();
-			str.sprintf("Face: %5d", programstate->selectedFace);
+			str.sprintf("Face: %5d", state.selectedFace);
 			lblSelectedFace->setText(str);
 		} else
 			lblSelectedFace->hide();
 
-		if (programstate->selectedVertex >= 0)  {
+		if (state.selectedVertex >= 0)  {
 			lblSelectedVertex->show();
-			str.sprintf("Vertex: %5d", programstate->selectedVertex);
+			str.sprintf("Vertex: %5d", state.selectedVertex);
 			lblSelectedVertex->setText(str);
 		} else
 			lblSelectedVertex->hide();
 
-		if (programstate->FPS >=0 )
+		if (state.FPS >=0 )
 		{
-			str.sprintf("%06.2f FPS", programstate->FPS);
+			str.sprintf("%06.2f FPS", state.FPS);
 			lblFPS->setText(str);
 			lblFPS->show();
 		} else {
 			lblFPS->hide();
 		}
 
-		if (programstate->progressValue != 0) {
-			progressIndicator->setValue(programstate->progressValue);
+		if (state.progressValue != 0) {
+			progressIndicator->setValue(state.progressValue);
 			progressIndicator->show();
 		} else
 			progressIndicator->hide();
 
-		if (programstate->statusbarMessage != "")
-			statusBar()->showMessage(programstate->statusbarMessage);
+		if (state.statusbarMessage != "")
+			statusBar()->showMessage(state.statusbarMessage);
 		else
 			statusBar()->showMessage("Ready");
 	}
 
 	if (flags & ProgramState::MODE_CHANGED)
 	{
-		auto mode = programstate->getCurrentMode();
-		bool hasKeyframes = mode != ProgramState::PROGRAM_MODE_NONE && mode != ProgramState::PROGRAM_MODE_OUTLINE;
 
-		bool busy = mode == ProgramState::PROGRAM_MODE_BUSY;
-		bool deformation = mode == ProgramState::PROGRAM_MODE_DEFORMATIONS;
-		bool editmode = mode == ProgramState::PROGRAM_MODE_DEFORMATIONS || mode == ProgramState::PROGRAM_MODE_OUTLINE;
-		bool nothing = mode == ProgramState::PROGRAM_MODE_NONE;
-
-		if (mode == ProgramState::PROGRAM_MODE_NONE || mode == ProgramState::PROGRAM_MODE_OUTLINE) 
+		if (!programstate->isFullMode())
 		{
 			animationPanel->setVisible(false);
 			actionAnimation_panel->setEnabled(false);
@@ -224,36 +219,44 @@ void MainWindow::programStateUpdated(int flags, void *param)
 			actionAnimation_panel->setChecked(true);
 		}
 
-		actionNew_keyframe->setEnabled(deformation);
-		actionDelete_keyframe->setEnabled(deformation);
-		actionReset_pins->setEnabled(deformation);
-		actionPin_edit_mode->setEnabled(deformation);
+		actionNew_keyframe->setEnabled(programstate->isDeformationEditor());
+		actionDelete_keyframe->setEnabled(programstate->isDeformationEditor());
+		actionReset_pins->setEnabled(programstate->isDeformationEditor());
+		actionPin_edit_mode->setEnabled(programstate->isDeformationEditor());
 
-		actionLoop->setEnabled(hasKeyframes);
-		actionPlay->setEnabled(hasKeyframes);
-		actionSave_video->setEnabled(hasKeyframes && !busy);
+		actionLoop->setEnabled(programstate->isFullMode() && !programstate->isBusy());
+		actionPlay->setEnabled(programstate->isFullMode() && !programstate->isBusy());
+		actionSave_video->setEnabled(programstate->isFullMode() && !programstate->isBusy());
 
+		actionNew->setEnabled(!programstate->isBusy());
+		actionNew_model->setEnabled(!programstate->isBusy());
+		actionLoad_mesh->setEnabled(!programstate->isBusy());
 
-		actionNew->setEnabled(!busy);
-		actionNew_model->setEnabled(!busy);
-		actionLoad_mesh->setEnabled(!busy);
-		actionSave_model->setEnabled(!busy && !nothing);
-		actionLoad_texture->setEnabled(!busy && !nothing);
-		actionReset_texture->setEnabled(!busy && !nothing);
-		actionSave_screenshot->setEnabled(!busy && !nothing);
+		actionSave_model->setEnabled(!programstate->isBusy() && programstate->isModelLoaded());
+		actionLoad_texture->setEnabled(!programstate->isBusy() && programstate->isModelLoaded());
+		actionReset_texture->setEnabled(!programstate->isBusy() && programstate->isModelLoaded());
+		actionSave_screenshot->setEnabled(!programstate->isBusy() && programstate->isModelLoaded());
 
-		actionUndo->setEnabled(editmode);
-		actionRedo->setEnabled(editmode);
-		actionReset_model->setEnabled(editmode);
+		actionUndo->setEnabled(programstate->isEditing());
+		actionRedo->setEnabled(programstate->isEditing());
+		actionReset_model->setEnabled(programstate->isEditing());
 
+		actionReapply_VF->setEnabled(programstate->isDeformationEditor());
+		actionReplay_log->setEnabled(programstate->isDeformationEditor());
+		actionSave_log->setEnabled(programstate->isDeformationEditor());
 
-		switch (programstate->mode) {
-		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_ANIMATION:
+		action_show_VF->setEnabled(programstate->isDeformationEditor());
+		action_show_orig_VF->setEnabled(programstate->isDeformationEditor());
+		actionTest_animations->setEnabled(programstate->isFullMode());
+
+		switch (programstate->getCurrentMode()) {
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_ANIMATION_PAUSED:
 			lblMode->show();
 			lblMode->setText("Interpolated frame");
 			break;
 		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_NONE:
 		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_BUSY:
+		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_ANIMATION_RUNNING:
 			lblMode->hide();
 			break;
 		case ProgramState::PROGRAM_MODE::PROGRAM_MODE_DEFORMATIONS:
@@ -304,7 +307,7 @@ void MainWindow::onAbout()
 
 void MainWindow::onInterpolationTest()
 {
-	programstate->interpolateFrame(programstate->currentAnimationTime+10);
+	programstate->setAnimationPosition(programstate->getAnimationPosition()+10);
 }
 
 /*****************************************************************************************************/

@@ -21,14 +21,19 @@ class VideoModel : public MeshModel
 {
 public:
 	VideoModel();
+	VideoModel(OutlineModel* outlineModel, int trianglecount);
+
 	bool createFromFile(const std::string &filename);
-	bool createFromOutline(OutlineModel* model, int trianglecount);
 	virtual ~VideoModel();
 
 	MeshModel* interpolateFrame(double msec, double *timeduration_out);
 
 	/* creates a new frame as a clone of existing frame*/
-	VideoKeyFrame* forkFrame(VideoKeyFrame* reference, MeshModel* newPoints = NULL);
+	VideoKeyFrame* forkFrame(VideoKeyFrame* reference);
+
+	/* creates new keyframe at specified time using a model */
+	VideoKeyFrame* insertFrame(int time, MeshModel* points);
+
 
 	/* deletes an key frame, will ignore case where frame exists and will return prevous frame */
 	VideoKeyFrame* deleteFrame(VideoKeyFrame* frame);
@@ -38,7 +43,7 @@ public:
 
 	VideoKeyFrame* getLastKeyframeBeforeTime(int msecs) const;
 
-	int count() const;
+	int keyframesCount() const;
 	int getKeyFrameIndex(VideoKeyFrame* frame) const;
 	int getKeyFrameTimeMsec(VideoKeyFrame* frame) const;
 	int getTotalTime() const;

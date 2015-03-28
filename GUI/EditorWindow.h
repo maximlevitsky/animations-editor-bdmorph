@@ -26,7 +26,7 @@ public:
     virtual ~EditorWindow();
         
 public slots:
-	void programStateUpdated(int flags, void *param);
+	void programStateUpdated(int flags);
 	void programStateCreated(ProgramState* state) { programstate = state; }
 
 private:

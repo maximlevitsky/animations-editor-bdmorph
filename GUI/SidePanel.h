@@ -13,7 +13,7 @@ public:
 	void programStateCreated(ProgramState* state) { programstate = state; }
 
 public slots:
-	void programStateUpdated(int flags, void *param);
+	void programStateUpdated(int flags);
 	void onShowHide(bool show);
 
 	void onImportProject();

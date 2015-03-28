@@ -41,7 +41,7 @@ OffScreenRenderer::~OffScreenRenderer()
 
 /*****************************************************************************************************/
 
-void OffScreenRenderer::setTexture(QPixmap &texture)
+void OffScreenRenderer::setTexture(const QPixmap &texture)
 {
 	makeCurrent();
 	deleteTexture(textureRef);

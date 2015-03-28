@@ -5,31 +5,31 @@
 
 #include "OffScreenRenderer.h"
 #include "ProgramState.h"
+#include <fstream>
 
 /***********************************************************************************************************/
 ProgramState::ProgramState() :
-	showVF(false),
-	showVForig(false),
-	showSelection(false),
-	wireframeTransparency(0),
-	multitouchMode(false),
-	pinMode(false),
-	progressValue(-1),
-	selectedFace(-1),
-	selectedVertex(-1),
 	currentModel(NULL),
 	mode(PROGRAM_MODE_NONE),
 	currentAnimationTime(0),
 	animationRepeat(false),
 	videoModel(NULL),
-	outlineModel(NULL),
-	showBDmorphEdge(false),
-	showBDmorphOrigMesh(false),
-	targetFPS(30)
+	outlineModel(NULL)
 {
+	renderSettings.pinMode = false;
+	renderSettings.showVF = false;
+	renderSettings.showVForig = false;
+	renderSettings.showSelection = false;
+	renderSettings.wireframeTransparency = 0;
+	renderSettings.alpha = 0.5;
+	renderSettings.showBDmorphEdge = false;
+	renderSettings.showBDmorphOrigMesh = false;
+	renderSettings.targetFPS = 30;
+
 	animationTimer = new QTimer(this);
 	animationTimer->setSingleShot(true);
 	connect_(animationTimer, timeout (), this, onAnimationTimer());
+	clearStatusBar();
 }
 
 /***********************************************************************************************************/
@@ -43,13 +43,13 @@ ProgramState::~ProgramState()
 void ProgramState::initialize()
 {
 	mode = PROGRAM_MODE_NONE;
-	emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+	emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED);
 }
 
 /***********************************************************************************************************/
 bool ProgramState::createProject(std::string file)
 {
-	if (mode == PROGRAM_MODE_BUSY)
+	if (isBusy())
 		return false;
 
 	if (file == "")
@@ -57,9 +57,10 @@ bool ProgramState::createProject(std::string file)
 		unloadAll();
 		outlineModel = new OutlineModel();
 		currentModel = outlineModel;
+		renderSettings.showSelection = false;
 		mode = PROGRAM_MODE_OUTLINE;
-		textureFile = "";
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+		renderSettings.textureFile = "";
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED);
 	}
 
 	else if (ends_with(file, ".png") || ends_with(file, ".jpg") || ends_with(file, ".jpeg") || ends_with(file, ".bmp") || file == "")
@@ -75,10 +76,11 @@ bool ProgramState::createProject(std::string file)
 		outlineModel = new OutlineModel();
 		currentModel = outlineModel;
 		mode = PROGRAM_MODE_OUTLINE;
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+		renderSettings.showSelection = false;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED);
 
-		texture.swap(newtexture);
-		textureFile = file;
+		renderSettings.texture.swap(newtexture);
+		renderSettings.textureFile = file;
 		updateTexture();
 	}
 
@@ -97,8 +99,9 @@ bool ProgramState::createProject(std::string file)
 		/* We start project from outline  */
 		outlineModel = newOutlineModel;
 		currentModel = outlineModel;
+		renderSettings.showSelection = false;
 		mode = PROGRAM_MODE_OUTLINE;
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED);
 		tryToGuessLoadTexture(file);
 	}
 
@@ -115,13 +118,13 @@ bool ProgramState::createProject(std::string file)
 		videoModel = newVideoModel;
 
 		mode = PROGRAM_MODE_DEFORMATIONS;
-		currentModel = videoModel->getKeyframeByIndex(1);
-		vertexCount = videoModel->getNumVertices();
-		facesCount = videoModel->getNumFaces();
-	    currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
-	    wireframeTransparency = 0;
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED|EDIT_SETTINGS_CHANGED,NULL);
+		currentModel = videoModel->getKeyframeByIndex(0);
+		statusbarState.vertexCount = videoModel->getNumVertices();
+		statusbarState.facesCount = videoModel->getNumFaces();
+	    renderSettings.wireframeTransparency = 0;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED|RENDER_SETTINGS_CHANGED);
 		tryToGuessLoadTexture(file);
+		switchToKeyframe(1);
 	}
 	else {
 		QMessageBox::warning(NULL, "Error", "Unknown file type selected");
@@ -137,9 +140,8 @@ bool ProgramState::createProjectFromOutline(int triangleCount)
 	if (mode != PROGRAM_MODE_OUTLINE) return false;
 	if (!outlineModel) return false;
 
-	VideoModel* newVideoModel  = new VideoModel();
-
-	if (!newVideoModel->createFromOutline(outlineModel, triangleCount))
+	VideoModel* newVideoModel  = new VideoModel(outlineModel, triangleCount);
+	if (!newVideoModel->keyframesCount())
 	{
     	QMessageBox::warning(NULL, "Error","Problem on creating the mesh, check if outline is valid");
     	delete newVideoModel;
@@ -148,18 +150,18 @@ bool ProgramState::createProjectFromOutline(int triangleCount)
 
 	unloadVideoModel();
 	videoModel = newVideoModel;
-    currentModel = videoModel->getKeyframeByIndex(1);
-    vertexCount = currentModel->getNumVertices();
-    facesCount = currentModel->getNumFaces();
+    currentModel = videoModel->getKeyframeByIndex(0);
+    statusbarState.vertexCount = currentModel->getNumVertices();
+    statusbarState.facesCount = currentModel->getNumFaces();
     mode = PROGRAM_MODE_DEFORMATIONS;
 
-    if (textureFile == "")
-    	wireframeTransparency = 0.5;
+    if (renderSettings.textureFile == "")
+    	renderSettings.wireframeTransparency = 0.5;
     else
-    	wireframeTransparency = 0;
+    	renderSettings.wireframeTransparency = 0;
 
-    currentAnimationTime = videoModel->getKeyframeByIndex(0)->duration;
-    emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|EDIT_SETTINGS_CHANGED|KEYFRAME_LIST_EDITED,NULL);
+    emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|RENDER_SETTINGS_CHANGED|KEYFRAME_LIST_EDITED);
+    switchToKeyframe(1);
     return true;
 }
 
@@ -167,7 +169,7 @@ bool ProgramState::createProjectFromOutline(int triangleCount)
 
 bool ProgramState::loadProject(std::string filename)
 {
-	if (mode == PROGRAM_MODE_BUSY)
+	if (isBusy())
 		return false;
 
     if (ends_with(filename, ".vproject"))
@@ -183,11 +185,11 @@ bool ProgramState::loadProject(std::string filename)
 		videoModel = newVideoModel;
 		mode = PROGRAM_MODE_DEFORMATIONS;
 		currentModel = videoModel->getKeyframeByIndex(0);
-		vertexCount = videoModel->getNumVertices();
-		facesCount = videoModel->getNumFaces();
+		statusbarState.vertexCount = videoModel->getNumVertices();
+		statusbarState.facesCount = videoModel->getNumFaces();
 	    currentAnimationTime = 0;
-	    wireframeTransparency = 0;
-		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED|EDIT_SETTINGS_CHANGED, NULL);
+	    renderSettings.wireframeTransparency = 0;
+		emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED|STATUSBAR_UPDATED|KEYFRAME_LIST_EDITED|RENDER_SETTINGS_CHANGED|KEYFRAME_LIST_EDITED);
     } else {
     	QMessageBox::warning(NULL, "Error", "Unknown file type selected");
     	return false;
@@ -200,27 +202,27 @@ bool ProgramState::loadProject(std::string filename)
 /***********************************************************************************************************/
 bool ProgramState::loadTexture(std::string newtextureFile)
 {
-	if (mode == PROGRAM_MODE_BUSY)
+	if (isBusy())
 		return false;
 
 	QPixmap newtex;
 	if (!loadTextureFile(newtextureFile, newtex) && newtextureFile != "") {
 		QMessageBox::warning(NULL, "Error", "Can't load texture file");
-		wireframeTransparency = 0.5;
-		emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
+		renderSettings.wireframeTransparency = 0.5;
+		emit programStateUpdated(RENDER_SETTINGS_CHANGED);
 		return false;
 	}
 
 	if (newtextureFile == "")
-		wireframeTransparency = 0.5;
+		renderSettings.wireframeTransparency = 0.5;
 	else
-		wireframeTransparency = 0;
+		renderSettings.wireframeTransparency = 0;
 
-	textureFile = newtextureFile;
-	texture.swap(newtex);
+	renderSettings.textureFile = newtextureFile;
+	renderSettings.texture.swap(newtex);
 	updateTexture();
 
-	emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
+	emit programStateUpdated(RENDER_SETTINGS_CHANGED);
 	return true;
 }
 
@@ -252,7 +254,7 @@ bool ProgramState::loadKeyframe(std::string filename)
     currentKeyframe->height = videoModel->height;
     currentKeyframe->moveMesh(videoModel->center);
     delete newModel;
-    emit programStateUpdated(KEYFRAME_EDITED, NULL);
+    emit programStateUpdated(MODEL_EDITED);
     return true;
 }
 
@@ -260,7 +262,7 @@ bool ProgramState::loadKeyframe(std::string filename)
 
 bool ProgramState::saveToFile(std::string filename)
 {
-	if (mode == PROGRAM_MODE_BUSY)
+	if (isBusy())
 		return false;
 
 	bool result;
@@ -283,14 +285,14 @@ bool ProgramState::saveToFile(std::string filename)
 
 bool ProgramState::saveScreenshot(std::string filename)
 {
-	if (mode == PROGRAM_MODE_BUSY)
+	if (isBusy())
 		return false;
 
 	if (!currentModel) return false;
 	QImage img;
 
 	OffScreenRenderer *imageRenderer = new OffScreenRenderer(NULL, NULL, 1024,768);
-	imageRenderer->setTexture(texture);
+	imageRenderer->setTexture(renderSettings.texture);
 	imageRenderer->renderToQImage(currentModel, img,0,0.9);
 	delete imageRenderer;
 
@@ -306,7 +308,7 @@ bool ProgramState::saveScreenshot(std::string filename)
 /***********************************************************************************************************/
 bool ProgramState::saveVideo(std::string filename)
 {
-	if (mode == PROGRAM_MODE_BUSY)
+	if (isBusy())
 		return false;
 
 	FFMpegEncoder* videoEncoder = new FFMpegEncoder(30);
@@ -321,20 +323,20 @@ bool ProgramState::saveVideo(std::string filename)
 	switchToKeyframe(0);
 	mode = PROGRAM_MODE_BUSY;
 	maxAnimationTime = videoModel->getTotalTime();
-	statusbarMessage = "Creating video...";
-	emit programStateUpdated(MODE_CHANGED|STATUSBAR_UPDATED, NULL);
+	statusbarState.statusbarMessage = "Creating video...";
+	emit programStateUpdated(MODE_CHANGED|STATUSBAR_UPDATED);
 
 	uint8_t* imagebuffer = (uint8_t*)malloc(1024*768*4);
 
 	OffScreenRenderer *imageRenderer = new OffScreenRenderer(NULL, NULL, 1024,768);
-	imageRenderer->setTexture(texture);
+	imageRenderer->setTexture(renderSettings.texture);
 	imageRenderer->setupTransform(videoModel,true,0,0.9);
 
 	for (double position = 0; position < maxAnimationTime ; position += videoEncoder->getFrameTimeMsec())
 	{
 		double duration;
 		MeshModel* pFrame = videoModel->interpolateFrame(position, &duration);
-		FPS = 1000.0 / duration;
+		statusbarState.FPS = 1000.0 / duration;
 
 		TimeMeasurment t;
 		imageRenderer->renderToBufferBGRA(pFrame,imagebuffer);
@@ -348,8 +350,8 @@ bool ProgramState::saveVideo(std::string filename)
 			return false;
 
 		}
-		progressValue = (int)((position * 100) /maxAnimationTime);
-		updateStatistics();
+
+		setProgress((int)((position * 100) /maxAnimationTime));
 		QApplication::processEvents();
 	}
 
@@ -359,9 +361,9 @@ bool ProgramState::saveVideo(std::string filename)
 	free(imagebuffer);
 
 	mode = PROGRAM_MODE_DEFORMATIONS;
-	progressValue = 0;
-	statusbarMessage.clear();
-	emit programStateUpdated(MODE_CHANGED|STATUSBAR_UPDATED, NULL);
+	statusbarState.progressValue = 0;
+	statusbarState.statusbarMessage.clear();
+	emit programStateUpdated(MODE_CHANGED|STATUSBAR_UPDATED);
 	return true;
 }
 
@@ -369,7 +371,7 @@ bool ProgramState::saveVideo(std::string filename)
 /***********************************************************************************************************/
 void ProgramState::editOutline()
 {
-	if (mode == PROGRAM_MODE_BUSY) return;
+	if (isBusy()) return;
 	if (mode == PROGRAM_MODE_OUTLINE) return;
 
 	 if (QMessageBox::question(NULL,
@@ -387,7 +389,7 @@ void ProgramState::editOutline()
     	currentModel = outlineModel;
     	mode = PROGRAM_MODE_OUTLINE;
     	updateTexture();
-    	emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+    	emit programStateUpdated(TRANSFORM_RESET|MODE_CHANGED|CURRENT_MODEL_CHANGED);
 	}
 }
 
@@ -397,15 +399,15 @@ void ProgramState::switchToKeyframe(int newIndex)
 	VideoKeyFrame* newFrame = videoModel->getKeyframeByIndex(newIndex);
 	if (newFrame != currentModel)
 	{
-
-		if (mode != PROGRAM_MODE_DEFORMATIONS) {
+		if (mode != PROGRAM_MODE_DEFORMATIONS && mode != PROGRAM_MODE_ANIMATION_RUNNING)
+		{
 			mode = PROGRAM_MODE_DEFORMATIONS;
-			emit programStateUpdated(MODE_CHANGED,NULL);
+			emit programStateUpdated(MODE_CHANGED);
 		}
 
 		currentModel = newFrame;
 		currentAnimationTime = videoModel->getKeyFrameTimeMsec(newFrame);
-		emit programStateUpdated(CURRENT_MODEL_CHANGED,NULL);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED);
 	}
 }
 /***********************************************************************************************************/
@@ -423,31 +425,20 @@ void ProgramState::cloneKeyframe(int index)
 	if (!parent) return;
 
 	currentModel = videoModel->forkFrame(parent);
-	emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED,NULL);
+	emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED);
 }
 
 /***********************************************************************************************************/
 
 void ProgramState::createKeyframeFromPFrame()
 {
-	if (mode != PROGRAM_MODE_ANIMATION) return;
+	if (mode != PROGRAM_MODE_ANIMATION_PAUSED) return;
 
-	if (currentModel == videoModel->pFrame && videoModel->pFrame && mode == PROGRAM_MODE_ANIMATION)
+	if (currentModel == videoModel->pFrame && videoModel->pFrame && mode == PROGRAM_MODE_ANIMATION_PAUSED)
 	{
-		VideoKeyFrame* currentKeyframe = dynamic_cast<VideoKeyFrame*>(videoModel->pFrame->modela);
-		int keyframeStartTime =videoModel->getKeyFrameTimeMsec(currentKeyframe);
-		int newDuration = currentAnimationTime - keyframeStartTime;
-		if (newDuration < 1) newDuration = 1;
-		int nextDuration = currentKeyframe->duration - newDuration;
-		if (nextDuration < 1) nextDuration = 1;
-
-		currentKeyframe->duration = newDuration;
-		currentModel = videoModel->forkFrame(currentKeyframe, currentModel);
-		currentKeyframe = dynamic_cast<VideoKeyFrame*>(currentModel);
-		currentKeyframe->duration = nextDuration;
-
+		currentModel = videoModel->insertFrame(currentAnimationTime, videoModel->pFrame);
 		mode = PROGRAM_MODE_DEFORMATIONS;
-		emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED|MODE_CHANGED,NULL);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED|MODE_CHANGED);
 	}
 
 }
@@ -459,7 +450,7 @@ void ProgramState::deleteKeyFrame(int index)
 	if (mode != PROGRAM_MODE_DEFORMATIONS) return;
 
 	/* Can't delete last keyframe */
-	if (videoModel->count() <= 1) return;
+	if (videoModel->keyframesCount() <= 1) return;
 
 	if (index == -1)
 		victim = dynamic_cast<VideoKeyFrame*>(currentModel);
@@ -472,9 +463,9 @@ void ProgramState::deleteKeyFrame(int index)
 	{
 		/* Switch away from current model */
 		currentModel = NULL;
-		emit programStateUpdated(CURRENT_MODEL_CHANGED,NULL);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED);
 		currentModel = videoModel->deleteFrame(victim);
-		emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED,NULL);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED);
 	}
 }
 /***********************************************************************************************************/
@@ -507,30 +498,33 @@ void ProgramState::setKeyframeTime(int id, int newTime)
 	newTime = std::max(1,newTime);
 	VideoKeyFrame* keyframe = videoModel->getKeyframeByIndex(id);
 	keyframe->duration = newTime;
-	emit programStateUpdated(KEYFRAME_LIST_EDITED, NULL);
+	emit programStateUpdated(KEYFRAME_LIST_EDITED);
 }
 
 /***********************************************************************************************************/
 int ProgramState::getKeyframeCount()
 {
 	if (!videoModel) return -1;
-	return videoModel->count();
+	return videoModel->keyframesCount();
 }
 
 /***********************************************************************************************************/
-void ProgramState::onUpdateModel()
+void ProgramState::informModelEdited()
 {
-	emit programStateUpdated(KEYFRAME_EDITED,NULL);
+	emit programStateUpdated(MODEL_EDITED);
 }
+
 /***********************************************************************************************************/
-void ProgramState::updateStatistics()
+void ProgramState::setRenderSettings(const RenderSettings &newsettings)
 {
-	emit programStateUpdated(STATUSBAR_UPDATED,NULL);
-}
-/***********************************************************************************************************/
-void ProgramState::updateSettings()
-{
-	emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
+	renderSettings = newsettings;
+
+	if (newsettings.showSelection == false) {
+		statusbarState.selectedFace = -1;
+		statusbarState.selectedVertex = -1;
+	}
+
+	emit programStateUpdated(RENDER_SETTINGS_CHANGED);
 }
 /***********************************************************************************************************/
 
@@ -538,8 +532,8 @@ void ProgramState::setProgress(int value)
 {
 	if (value > 100) value = 100;
 	if (value < 0) value = 0;
-	progressValue = value;
-	emit programStateUpdated(STATUSBAR_UPDATED,NULL);
+	statusbarState.progressValue = value;
+	emit programStateUpdated(STATUSBAR_UPDATED);
 }
 
 /***********************************************************************************************************/
@@ -548,23 +542,29 @@ enum ProgramState::PROGRAM_MODE ProgramState::getCurrentMode()
 	return mode;
 }
 
+void ProgramState::setCurrentMode(enum ProgramState::PROGRAM_MODE newmode)
+{
+	mode = newmode;
+	emit programStateUpdated(MODE_CHANGED);
+}
+
 /***********************************************************************************************************/
 void ProgramState::startStopAnimations()
 {
 	if (!videoModel) return;
 
-	if (mode != PROGRAM_MODE_BUSY)
+	if (mode != PROGRAM_MODE_ANIMATION_RUNNING)
 	{
-		mode = PROGRAM_MODE_BUSY;
+		mode = PROGRAM_MODE_ANIMATION_RUNNING;
 		maxAnimationTime = videoModel->getTotalTime();
-		emit programStateUpdated(MODE_CHANGED,NULL);
+		emit programStateUpdated(MODE_CHANGED);
 		animationReferenceTimer.start();
 		animationTimer->start(0);
 	} else
 	{
 		animationTimer->stop();
-		mode = PROGRAM_MODE_ANIMATION;
-		emit programStateUpdated(MODE_CHANGED,NULL);
+		mode = PROGRAM_MODE_ANIMATION_PAUSED;
+		emit programStateUpdated(MODE_CHANGED);
 	}
 }
 
@@ -572,7 +572,7 @@ void ProgramState::startStopAnimations()
 
 void ProgramState::resetTransform()
 {
-	emit programStateUpdated(TRANSFORM_RESET,NULL);
+	emit programStateUpdated(TRANSFORM_RESET);
 }
 
 /***********************************************************************************************************/
@@ -592,7 +592,7 @@ void ProgramState::onAnimationTimer()
 
 	animationReferenceTimer.start();
 	interpolateFrame(currentAnimationTime);
-	int sleepTime = (1000/targetFPS) - animationReferenceTimer.nsecsElapsed() / (1000*1000);
+	int sleepTime = (1000/renderSettings.targetFPS) - animationReferenceTimer.nsecsElapsed() / (1000*1000);
 	printf("Sleep time %d\n", sleepTime);
 	if (sleepTime < 0) sleepTime = 0;
 	animationTimer->start(sleepTime);
@@ -606,29 +606,30 @@ void ProgramState::interpolateFrame(int time)
 	VideoKeyFrame* prevFrame = videoModel->getLastKeyframeBeforeTime(time);
 	if (!prevFrame) return;
 
+
 	double duration;
-	MeshModel* pFrame = videoModel->interpolateFrame(time, &duration);
-
-	if (pFrame != currentModel)
-	{
-		currentModel = pFrame;
-		emit programStateUpdated(CURRENT_MODEL_CHANGED, NULL);
-
-	}
-
+	currentModel = videoModel->interpolateFrame(time, &duration);
 	currentAnimationTime = time;
-	emit programStateUpdated(ANIMATION_STEPPED, NULL);
+	emit programStateUpdated(ANIMATION_POSITION_CHANGED);
 
-	if (mode != PROGRAM_MODE_ANIMATION && mode != PROGRAM_MODE_BUSY)
-	{
-		mode = PROGRAM_MODE_ANIMATION;
-		emit programStateUpdated(MODE_CHANGED, NULL);
-	}
-
-
-	FPS = 1000.0/duration;
-	emit programStateUpdated(STATUSBAR_UPDATED, NULL);
+	statusbarState.FPS = 1000.0/duration;
+	emit programStateUpdated(STATUSBAR_UPDATED);
 }
+
+/***********************************************************************************************************/
+
+void ProgramState::setAnimationPosition(int newPosition)
+{
+	interpolateFrame(newPosition);
+
+	if (mode != PROGRAM_MODE_ANIMATION_PAUSED && mode != PROGRAM_MODE_ANIMATION_RUNNING)
+	{
+		mode = PROGRAM_MODE_ANIMATION_PAUSED;
+		emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED);
+		emit programStateUpdated(CURRENT_MODEL_CHANGED);
+	}
+}
+
 
 /***********************************************************************************************************/
 
@@ -641,13 +642,13 @@ void ProgramState::setAnimationRepeat(bool enabled)
 
 void ProgramState::clearStatusBar()
 {
-	FPS=-1;
-	vertexCount=0;
-	facesCount=0;
-	progressValue=0;
-	selectedVertex=-1;
-	selectedFace=-1;
-	emit programStateUpdated(STATUSBAR_UPDATED, NULL);
+	statusbarState.FPS=-1;
+	statusbarState.vertexCount=0;
+	statusbarState.facesCount=0;
+	statusbarState.progressValue=0;
+	statusbarState.selectedVertex=-1;
+	statusbarState.selectedFace=-1;
+	emit programStateUpdated(STATUSBAR_UPDATED);
 }
 /***********************************************************************************************************/
 
@@ -656,14 +657,15 @@ void ProgramState::unloadAll()
 	clearStatusBar();
 	mode = PROGRAM_MODE_NONE;
 	currentModel = NULL;
-	emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+	emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED|KEYFRAME_LIST_EDITED);
 
 	/* Delete everything */
 	delete videoModel;
 	videoModel = NULL;
 	delete outlineModel;
 	outlineModel = NULL;
-	loadTextureFile("", texture);
+	loadTextureFile("", renderSettings.texture);
+	renderSettings.textureFile = "";
 	updateTexture();
 }
 /***********************************************************************************************************/
@@ -673,7 +675,7 @@ void ProgramState::unloadVideoModel()
 	clearStatusBar();
 	mode = PROGRAM_MODE_NONE;
 	currentModel = NULL;
-	emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+	emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED);
 	delete videoModel;
 	videoModel = NULL;
 }
@@ -684,7 +686,7 @@ void ProgramState::unloadOutlineModel()
 	clearStatusBar();
 	mode = PROGRAM_MODE_NONE;
 	currentModel = NULL;
-	emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED,NULL);
+	emit programStateUpdated(MODE_CHANGED|CURRENT_MODEL_CHANGED);
 	delete outlineModel;
 	outlineModel = NULL;
 }
@@ -709,8 +711,8 @@ void ProgramState::updateTexture()
 {
 	if (mode == PROGRAM_MODE_OUTLINE)
 	{
-		int x = texture.width();
-		int y = texture.height();
+		int x = renderSettings.texture.width();
+		int y = renderSettings.texture.height();
 
 		if (y > x)
 			outlineModel->setScale((double)x/y,1);
@@ -718,15 +720,14 @@ void ProgramState::updateTexture()
 			outlineModel->setScale(1,(double)y/x);
 	}
 
-	/* Bind it and in darkness grind it....*/
-	emit programStateUpdated(TEXTURE_CHANGED, NULL);
+	emit programStateUpdated(TEXTURE_CHANGED);
 }
 
 /***********************************************************************************************************/
 
 void ProgramState::updateGUI()
 {
-	emit programStateUpdated(PANEL_VISIBLITIY_CHANGED, NULL);
+	emit programStateUpdated(PANEL_VISIBLITIY_CHANGED);
 }
 
 /***********************************************************************************************************/
@@ -741,14 +742,14 @@ void ProgramState::tryToGuessLoadTexture(std::string file)
 	QPixmap tex;
 
 	if (loadTextureFile(rawname, tex)) {
-		textureFile = rawname;
-		texture.swap(tex);
+		renderSettings.textureFile = rawname;
+		renderSettings.texture.swap(tex);
 		updateTexture();
-		wireframeTransparency = 0;
+		renderSettings.wireframeTransparency = 0;
 	} else
-		wireframeTransparency = 0.5;
+		renderSettings.wireframeTransparency = 0.5;
 
-	emit programStateUpdated(EDIT_SETTINGS_CHANGED,NULL);
+	emit programStateUpdated(RENDER_SETTINGS_CHANGED);
 }
 
 /***********************************************************************************************************/
@@ -758,79 +759,89 @@ void ProgramState::autoCreateOutline()
 	if (!outlineModel || mode != PROGRAM_MODE_OUTLINE)
 		return;
 
-	QImage image = texture.scaled(350,350,Qt::KeepAspectRatio).toImage();
-	image = image.mirrored(false,true);
-
 	currentModel = NULL;
-	emit programStateUpdated(CURRENT_MODEL_CHANGED,NULL);
+	emit programStateUpdated(CURRENT_MODEL_CHANGED);
 
 	delete outlineModel;
-	outlineModel = new OutlineModel;
-
-	const int stroke = 2;
-	int Vmap[350+4*2][350+4*2] = {{0}}; //added stroke 2 in each side of the map
-	for (int i=stroke; i<image.width()+stroke; i++)
-	{
-		for (int j=stroke; j<image.height()+stroke; j++)
-		{
-			if ( (image.hasAlphaChannel() && qAlpha(image.pixel(i-stroke,j-stroke)) > 200) ||
-				 (!image.hasAlphaChannel() && qGray(image.pixel(i-stroke,j-stroke)) > 200))
-			{
-				for (int k=i-stroke; k<=i+stroke; k++) {
-					for (int l=j-stroke; l<=j+stroke; l++) {
-						Vmap[k][l] = -1;
-					}
-				}
-			}
-		}
-	}
-
-	int count = 0;
-	for (int i=0; i<image.width()+2*stroke; i++) {
-		for (int j=0; j<image.height()+2*stroke; j++) {
-			if (Vmap[i][j] == -1)
-			{
-				if (Vmap[std::max(0,i-1)][j] == 0 ||
-					Vmap[i][std::max(0,j-1)] == 0 ||
-					Vmap[std::min(image.width()+2*stroke-1,i+1)][j] == 0 ||
-					Vmap[i][std::min(image.height()+2*stroke-1,j+1)] == 0 ||
-					Vmap[std::max(0,i-1)][std::max(0,j-1)] == 0 ||
-					Vmap[std::max(0,i-1)][std::min(image.height()+2*stroke-1,j+1)] == 0 ||
-					Vmap[std::min(image.width()+2*stroke-1,i+1)][std::max(0,j-1)] == 0 ||
-					Vmap[std::min(image.width()+2*stroke-1,i+1)][std::min(image.height()+2*stroke-1,j+1)] == 0)
-				{
-						Vmap[i][j] = count++;
-
-						Point2 p;
-						p.x = (double)i / (image.width()+stroke);
-						p.y = (double)j / (image.height()+stroke);
-
-						outlineModel->vertices.push_back(p);
-				}
-			}
-		}
-	}
-
-	for (int i=0; i<image.width()+2*stroke; i++)
-	{
-		for (int j=0; j<image.height()+2*stroke; j++) {
-			if (j+1 < image.height()+2*stroke && Vmap[i][j] > 0 && Vmap[i][j+1] > 0)
-			{
-				outlineModel->edges.insert(Edge(Vmap[i][j],Vmap[i][j+1]));
-			}
-			if (i+1 < image.width()+2*stroke && Vmap[i][j] > 0 && Vmap[i+1][j] > 0)
-			{
-				outlineModel->edges.insert(Edge(Vmap[i][j],Vmap[i+1][j]));
-			}
-		}
-	}
-
-	outlineModel->updateMeshInfo();
+	outlineModel = new OutlineModel(renderSettings.texture.toImage());
 	updateTexture();
 
 	currentModel = outlineModel;
-	emit programStateUpdated(KEYFRAME_EDITED|TRANSFORM_RESET|CURRENT_MODEL_CHANGED,NULL);
+	emit programStateUpdated(MODEL_EDITED|TRANSFORM_RESET|CURRENT_MODEL_CHANGED);
+}
+
+/***********************************************************************************************************/
+void ProgramState::setSelectedVertexAndFace(int selectedVertex,
+		int selectedFace)
+{
+	statusbarState.selectedVertex = selectedVertex;
+	statusbarState.selectedFace = selectedFace;
+	emit programStateUpdated(STATUSBAR_UPDATED);
+}
+
+/***********************************************************************************************************/
+
+void ProgramState::setFPS(double newFPS) {
+	statusbarState.FPS = newFPS;
+	emit programStateUpdated(STATUSBAR_UPDATED);
 
 }
 
 /***********************************************************************************************************/
+
+void ProgramState::showStatusBarMessage(const QString& message)
+{
+	statusbarState.statusbarMessage = message;
+	emit programStateUpdated(STATUSBAR_UPDATED);
+}
+
+/***********************************************************************************************************/
+
+void ProgramState::runLog(std::string filename)
+{
+	KVFModel *kvfModel = dynamic_cast<KVFModel *>(currentModel);
+	if (!kvfModel)
+		return;
+
+	std::ifstream infile(filename);
+    printf("STARTING log replay\n");
+    TimeMeasurment t;
+
+    int numSteps;
+    infile >> numSteps;
+    showStatusBarMessage("Replaying log...");
+
+    ProgramState::PROGRAM_MODE savedmode = getCurrentMode();
+    setCurrentMode(ProgramState::PROGRAM_MODE_BUSY);
+
+    for (int step = 0; step < numSteps; step++)
+    {
+
+    	kvfModel->historyLoadFromFile(infile);
+    	informModelEdited();
+    	setFPS(1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime));
+    	setProgress((step*100)/numSteps);
+		QApplication::processEvents();
+
+    }
+
+    showStatusBarMessage("");
+    setProgress(0);
+    setCurrentMode(savedmode);
+
+    printf("DONE WITH log replay (took %f msec)\n", t.measure_msec());
+    kvfModel->historySnapshot();
+}
+
+/***********************************************************************************************************/
+void ProgramState::saveLog(std::string filename)
+{
+	KVFModel *kvfModel = dynamic_cast<KVFModel*>(currentModel);
+	if (!kvfModel) return;
+
+    std::ofstream outfile(filename);
+    kvfModel->historySaveToFile(outfile);
+}
+
+/***********************************************************************************************************/
+

@@ -48,23 +48,21 @@ SidePanel::SidePanel(QWidget* parent) : QDockWidget(parent), programstate(NULL)
 }
 
 /******************************************************************************************************************************/
-void SidePanel::programStateUpdated(int flags, void *param)
+void SidePanel::programStateUpdated(int flags)
 {
-	if (flags & ProgramState::ANIMATION_STEPPED)
+	if (flags & ProgramState::ANIMATION_POSITION_CHANGED)
 	{
 		QString bdmorphTime;
-		bdmorphTime.sprintf("Current time: %s (t = %f)", printTime(programstate->currentAnimationTime).c_str(), programstate->videoModel->pFrame->current_t);
+		bdmorphTime.sprintf("Current time: %s (t = %f)",
+				printTime(programstate->getAnimationPosition()).c_str(),
+				programstate->videoModel->pFrame->current_t);
 
 		lblCurrentBDMORPHTime->setText(bdmorphTime);
 	}
 
 	if (flags & ProgramState::MODE_CHANGED)
 	{
-		bool animations = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_ANIMATION;
-		bool outline = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_OUTLINE;
-		bool deformations = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_DEFORMATIONS;
-		bool video = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_BUSY;
-		bool nothing = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_NONE;
+		bool animations_paused = programstate->getCurrentMode() == ProgramState::PROGRAM_MODE_ANIMATION_PAUSED;
 
 		frameOutline->setVisible(false);
 		frameKVF->setVisible(false);
@@ -72,32 +70,34 @@ void SidePanel::programStateUpdated(int flags, void *param)
 		frameEdit->setVisible(false);
 		frameWireframe->setVisible(false);
 
-		frameLoad->setEnabled(!video);
-		btnConvertToKeyframe->setEnabled(animations);
-		frameOutline->setVisible(outline);
-		frameKVF->setVisible(deformations);
-		frameBDMorph->setVisible(animations || video);
-		frameEdit->setVisible(outline || deformations);
-		frameWireframe->setVisible(!nothing && !outline);
-		btnCreateMesh->setEnabled(outline);
-		btnEditOutline->setEnabled(!outline && !nothing);
+		frameLoad->setEnabled(!programstate->isBusy());
+		btnLoadTexture->setEnabled(programstate->isModelLoaded());
+		btnResetTexture->setEnabled(programstate->isModelLoaded());
+		btnSaveModel->setEnabled(programstate->isModelLoaded());
 
-		btnLoadTexture->setEnabled(!nothing);
-		btnResetTexture->setEnabled(!nothing);
-		btnSaveModel->setEnabled(!nothing);
+		btnConvertToKeyframe->setEnabled(animations_paused);
+		frameOutline->setVisible(programstate->isOutlineEditor());
+		frameKVF->setVisible(programstate->isDeformationEditor());
+		frameBDMorph->setVisible(programstate->isAnimations());
+		frameEdit->setVisible(programstate->isEditing());
+		frameWireframe->setVisible(programstate->isFullMode());
+		btnEditOutline->setEnabled(programstate->isFullMode());
+		btnCreateMesh->setEnabled(!programstate->isFullMode());
+
 	}
 
-	if (flags & (ProgramState::EDIT_SETTINGS_CHANGED|ProgramState::CURRENT_MODEL_CHANGED))
+	if (flags & (ProgramState::RENDER_SETTINGS_CHANGED|ProgramState::CURRENT_MODEL_CHANGED))
 	{
 		KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
+		RenderSettings settings = programstate->getRenderSettings();
 
 		if (kvfModel)  {
-			sliderAlpha->setValue(kvfModel->getAlpha() * 1000);
+			sliderAlpha->setValue(settings.alpha * 1000);
 			QString alphaLabel;
-			alphaLabel.sprintf("Control points weight: (alpha=%f)", kvfModel->getAlpha() );
+			alphaLabel.sprintf("Control points weight: (alpha=%f)", settings.alpha );
 			lblControlPoints->setText(alphaLabel);
 		}
-		sliderWireframeTransparency->setValue(programstate->wireframeTransparency*100);
+		sliderWireframeTransparency->setValue(settings.wireframeTransparency*100);
 	}
 }
 
@@ -129,11 +129,13 @@ void SidePanel::onSaveProject()
 
 	if (programstate->videoModel)
 		outputFormat = "Video Project (*.vproject);;Mesh (*.obj)";
+
 	else if (programstate->outlineModel)
 		outputFormat="Outline (*.poly)";
 
     QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), outputFormat);
     if ( filename == "") return;
+
     programstate->saveToFile(filename.toStdString());
 }
 
@@ -174,8 +176,7 @@ void  SidePanel::onResetPoints()
 	MeshModel *model = programstate->currentModel;
 	if (!model) return;
 	model->historyReset();
-	programstate->onUpdateModel();
-	programstate->updateSettings();
+	programstate->informModelEdited();
 }
 /******************************************************************************************************************************/
 void SidePanel::onUndoModel()
@@ -184,8 +185,7 @@ void SidePanel::onUndoModel()
 	MeshModel *model = programstate->currentModel;
 	if (!model) return;
 	model->historyUndo();
-	programstate->onUpdateModel();
-	programstate->updateSettings();
+	programstate->informModelEdited();
 }
 
 /******************************************************************************************************************************/
@@ -195,58 +195,25 @@ void SidePanel::onRedoModel()
 	MeshModel *model = programstate->currentModel;
 	if (!model) return;
 	model->historyRedo();
-	programstate->onUpdateModel();
-	programstate->updateSettings();
+	programstate->informModelEdited();
 }
 
 /******************************************************************************************************************************/
 void SidePanel::onSaveLog()
 {
 	if (!programstate) return;
-	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
-	if (!kvfModel) return;
-
 	QString filename = QFileDialog::getSaveFileName(this, tr("Choose file"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
-    std::ofstream outfile(filename.toAscii());
-    kvfModel->historySaveToFile(outfile);
+    programstate->saveLog(filename.toStdString());
 }
 
 /******************************************************************************************************************************/
 void SidePanel::onRunLog()
 {
 	if (!programstate) return;
-	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
-	if (!kvfModel) return;
-
 	QString filename = QFileDialog::getOpenFileName(this, tr("Choose log"), QString(), QLatin1String("*.txt"));
     if (filename == "") return;
-    std::ifstream infile(filename.toAscii());
-
-    printf("STARTING log replay\n");
-    TimeMeasurment t;
-
-    int numSteps;
-    infile >> numSteps;
-
-    programstate->statusbarMessage = "Replaying log...";
-
-    for (int step = 0; step < numSteps; step++)
-    {
-    	kvfModel->historyLoadFromFile(infile);
-    	programstate->onUpdateModel();
-    	programstate->updateSettings();
-    	programstate->FPS = 1000.0 / (kvfModel->lastVFCalcTime+kvfModel->lastVFApplyTime);
-    	programstate->setProgress((step*100)/numSteps);
-		QApplication::processEvents();
-
-    }
-
-    programstate->statusbarMessage.clear();
-    programstate->setProgress(0);
-
-    printf("DONE WITH log replay (took %f msec)\n", t.measure_msec());
-    kvfModel->historySnapshot();
+    programstate->runLog(filename.toStdString());
 }
 /******************************************************************************************************************************/
 
@@ -256,8 +223,7 @@ void SidePanel::onClearPins()
 	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
 	if (!kvfModel) return;
 	kvfModel->clearPins();
-	programstate->onUpdateModel();
-	programstate->updateSettings();
+	programstate->informModelEdited();
 }
 
 /******************************************************************************************************************************/
@@ -267,63 +233,82 @@ void SidePanel::onReuseVF()
 	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
 	if (!kvfModel) return;
 	kvfModel->applyVF();
-	programstate->onUpdateModel();
+	programstate->informModelEdited();
 }
 
 /******************************************************************************************************************************/
 void SidePanel::onChangeAlpha(int i)
 {
 	if (!programstate) return;
-	KVFModel *kvfModel = dynamic_cast<KVFModel*>(programstate->currentModel);
-	if (!kvfModel) return;
-	kvfModel->setAlpha((((double) (i)) / 1000));
-	programstate->updateSettings();
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.alpha = (((double) (i)) / 1000);
+	programstate->setRenderSettings(settings);
 }
 
 /******************************************************************************************************************************/
 void SidePanel::onDrawVFModeChanged(bool m)
 {
 	if (!programstate) return;
-	programstate->showVF = m;
-	programstate->updateSettings();
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.showVF = m;
+	programstate->setRenderSettings(settings);
 }
 
 /******************************************************************************************************************************/
 void SidePanel::onDrawOrigVFModeChanged(bool m)
 {
 	if (!programstate) return;
-	programstate->showVForig = m;
-	programstate->updateSettings();
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.showVForig = m;
+	programstate->setRenderSettings(settings);
 }
 
 /******************************************************************************************************************************/
 
 void SidePanel::onShowSelectionChanged(bool m)
 {
-	programstate->showSelection = m;
-
-	if (!m) {
-		programstate->selectedFace = -1;
-		programstate->selectedVertex = -1;
-	}
-
-	programstate->updateSettings();
+	if (!programstate) return;
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.showSelection = m;
+	programstate->setRenderSettings(settings);
 }
 
 /******************************************************************************************************************************/
 void SidePanel::onPinModeChanged(bool m)
 {
 	if (!programstate) return;
-	programstate->pinMode = m;
-	programstate->updateSettings();
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.pinMode = m;
+	programstate->setRenderSettings(settings);
 }
 /******************************************************************************************************************************/
 void SidePanel::onChangeWireframe(int i)
 {
 	if (!programstate) return;
-	programstate->wireframeTransparency = (double)i / 100.0;
-	programstate->updateSettings();
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.wireframeTransparency = (double)i / 100.0;
+	programstate->setRenderSettings(settings);
 }
+
+/******************************************************************************************************************************/
+void SidePanel::onShowBdmorphEdgeClicked(bool checked)
+{
+	if (!programstate) return;
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.showBDmorphEdge = checked;
+	programstate->setRenderSettings(settings);
+}
+
+
+/******************************************************************************************************************************/
+void SidePanel::onBdmorphOrigModel(bool checked)
+{
+	if (!programstate) return;
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.showBDmorphOrigMesh = checked;
+	programstate->setRenderSettings(settings);
+}
+
 
 /******************************************************************************************************************************/
 void SidePanel::onResetTransform()
@@ -340,35 +325,18 @@ void SidePanel::onShowHide(bool checked)
 }
 
 /******************************************************************************************************************************/
-void SidePanel::onShowBdmorphEdgeClicked(bool checked)
-{
-	programstate->showBDmorphEdge = checked;
-	programstate->updateSettings();
-}
-
-
-/******************************************************************************************************************************/
-void SidePanel::onBdmorphOrigModel(bool checked)
-{
-	programstate->showBDmorphOrigMesh = checked;
-	programstate->updateSettings();
-}
-
-
-/******************************************************************************************************************************/
 void SidePanel::onBdmorphConvertToKeyframe()
 {
 	programstate->createKeyframeFromPFrame();
 }
 
-
 /******************************************************************************************************************************/
 void SidePanel::onTargetFPSChanged(int newValue)
 {
-	programstate->targetFPS = newValue;
-	programstate->updateSettings();
+	RenderSettings settings = programstate->getRenderSettings();
+	settings.targetFPS = newValue;
+	programstate->setRenderSettings(settings);
 }
-
 
 /******************************************************************************************************************************/
 void SidePanel::closeEvent (QCloseEvent *event)
@@ -381,4 +349,3 @@ void SidePanel::onAutoOutlineCreate()
 {
 	programstate->autoCreateOutline();
 }
-

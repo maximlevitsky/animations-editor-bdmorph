@@ -20,6 +20,7 @@ void eatTokens(std::ifstream &ifile, int count)
 
 OutlineModel::OutlineModel() : selectedVertex(-1)
 {
+	/* create new empty outline */
 	width = 1;
 	height = 1;
 	center.x = 0.5;
@@ -31,6 +32,8 @@ OutlineModel::OutlineModel() : selectedVertex(-1)
 
 OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 {
+	/* create outline from mesh */
+
 	std::map<Vertex,Vertex> theirToOurBoundaryVertices;
 	setScale(1,1);
 
@@ -65,6 +68,82 @@ OutlineModel::OutlineModel(MeshModel *from): selectedVertex(-1)
 	width = b.width();
 	height = b.height();
 	center = b.center();
+}
+
+/******************************************************************************************************************************/
+
+OutlineModel::OutlineModel(const QImage &from): selectedVertex(-1)
+{
+	/* create outline from picture*/
+
+	QImage image = from.scaled(350,350,Qt::KeepAspectRatio);
+	image = image.mirrored(false,true);
+
+	width = 1;
+	height = 1;
+	center.x = 0.5;
+	center.y = 0.5;
+	setScale(1,1);
+
+	const int stroke = 2;
+	int Vmap[350+4*2][350+4*2] = {{0}}; //added stroke 2 in each side of the map
+	for (int i=stroke; i<image.width()+stroke; i++)
+	{
+		for (int j=stroke; j<image.height()+stroke; j++)
+		{
+			if ( (image.hasAlphaChannel() && qAlpha(image.pixel(i-stroke,j-stroke)) > 200) ||
+				 (!image.hasAlphaChannel() && qGray(image.pixel(i-stroke,j-stroke)) > 200))
+			{
+				for (int k=i-stroke; k<=i+stroke; k++) {
+					for (int l=j-stroke; l<=j+stroke; l++) {
+						Vmap[k][l] = -1;
+					}
+				}
+			}
+		}
+	}
+
+	int count = 0;
+	for (int i=0; i<image.width()+2*stroke; i++) {
+		for (int j=0; j<image.height()+2*stroke; j++) {
+			if (Vmap[i][j] == -1)
+			{
+				if (Vmap[std::max(0,i-1)][j] == 0 ||
+					Vmap[i][std::max(0,j-1)] == 0 ||
+					Vmap[std::min(image.width()+2*stroke-1,i+1)][j] == 0 ||
+					Vmap[i][std::min(image.height()+2*stroke-1,j+1)] == 0 ||
+					Vmap[std::max(0,i-1)][std::max(0,j-1)] == 0 ||
+					Vmap[std::max(0,i-1)][std::min(image.height()+2*stroke-1,j+1)] == 0 ||
+					Vmap[std::min(image.width()+2*stroke-1,i+1)][std::max(0,j-1)] == 0 ||
+					Vmap[std::min(image.width()+2*stroke-1,i+1)][std::min(image.height()+2*stroke-1,j+1)] == 0)
+				{
+						Vmap[i][j] = count++;
+
+						Point2 p;
+						p.x = (double)i / (image.width()+stroke);
+						p.y = (double)j / (image.height()+stroke);
+
+						vertices.push_back(p);
+				}
+			}
+		}
+	}
+
+	for (int i=0; i<image.width()+2*stroke; i++)
+	{
+		for (int j=0; j<image.height()+2*stroke; j++) {
+			if (j+1 < image.height()+2*stroke && Vmap[i][j] > 0 && Vmap[i][j+1] > 0)
+			{
+				edges.insert(Edge(Vmap[i][j],Vmap[i][j+1]));
+			}
+			if (i+1 < image.width()+2*stroke && Vmap[i][j] > 0 && Vmap[i+1][j] > 0)
+			{
+				edges.insert(Edge(Vmap[i][j],Vmap[i+1][j]));
+			}
+		}
+	}
+
+	updateMeshInfo();
 }
 
 /******************************************************************************************************************************/

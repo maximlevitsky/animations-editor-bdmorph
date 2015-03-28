@@ -26,7 +26,7 @@ public:
 	MainWindow();
 	virtual ~MainWindow();
 public slots:
-	void programStateUpdated(int flags, void *param);
+	void programStateUpdated(int flags);
 	void onSaveScreenShot();
 	void onSaveVideo();
 	void onAbout();
