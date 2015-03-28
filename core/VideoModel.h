@@ -32,7 +32,7 @@ public:
 	VideoKeyFrame* forkFrame(VideoKeyFrame* reference);
 
 	/* creates new keyframe at specified time using a model */
-	VideoKeyFrame* insertFrame(int time, MeshModel* points);
+	VideoKeyFrame* insertFrame(int time, BDMORPHModel* points);
 
 
 	/* deletes an key frame, will ignore case where frame exists and will return prevous frame */

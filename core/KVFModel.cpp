@@ -49,14 +49,7 @@ KVFModel::KVFModel(MeshModel* model) :
 
 	newPoints.resize(getNumVertices());
     counts.resize(getNumVertices());
-
 	historyReset();
-
-    KVFModel* otherModel = dynamic_cast<KVFModel*>(model);
-
-    if (otherModel) {
-    	pinnedVertexes = otherModel->pinnedVertexes;
-    }
 }
 
 /******************************************************************************************************************************/
@@ -558,9 +551,17 @@ Vertex KVFModel::getClosestPin(Point2 point, double radius) const
 void KVFModel::clearPins()
 {
 	pinnedVertexes.clear();
-
 	cholmod_free_factor(&L1, cholmod_get_common());
 }
+
+/******************************************************************************************************************************/
+
+void KVFModel::setPinnedVertices(const std::set<Vertex>& newPins)
+{
+	pinnedVertexes = newPins;
+	cholmod_free_factor(&L1, cholmod_get_common());
+}
+
 
 /******************************************************************************************************************************/
 

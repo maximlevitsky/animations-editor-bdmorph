@@ -35,6 +35,7 @@ public:
 
 	/* deformation entry points*/
 	void clearPins();
+	void setPinnedVertices(const std::set<Vertex>& newPins);
 	const std::set<Vertex>& getPinnedVertexes() const { return pinnedVertexes; }
 
 	void displaceMesh(const std::set<DisplacedVertex> &displacements, double alpha1);

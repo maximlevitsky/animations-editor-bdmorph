@@ -210,32 +210,30 @@ VideoKeyFrame* VideoModel::forkFrame(VideoKeyFrame* reference)
 
 
 /******************************************************************************************************************************/
-VideoKeyFrame* VideoModel::insertFrame(int time, MeshModel* points)
+VideoKeyFrame* VideoModel::insertFrame(int time, BDMORPHModel* points)
 {
 	VideoKeyFrame* FrameA = getLastKeyframeBeforeTime(time);
-	int FrameATime = getKeyFrameTimeMsec(FrameA);
+	VideoKeyFrame* FrameB = new VideoKeyFrame(points);
 
-	int newFrameADuration = time - FrameATime;
+	KVFModel* kvfModelA = dynamic_cast<KVFModel*>(FrameA);
+	FrameB->setPinnedVertices(kvfModelA->getPinnedVertexes());
 
+	int newFrameADuration = time - getKeyFrameTimeMsec(FrameA);
 	if (newFrameADuration <= 1)
 		newFrameADuration = 1;
 
 	int newFrameBDuration = FrameA->duration - newFrameADuration;
-
 	if (newFrameBDuration <= 1)
 		newFrameBDuration = 1;
 
-	VideoKeyFrame* frameB = new VideoKeyFrame(points);
-
 	FrameA->duration = newFrameADuration;
-	frameB->duration = newFrameBDuration;
+	FrameB->duration = newFrameBDuration;
 
 	/* inserts new keyframe after this one */
 	auto iter = std::find(keyframes.begin(), keyframes.end(),FrameA);
 	assert (iter != keyframes.end());
-	keyframes.insert(iter + 1, frameB);
-
-	return frameB;
+	keyframes.insert(iter + 1, FrameB);
+	return FrameB;
 }
 
 /******************************************************************************************************************************/
