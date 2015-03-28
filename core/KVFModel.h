@@ -85,7 +85,7 @@ private:
 
 	void renderVF_common(Vector2* VF) const;
 
-    void historyAdd(const std::set<DisplacedVertex> &disps);
+    void historyAdd(const std::set<DisplacedVertex> &disps, double alpha);
 	Vertex getClosestPin(Point2 point, double radius) const;
 	void togglePinVertex(Vertex v);
 

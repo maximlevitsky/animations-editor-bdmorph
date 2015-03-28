@@ -75,7 +75,7 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements, doub
 	    	vertices[i] += disp;
 		lastVFCalcTime = 1;
 		lastVFApplyTime = 1;
-		historyAdd(displacements);
+		historyAdd(displacements, alpha1);
 		return;
 	}
 
@@ -85,7 +85,7 @@ void KVFModel::displaceMesh(const std::set<DisplacedVertex> &displacements, doub
 	double create_time = lastVFCalcTime + lastVFApplyTime;
 	double FPS = 1000.0 / (create_time);
 	printf("KVF: Total solve time: %f msec (%f FPS)\n\n", create_time, FPS);
-    historyAdd(disps);
+    historyAdd(disps, alpha1);
 }
 
 /*****************************************************************************************************/
@@ -368,12 +368,13 @@ void KVFModel::renderVF_common(Vector2* VF) const
 }
 
 /******************************************************************************************************************************/
-void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps)
+void  KVFModel::historyAdd(const std::set<DisplacedVertex> &disps, double alpha)
 {
 	/* add item to undo log */
 	KVFModel::LogItem item;
 	item.pinnedVertexes = pinnedVertexes;
 	item.displacedVertexes = disps;
+	item.alpha = alpha;
 	currentDeformLog.push_back(item);
 }
 /******************************************************************************************************************************/
