@@ -224,8 +224,8 @@ void MainWindow::programStateUpdated(int flags)
 		actionReset_pins->setEnabled(programstate->isDeformationEditor());
 		actionPin_edit_mode->setEnabled(programstate->isDeformationEditor());
 
-		actionLoop->setEnabled(programstate->isFullMode() && !programstate->isBusy());
-		actionPlay->setEnabled(programstate->isFullMode() && !programstate->isBusy());
+		actionLoop->setEnabled(programstate->isFullMode() && (!programstate->isBusy() || programstate->isAnimations()));
+		actionPlay->setEnabled(programstate->isFullMode() && (!programstate->isBusy() || programstate->isAnimations()));
 		actionSave_video->setEnabled(programstate->isFullMode() && !programstate->isBusy());
 
 		actionNew->setEnabled(!programstate->isBusy());
